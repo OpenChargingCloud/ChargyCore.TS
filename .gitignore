@@ -1,0 +1,7 @@
+node_modules/
+dist/
+coverage/
+.npm-cache/
+*.tgz
+*.tsbuildinfo
+npm-debug.log*
