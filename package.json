@@ -45,7 +45,7 @@
     "buffer": "^6.0.3",
     "decimal.js": "^10.5.0",
     "elliptic": "^6.6.1",
-    "file-type": "^20.5.0",
+    "file-type": "^21.3.2",
     "jsqr": "^1.4.0",
     "moment": "^2.30.1",
     "pdfjs-dist": "^5.3.93",
