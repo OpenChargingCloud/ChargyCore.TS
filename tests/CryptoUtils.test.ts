@@ -33,10 +33,15 @@ describe("CryptoUtils", () => {
         expect(message.signatures?.[0]?.publicKeyHEX).toBe(keyPair.getPublic(false, "hex"));
         expect(message.signatures?.[0]?.publicKey).toBe(Buffer.from(keyPair.getPublic(false, "array")).toString("base64"));
         expect(message.signatures?.[0]?.signatureHEX).toMatch(/^30[0-9a-f]+$/);
-        expect(message.signatures?.[0]?.signature).toBe(Buffer.from(message.signatures![0]!.signatureHEX, "hex").toString("base64"));
 
-        await expect(verifyJSONSignature(message, message.signatures![0]!)).resolves.toBe(true);
-        await expect(verifyJSONMessageSignatures(JSON.stringify(message))).resolves.toBe(true);
+        if (message.signatures && message.signatures.length > 0)
+        {
+            expect(message.signatures[0].signature).toBe(Buffer.from(message.signatures[0].signatureHEX, "hex").toString("base64"));
+
+            await expect(verifyJSONSignature(message, message.signatures[0])).resolves.toBe(true);
+            await expect(verifyJSONMessageSignatures(JSON.stringify(message))).resolves.toBe(true);
+
+        }
 
         await expect(verifyJSONMessageSignatureResults(JSON.stringify(message))).resolves.toMatchObject({
             status:     JSONSignatureVerificationStatus.True,
@@ -59,8 +64,11 @@ describe("CryptoUtils", () => {
         await expect(signJSONMessage(message, [keyPair1, keyPair2])).resolves.toBe(true);
 
         expect(message.signatures).toHaveLength(2);
-        await expect(verifyJSONSignature(message, message.signatures![0]!)).resolves.toBe(true);
-        await expect(verifyJSONSignature(message, message.signatures![1]!)).resolves.toBe(true);
+        if (message.signatures && message.signatures.length > 0)
+        {
+            await expect(verifyJSONSignature(message, message.signatures[0])).resolves.toBe(true);
+            await expect(verifyJSONSignature(message, message.signatures[1])).resolves.toBe(true);
+        }
         await expect(parseAndVerifyJSONSignatures(JSON.stringify(message))).resolves.toBe(true);
 
     });
@@ -115,7 +123,10 @@ describe("CryptoUtils", () => {
         await expect(signMessage(message, keyPair)).resolves.toBe(true);
 
         const malformedSignatureMessage: SignedJSONMessage = JSON.parse(JSON.stringify(message));
-        malformedSignatureMessage.signatures![0]!.signature = "this-is-not-the-same-base64";
+        if (malformedSignatureMessage.signatures && malformedSignatureMessage.signatures.length > 0)
+        {
+            malformedSignatureMessage.signatures[0].signature = "this-is-not-the-same-base64";
+        }
 
         await expect(verifyJSONMessageSignatures(malformedSignatureMessage)).resolves.toBe(false);
         await expect(verifyJSONMessageSignatureResults(malformedSignatureMessage)).resolves.toMatchObject({
@@ -138,8 +149,11 @@ describe("CryptoUtils", () => {
         await expect(signMessage(message, keyPair)).resolves.toBe(true);
 
         const invalidPublicKeyMessage: SignedJSONMessage = JSON.parse(JSON.stringify(message));
-        invalidPublicKeyMessage.signatures![0]!.publicKeyHEX = "04";
-        invalidPublicKeyMessage.signatures![0]!.publicKey    = Buffer.from("04", "hex").toString("base64");
+        if (invalidPublicKeyMessage.signatures && invalidPublicKeyMessage.signatures.length > 0)
+        {
+            invalidPublicKeyMessage.signatures[0].publicKeyHEX = "04";
+            invalidPublicKeyMessage.signatures[0].publicKey    = Buffer.from("04", "hex").toString("base64");
+        }
 
         await expect(verifyJSONMessageSignatureResults(invalidPublicKeyMessage)).resolves.toMatchObject({
             status:     JSONSignatureVerificationStatus.False,

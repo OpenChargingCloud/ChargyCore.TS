@@ -410,31 +410,26 @@ export class ChargePoint {
                 };
 
 
-                if (parking && parking.length > 0 && CTR.chargingSessions)
+                if (parking && parking.length > 0 && CTR.chargingSessions && CTR.chargingSessions.length > 0)
                 {
 
                     const chargingSession = CTR.chargingSessions[0];
 
-                    if (chargingSession !== undefined)
+                    chargingSession.parking = [];
+
+                    for (const parkingItem of parking)
                     {
 
-                        chargingSession.parking = [];
+                        const parkingObj = chargyLib.asJSONObject(parkingItem);
 
-                        for (const parkingItem of parking)
+                        if (chargyLib.asString(parkingObj?.["seq_num"]) !== "SUBTOTAL")
                         {
-
-                            const parkingObj = chargyLib.asJSONObject(parkingItem);
-
-                            if (chargyLib.asString(parkingObj?.["seq_num"]) !== "SUBTOTAL")
-                            {
-                                chargingSession.parking.push({
-                                    "@id":     "-",
-                                    begin:     this.chargy.moment.unix(chargyLib.asNumber(parkingObj?.["start_time_utc"]) ?? NaN).utc().format(),
-                                    end:       this.chargy.moment.unix(chargyLib.asNumber(parkingObj?.["end_time_utc"])   ?? NaN).utc().format(),
-                                    overstay:  chargyLib.asNumber(parkingObj?.["overstay"]) === 1,
-                                });
-                            }
-
+                            chargingSession.parking.push({
+                                "@id":     "-",
+                                begin:     this.chargy.moment.unix(chargyLib.asNumber(parkingObj?.["start_time_utc"]) ?? NaN).utc().format(),
+                                end:       this.chargy.moment.unix(chargyLib.asNumber(parkingObj?.["end_time_utc"])   ?? NaN).utc().format(),
+                                overstay:  chargyLib.asNumber(parkingObj?.["overstay"]) === 1,
+                            });
                         }
 
                     }

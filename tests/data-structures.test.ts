@@ -28,7 +28,6 @@ import {
 import {
   OBIS2Hex,
   OBIS2MeasurementName,
-  ParseJSON_LD,
   buf2hex,
   createHexString,
   hexToArrayBuffer,

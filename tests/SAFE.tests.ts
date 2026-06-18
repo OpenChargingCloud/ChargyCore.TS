@@ -1,6 +1,6 @@
 import { createRequire } from "node:module";
-import { describe, expect, test, vi } from 'vitest';
-import { expectVerificationReport, expectArchiveVerificationReport, expectVerificationReportInline } from './testHelper';
+import { describe, expect, test } from 'vitest';
+import { expectVerificationReport, expectArchiveVerificationReport } from './testHelper';
 import { Chargy } from '@open-charging-cloud/chargy-core';
 import { SAFEXML } from '@open-charging-cloud/chargy-core';
 

@@ -121,7 +121,7 @@ describe('Mennekes EDL40 Tests', () => {
 
     test("builds the 320 byte extended SML signature data at documented offsets", () => {
 
-        const chargingProcess = extractMennekesChargingProcesses(parseXML(readFixture("test1.xml")))[0]!;
+        const chargingProcess = extractMennekesChargingProcesses(parseXML(readFixture("test1.xml")))[0];
         const signedData      = buildMennekesSignatureData(chargingProcess, chargingProcess.measurementStart);
 
         expect(signedData).toHaveLength(320);

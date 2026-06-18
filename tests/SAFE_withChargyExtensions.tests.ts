@@ -1,6 +1,6 @@
 import { createRequire } from "node:module";
-import { describe, expect, test, vi } from 'vitest';
-import { expectVerificationReport, expectArchiveVerificationReport, expectVerificationReportInline } from './testHelper';
+import { describe, expect, test } from 'vitest';
+import { expectVerificationReport, expectVerificationReportInline } from './testHelper';
 import { Chargy } from '@open-charging-cloud/chargy-core';
 import { SAFEXML } from '@open-charging-cloud/chargy-core';
 
@@ -24,7 +24,7 @@ function createChargy(): Chargy {
 
 describe('SAFE Tests with Chargy Extensions', () => {
 
-    test("SAFE chargingStation context is parsed into a JSON object", async () => {
+    test("SAFE chargingStation context is parsed into a JSON object", () => {
 
         const xmlDocument = new DOMParser().parseFromString(`<?xml version="1.0" encoding="UTF-8"?>
 <values>

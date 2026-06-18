@@ -259,12 +259,12 @@ export function OBIS2Hex(OBIS: string): string
 
     return OBISElements == null
                ? "000000000000"
-               : parseInt(OBISElements[ 2] ?? "00").toString(16).padStart(2, "0") +   // optional  A
-                 parseInt(OBISElements[ 4] ?? "00").toString(16).padStart(2, "0") +   // optional  B
-                 parseInt(OBISElements[ 6] ?? "00").toString(16).padStart(2, "0") +   // mandatory C
-                 parseInt(OBISElements[ 7] ?? "00").toString(16).padStart(2, "0") +   // mandatory D
-                 parseInt(OBISElements[ 9] ?? "00").toString(16).padStart(2, "0") +   // optional  E
-                 parseInt(OBISElements[11] ?? "00").toString(16).padStart(2, "0");    // optional  F
+               : parseInt(OBISElements[ 2]).toString(16).padStart(2, "0") +   // optional  A
+                 parseInt(OBISElements[ 4]).toString(16).padStart(2, "0") +   // optional  B
+                 parseInt(OBISElements[ 6]).toString(16).padStart(2, "0") +   // mandatory C
+                 parseInt(OBISElements[ 7]).toString(16).padStart(2, "0") +   // mandatory D
+                 parseInt(OBISElements[ 9]).toString(16).padStart(2, "0") +   // optional  E
+                 parseInt(OBISElements[11]).toString(16).padStart(2, "0");    // optional  F
 
 }
 

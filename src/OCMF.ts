@@ -1952,13 +1952,12 @@ export class OCMF {
         // The casts are backed by the field-by-field validation
         // within tryToParseOCMFv1_0(...)!
         let   ocmfPayload             = {} as IOCMFPayload;
-        let   ocmfSignature           = {} as IOCMFSignature;
+        let   ocmfSignature: IOCMFSignature;
 
         let   depth                   =  0;
         let   ocmfStartIndex          = -1;
         let   startIndex              = -1;
-        let   endIndex                = -1;
-
+        //let   endIndex                = -1;
         const   ocmfJSONDocuments: Array<IOCMFJSONDocument> = [];
 
         //#endregion
@@ -2021,11 +2020,11 @@ export class OCMF {
                         if (depth === 0)
                         {
 
-                            endIndex = i;
+                            const endIndex = i;
 
                             //#region Copy OCMF
 
-                            if (startIndex !== -1 && endIndex !== -1) {
+                            if (startIndex !== -1) {
 
                                 //#region Copy payload
 

@@ -156,7 +156,7 @@ export class Chargy {
             );
         });
 
-        const publicKeyDER   = ASN1_PublicKey.decode(publicKeyBuffer, 'der');
+        const publicKeyDER   = ASN1_PublicKey.decode<DERPublicKey>(publicKeyBuffer, 'der');
 
         const KeyType_OID    = publicKeyDER.oids[0].join(".");
         let   KeyType        = "unknown";
