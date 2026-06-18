@@ -85,6 +85,22 @@ export default tseslint.config(
     }
   },
   {
+    files: ["tests/browser/**/*.js"],
+    languageOptions: {
+      globals: {
+        ...globals.browser
+      }
+    }
+  },
+  {
+    files: ["tests/build/**/*.js"],
+    languageOptions: {
+      globals: {
+        ...globals.node
+      }
+    }
+  },
+  {
     files: ["*.config.ts", "*.config.js"],
     languageOptions: {
       globals: {

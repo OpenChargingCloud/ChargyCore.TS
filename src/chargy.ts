@@ -35,6 +35,7 @@ import * as chargeTransparencyLiveLink      from './interfaces/IChargeTransparen
 import * as publicKeyInfo                   from './interfaces/IPublicKeyInfo'
 import * as chargyLib                       from './chargyLib'
 import { readQRCodeTextFromImage }          from './qrCodeReader'
+import { importPdfJs }                      from '#pdfjs-runtime'
 import seekBzip                             from 'seek-bzip';
 
 type DERPublicKey = {
@@ -63,8 +64,6 @@ type Asn1Module = {
 };
 
 type Base32Decode = (input: string, variant: "RFC3548" | "RFC4648" | "RFC4648-HEX" | "Crockford") => ArrayBuffer;
-
-type PdfJsLib = typeof import("pdfjs-dist");
 
 export type EllipticKeyPair = {
     verify(hash: string, signature: unknown): boolean;
@@ -122,39 +121,6 @@ export class Chargy {
         this.asn1            = asn1;
         this.base32Decode    = base32Decode;
         this.showPKIDetails  = ShowPKIDetails;
-
-    }
-
-
-    private isNodeRuntime(): boolean {
-
-        return typeof globalThis.process === "object" &&
-               globalThis.process != null &&
-               globalThis.process.versions?.node != null;
-
-    }
-
-
-    private async importPdfJs(): Promise<PdfJsLib> {
-
-        if (this.isNodeRuntime())
-        {
-            const pdfjsLib     = await import("pdfjs-dist/legacy/build/pdf.mjs") as PdfJsLib;
-            const pdfWorkerSrc = await import("pdfjs-dist/legacy/build/pdf.worker.mjs");
-
-            if (typeof pdfWorkerSrc.default === "string")
-                pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorkerSrc.default;
-
-            return pdfjsLib;
-        }
-
-        const pdfjsLib     = await import("pdfjs-dist");
-        const pdfWorkerSrc = await import("pdfjs-dist/build/pdf.worker.mjs");
-
-        if (typeof pdfWorkerSrc.default === "string")
-            pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorkerSrc.default;
-
-        return pdfjsLib;
 
     }
 
@@ -1169,7 +1135,7 @@ export class Chargy {
                 if (fileInfo.type === "application/pdf" || fileInfo.name.endsWith(".pdf"))
                 {
 
-                    const pdfjsLib     = await this.importPdfJs();
+                    const pdfjsLib     = await importPdfJs();
 
                     const pdfDocument  = fileInfo.data
                                             ? await pdfjsLib.getDocument({ data: fileInfo.data }).promise

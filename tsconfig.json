@@ -24,6 +24,9 @@
       ],
       "@open-charging-cloud/chargy-core/i18n.json": [
         "./i18n.json"
+      ],
+      "#pdfjs-runtime": [
+        "./src/pdfjs/runtime.ts"
       ]
     },
     "noEmit": true
@@ -32,6 +35,8 @@
     "src/**/*.ts",
     "tests/**/*.ts",
     "vitest.config.ts",
+    "vitest.browser.config.ts",
+    "vitest.bundle.config.ts",
     "tsup.config.ts"
   ],
   "exclude": [
