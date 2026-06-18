@@ -1,6 +1,6 @@
 # Chargy Core TS
 
-Shared TypeScript core for ChargyDesktopApp, ChargyWebApp, and the future ChargyMobileApp.
+The ChargyCore TypeScript library shared between Chargy Desktop, Web & Mobile applications.
 
 ## Usage
 
