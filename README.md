@@ -24,8 +24,12 @@ The build emits the package into `dist/`.
 
 
 ```bash
+npm version 0.2.0 --no-git-tag-version
+npm run verify
 npm pack --dry-run
 npm pack
+npm login
+npm whoami
 npm publish
 ```
 
