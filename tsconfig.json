@@ -18,12 +18,21 @@
     "forceConsistentCasingInFileNames": true,
     "isolatedModules": true,
     "resolveJsonModule": true,
+    "paths": {
+      "@open-charging-cloud/chargy-core": [
+        "./src/index.ts"
+      ],
+      "@open-charging-cloud/chargy-core/i18n.json": [
+        "./i18n.json"
+      ]
+    },
     "noEmit": true
   },
   "include": [
     "src/**/*.ts",
     "tests/**/*.ts",
-    "vitest.config.ts"
+    "vitest.config.ts",
+    "tsup.config.ts"
   ],
   "exclude": [
     "dist",
