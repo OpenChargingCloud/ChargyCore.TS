@@ -1,4 +1,4 @@
-# Chargy Core TS
+# Chargy Core
 
 The ChargyCore TypeScript library shared between Chargy Desktop, Web & Mobile applications.
 
