@@ -101,7 +101,7 @@ npx playwright install chromium
 
 
 ```bash
-npm version 0.4.0 --no-git-tag-version
+npm version 0.5.0 --no-git-tag-version
 npm run verify
 npm pack --dry-run
 npm pack
