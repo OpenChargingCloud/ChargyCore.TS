@@ -1,6 +1,6 @@
 {
   "name": "@open-charging-cloud/chargy-core",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "description": "The ChargyCore TypeScript library shared between Chargy Desktop, Web & Mobile applications.",
   "type": "module",
   "license": "AGPL-3.0-only",
