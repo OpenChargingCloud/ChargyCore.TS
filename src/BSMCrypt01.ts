@@ -1022,12 +1022,14 @@ export class BSMCrypt01 extends ACrypt {
         }
         catch (exception)
         {
-            errors.push(chargyInterfaces.CreateError("Exception occured: " + (exception instanceof Error ? exception.message : String(exception))));
+            errors.push(
+                chargyInterfaces.CreateError({"en": "Exception occured: " + (exception instanceof Error ? exception.message : String(exception))})
+            );
         }
 
         return {
             status:    chargyInterfaces.SessionVerificationResult.InvalidSessionFormat,
-            errors:     errors,
+            errors:    errors,
             warnings:  warnings,
             certainty: 0
         }
