@@ -458,17 +458,37 @@ export enum WarningLevel {
     high        = "high"
 }
 
-export interface IWarning {
-    level:       WarningLevel;
-    message:     string;
+export enum ErrorLevel {
+    low         = "low",
+    medium      = "medium",
+    high        = "high"
 }
 
+export interface IWarning {
+    level:       WarningLevel;
+    message:     IMultilanguageText;
+}
+
+export interface IError {
+    level:       ErrorLevel;
+    message:     IMultilanguageText;
+}
+
+export function CreateError(message: IMultilanguageText,
+                            level:   ErrorLevel = ErrorLevel.high): IError {
+
+    return {
+        level:   level,
+        message: message
+    };
+
+}
 
 export interface ISessionCryptoResult extends chargyLib.JSONObject
 {
 
     status:                     SessionVerificationResult;
-    message?:                   string;
+    message?:                   IMultilanguageText;
     exception?:                 unknown;
 
     // How sure we are that this result is correct!
@@ -478,7 +498,7 @@ export interface ISessionCryptoResult extends chargyLib.JSONObject
     certainty:                  number;
 
     warnings?:                  Array<IWarning>;
-    errors?:                    Array<string>;
+    errors?:                    Array<IError>;
 
 }
 
@@ -496,7 +516,7 @@ export function isISessionCryptoResult2(obj: unknown): obj is ISessionCryptoResu
 export interface ICryptoResult
 {
     status:                     VerificationResult;
-    errors?:                    Array<string>;
+    errors?:                    Array<IError>;
     warnings?:                  Array<IWarning>;
 }
 
@@ -639,13 +659,16 @@ export interface IVersionSignature {
     signature:      string
 }
 
+export type LanguageString  = string;
+export type LanguageStrings = Array<LanguageString>;
+
 export interface IMultilanguageText {
-    [key: string]:  string;
+    [key: LanguageString]: string | undefined;
 }
 
 // The i18n.json dictionary: message key => language => localized text
 export interface I18NDictionary {
-    [key: string]:  IMultilanguageText;
+    [key: string]: IMultilanguageText | undefined;
 }
 
 export type ValidationRuleOperator = ">" | ">=" | "<" | "<=" | "=" | "==";
@@ -749,7 +772,7 @@ export interface IChargingTariffElement {
 }
 
 export interface IDisplayText {
-    language:                   string,
+    language:                   LanguageString,
     text:                       string
 }
 
@@ -761,7 +784,7 @@ export interface IChargingTariff {
     country_code?:              string,
     party_id?:                  string,
     shortName?:                 IMultilanguageText;
-    summary?:               IMultilanguageText;
+    summary?:                   IMultilanguageText;
     tariff_alt_url?:            string,
     currency?:                  string,
     taxes?:                     Array<ITaxes>;

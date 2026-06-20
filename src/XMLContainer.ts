@@ -104,7 +104,7 @@ export class XMLContainer {
                                 default:
                                     return {
                                         status:    chargyInterfaces.SessionVerificationResult.InvalidSessionFormat,
-                                        message:   "Unkown public key encoding within the given XML container!",
+                                        message:   this.chargy.GetMultilanguageText("Unkown public key encoding within the given XML container!"),
                                         certainty: 0
                                     }
 
@@ -113,7 +113,7 @@ export class XMLContainer {
                             if (chargyLib.IsNullOrEmpty(publicKeyValue))
                                 return {
                                     status:    chargyInterfaces.SessionVerificationResult.InvalidSessionFormat,
-                                    message:   "The public key within the given XML container must not be empty!",
+                                    message:   this.chargy.GetMultilanguageText("The public key within the given XML container must not be empty!"),
                                     certainty: 0
                                 }
 
@@ -123,7 +123,7 @@ export class XMLContainer {
                             else if (publicKeyValue != common.publicKey)
                                 return {
                                     status:    chargyInterfaces.SessionVerificationResult.InvalidSessionFormat,
-                                    message:   "Invalid mixture of different public keys within the given XML container!",
+                                    message:   this.chargy.GetMultilanguageText("Invalid mixture of different public keys within the given XML container!"),
                                     certainty: 0
                                 }
 
@@ -163,7 +163,7 @@ export class XMLContainer {
                                 default:
                                     return {
                                         status:    chargyInterfaces.SessionVerificationResult.InvalidSessionFormat,
-                                        message:   "Unkown meter value signature encoding within the given XML container!",
+                                        message:   this.chargy.GetMultilanguageText("Unkown meter value signature encoding within the given XML container!"),
                                         certainty: 0
                                     }
 
@@ -172,7 +172,7 @@ export class XMLContainer {
                             if (chargyLib.IsNullOrEmpty(meterValueSignatureValue))
                                 return {
                                     status:    chargyInterfaces.SessionVerificationResult.InvalidSessionFormat,
-                                    message:   "The meter value signature within the given XML container must not be empty!",
+                                    message:   this.chargy.GetMultilanguageText("The meter value signature within the given XML container must not be empty!"),
                                     certainty: 0
                                 }
 
@@ -192,7 +192,7 @@ export class XMLContainer {
                         else if (common.signatureMethod != signatureMethod)
                             return {
                                 status:     chargyInterfaces.SessionVerificationResult.InvalidSessionFormat,
-                                message:   "Invalid mixture of different signature methods within the given XML container!",
+                                message:   this.chargy.GetMultilanguageText("Invalid mixture of different signature methods within the given XML container!"),
                                 certainty:  0
                             }
 
@@ -208,7 +208,7 @@ export class XMLContainer {
                         else if (common.encodingMethod != encodingMethod)
                             return {
                                 status:     chargyInterfaces.SessionVerificationResult.InvalidSessionFormat,
-                                message:   "Invalid mixture of different signed data formats within the given XML container!",
+                                message:   this.chargy.GetMultilanguageText("Invalid mixture of different signed data formats within the given XML container!"),
                                 certainty:  0
                             }
 
@@ -246,7 +246,7 @@ export class XMLContainer {
                                 default:
                                     return {
                                         status:    chargyInterfaces.SessionVerificationResult.InvalidSessionFormat,
-                                        message:   "Unkown signed data encoding within the given XML container!",
+                                        message:   this.chargy.GetMultilanguageText("Unkown signed data encoding within the given XML container!"),
                                         certainty: 0
                                     }
 
@@ -255,7 +255,7 @@ export class XMLContainer {
                             if (chargyLib.IsNullOrEmpty(signedDataValue))
                                 return {
                                     status:    chargyInterfaces.SessionVerificationResult.InvalidSessionFormat,
-                                    message:   "The signed data value within the given XML container must not be empty!",
+                                    message:   this.chargy.GetMultilanguageText("The signed data value within the given XML container must not be empty!"),
                                     certainty: 0
                                 }
 
@@ -265,7 +265,7 @@ export class XMLContainer {
                         else
                             return {
                                 status:    chargyInterfaces.SessionVerificationResult.InvalidSessionFormat,
-                                message:   "The signed data tag within the given XML container must not be empty!",
+                                message:   this.chargy.GetMultilanguageText("The signed data tag within the given XML container must not be empty!"),
                                 certainty: 0
                             }
 
@@ -294,7 +294,7 @@ export class XMLContainer {
 
             return {
                 status:    chargyInterfaces.SessionVerificationResult.InvalidSessionFormat,
-                message:   this.chargy.GetLocalizedMessage("UnknownOrInvalidChargingSessionFormat"),
+                message:   this.chargy.GetMultilanguageText("UnknownOrInvalidChargingSessionFormat"),
                 certainty: 0
             }
 
@@ -303,7 +303,7 @@ export class XMLContainer {
         {
             return {
                 status:    chargyInterfaces.SessionVerificationResult.InvalidSessionFormat,
-                message:   "Exception occured: " + (exception instanceof Error ? exception.message : String(exception)),
+                message:   this.chargy.GetMultilanguageText("Exception occured: " + (exception instanceof Error ? exception.message : String(exception))),
                 certainty: 0
             }
         }

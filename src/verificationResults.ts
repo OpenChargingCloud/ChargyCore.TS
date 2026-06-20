@@ -15,6 +15,7 @@
  * limitations under the License.
  */
 
+import { ChargyInterfaces } from '.';
 import {
     isISessionCryptoResult1,
     SessionVerificationResult
@@ -40,8 +41,8 @@ import type {
  * while non-UI callers (CLI service, tests) get a sensible English default.
  */
 export function toSessionVerificationResults(
-    CTR:              IChargeTransparencyRecord,
-    noRecordsMessage: string = "No charge transparency records found!"
+    CTR:               IChargeTransparencyRecord,
+    noRecordsMessage:  ChargyInterfaces.IMultilanguageText = {"en": "No charge transparency records found!" }
 ): ISessionCryptoResult[] | ISessionCryptoResult
 {
 

@@ -561,7 +561,7 @@ export class PCDF {
             {
                 return {
                     status:    chargyInterfaces.SessionVerificationResult.InvalidPublicKey,
-                    message:   "Wrong Public Key",
+                    message:   this.chargy.GetMultilanguageText("Wrong Public Key"),
                     certainty: 1
                 };
             }
@@ -589,9 +589,9 @@ export class PCDF {
                 status:    exception instanceof PCDFParseError
                                ? chargyInterfaces.SessionVerificationResult.InvalidSessionFormat
                                : chargyInterfaces.SessionVerificationResult.InvalidSessionFormat,
-                message:   exception instanceof Error
+                message:   this.chargy.GetMultilanguageText(exception instanceof Error
                                ? exception.message
-                               : String(exception),
+                               : String(exception)),
                 certainty: 0
             };
         }

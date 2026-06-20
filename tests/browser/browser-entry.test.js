@@ -35,7 +35,7 @@ describe("browser package entry", () => {
   test("creates a Chargy instance with browser-resolved dependencies", () => {
     const chargy = new Chargy(
       i18n,
-      "en",
+      [ "en" ],
       ellipticStub,
       momentStub,
       asn1Stub,

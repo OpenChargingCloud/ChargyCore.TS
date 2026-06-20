@@ -1173,13 +1173,13 @@ export class OCMF {
 
                     if (transactionType === OCMFTransactionTypes.undefined) return {
                         status:    chargyInterfaces.SessionVerificationResult.InvalidSessionFormat,
-                        message:   this.chargy.GetLocalizedMessage("The given OCMF data does not have a valid transaction type!"),
+                        message:   this.chargy.GetMultilanguageText("The given OCMF data does not have a valid transaction type!"),
                         certainty: 0
                     }
 
                     if (!chargyLib.isMandatoryNumber(pagination)) return {
                         status:    chargyInterfaces.SessionVerificationResult.InvalidSessionFormat,
-                        message:   this.chargy.GetLocalizedMessage("The given OCMF data does not have a valid pagination counter!"),
+                        message:   this.chargy.GetMultilanguageText("The given OCMF data does not have a valid pagination counter!"),
                         certainty: 0
                     }
 
@@ -1187,7 +1187,7 @@ export class OCMF {
 
                     if (firstOCMDJSONDocument.payload.RD.length == 0) return {
                         status:    chargyInterfaces.SessionVerificationResult.InvalidSessionFormat,
-                        message:   this.chargy.GetLocalizedMessage("Each OCMF data set must have at least one meter reading!"),
+                        message:   this.chargy.GetMultilanguageText("Each OCMF data set must have at least one meter reading!"),
                         certainty: 0
                     }
 
@@ -1342,7 +1342,7 @@ export class OCMF {
 
                                 if (timeSplit.length != 2) return {
                                     status:    chargyInterfaces.SessionVerificationResult.InvalidSessionFormat,
-                                    message:   this.chargy.GetLocalizedMessage("The given OCMF meter value does not have a valid time format!"),
+                                    message:   this.chargy.GetMultilanguageText("The given OCMF meter value does not have a valid time format!"),
                                     certainty: 0
                                 }
 
@@ -1351,7 +1351,7 @@ export class OCMF {
 
                                 if (!chargyLib.isMandatoryString (timeStamp) || !timeRegEx.test(timeStamp)) return {
                                     status:    chargyInterfaces.SessionVerificationResult.InvalidSessionFormat,
-                                    message:   this.chargy.GetLocalizedMessage("The given OCMF meter value does not have a valid time sync format!"),
+                                    message:   this.chargy.GetMultilanguageText("The given OCMF meter value does not have a valid time sync format!"),
                                     certainty: 0
                                 }
 
@@ -1361,7 +1361,7 @@ export class OCMF {
 
                                 if (!chargyLib.isMandatoryString (timeSyncText) || !["U", "I", "S", "R"].includes(timeSyncText)) return {
                                     status:    chargyInterfaces.SessionVerificationResult.InvalidSessionFormat,
-                                    message:   this.chargy.GetLocalizedMessage("The given OCMF meter value does not have a valid time sync format!"),
+                                    message:   this.chargy.GetMultilanguageText("The given OCMF meter value does not have a valid time sync format!"),
                                     certainty: 0
                                 }
 
@@ -1386,7 +1386,7 @@ export class OCMF {
                                     default:
                                         return {
                                             status:    chargyInterfaces.SessionVerificationResult.InvalidSessionFormat,
-                                            message:   this.chargy.GetLocalizedMessage("The given OCMF meter value does not have a valid time sync format!"),
+                                            message:   this.chargy.GetMultilanguageText("The given OCMF meter value does not have a valid time sync format!"),
                                             certainty: 0
                                         }
 
@@ -1394,19 +1394,19 @@ export class OCMF {
 
                                 if (transaction && !["B", "C", "X", "E", "L", "R", "A", "P", "S", "T"].includes(transaction)) return {
                                     status:    chargyInterfaces.SessionVerificationResult.InvalidSessionFormat,
-                                    message:   this.chargy.GetLocalizedMessage("The given OCMF meter value does not have a valid transaction type!"),
+                                    message:   this.chargy.GetMultilanguageText("The given OCMF meter value does not have a valid transaction type!"),
                                     certainty: 0
                                 }
 
                                 if (!["kWh", "Wh", "mOhm", "uOhm"].includes(readingUnit)) return {
                                     status:    chargyInterfaces.SessionVerificationResult.InvalidSessionFormat,
-                                    message:   this.chargy.GetLocalizedMessage("The given OCMF meter value does not have a valid current type!"),
+                                    message:   this.chargy.GetMultilanguageText("The given OCMF meter value does not have a valid current type!"),
                                     certainty: 0
                                 }
 
                                 if (readingCurrentType && !["AC", "DC"].includes(readingCurrentType)) return {
                                     status:    chargyInterfaces.SessionVerificationResult.InvalidSessionFormat,
-                                    message:   this.chargy.GetLocalizedMessage("The given OCMF meter value does not have a valid current type!"),
+                                    message:   this.chargy.GetMultilanguageText("The given OCMF meter value does not have a valid current type!"),
                                     certainty: 0
                                 }
 
@@ -1497,7 +1497,7 @@ export class OCMF {
         {
             return {
                 status:    chargyInterfaces.SessionVerificationResult.InvalidSessionFormat,
-                message:   "Invalid OCMF data: " + (exception instanceof Error ? exception.message : String(exception)),
+                message:   this.chargy.GetMultilanguageText("Invalid OCMF data: " + (exception instanceof Error ? exception.message : String(exception))),
                 certainty: 0
             }
         }
@@ -2286,7 +2286,7 @@ export class OCMF {
 
         if (OCMFDocuments.length == 0) return {
              status:    chargyInterfaces.SessionVerificationResult.InvalidSessionFormat,
-             message:   this.chargy.GetLocalizedMessage("The given OCMF data could not be parsed") + "!",
+             message:   this.chargy.GetMultilanguageText(this.chargy.GetLocalizedMessage("The given OCMF data could not be parsed") + "!"),
              certainty: 0
          }
 
@@ -2343,7 +2343,7 @@ export class OCMF {
                 {
                     return {
                         status:    chargyInterfaces.SessionVerificationResult.InvalidSessionFormat,
-                        message:   this.chargy.GetLocalizedMessage("The given OCMF data could not be parsed") + ": " + (exception instanceof Error ? exception.message : String(exception)),
+                        message:   this.chargy.GetMultilanguageText(this.chargy.GetLocalizedMessage("The given OCMF data could not be parsed") + ": " + (exception instanceof Error ? exception.message : String(exception))),
                         certainty: 0
                     }
                 }
@@ -2382,7 +2382,7 @@ export class OCMF {
                         default:
                             ocmfCTRs.push({
                                 status:    chargyInterfaces.SessionVerificationResult.InvalidSessionFormat,
-                                message:   this.chargy.GetLocalizedMessage("Unknown OCMF version!"),
+                                message:   this.chargy.GetMultilanguageText("Unknown OCMF version!"),
                                 certainty: 0
                             });
                             break;
@@ -2399,8 +2399,8 @@ export class OCMF {
 
         return {
             status:    chargyInterfaces.SessionVerificationResult.InvalidSessionFormat,
-            message:   this.chargy.GetLocalizedMessage("The given OCMF data could not be parsed") +
-                           (typeof ocmfJSONDocuments === 'string' ? ": " + ocmfJSONDocuments : "!"),
+            message:   this.chargy.GetMultilanguageText(this.chargy.GetLocalizedMessage("The given OCMF data could not be parsed") +
+                           (typeof ocmfJSONDocuments === 'string' ? ": " + ocmfJSONDocuments : "!")),
             certainty: 0
         }
 

@@ -11,7 +11,7 @@ function createChargy(): Chargy {
 
     return new Chargy(
         {},
-        "en",
+        [ "en" ],
         require("elliptic"),
         require("moment"),
         require("asn1.js"),
@@ -36,7 +36,9 @@ describe('SAFE Tests', () => {
 
         expect(result).toMatchObject({
             status:  "InvalidSessionFormat",
-            message: "Each value within the given XML container must contain signed data!"
+            message: {
+                en: "Each value within the given XML container must contain signed data!"
+            }
         });
 
     });

@@ -11,7 +11,7 @@ function createChargy(): Chargy {
 
     return new Chargy(
         {},
-        "en",
+        [ "en" ],
         require("elliptic"),
         require("moment"),
         require("asn1.js"),
@@ -175,7 +175,9 @@ describe('SAFE Tests with Chargy Extensions', () => {
             "SAFE/withChargyExtensions/SAFE-Testdata-02_multipleEVSEs_shouldFail.xml",
             {
                 status:  "InvalidSessionFormat",
-                message: "Exception occured: The SAFE chargingStation XML element must not contain more than one EVSE element!"
+                message: {
+                    en: "Exception occured: The SAFE chargingStation XML element must not contain more than one EVSE element!"
+                }
             }
         );
 
@@ -190,7 +192,9 @@ describe('SAFE Tests with Chargy Extensions', () => {
             "SAFE/withChargyExtensions/SAFE-Testdata-02_multipleConnectors_shouldFail.xml",
             {
                 status:  "InvalidSessionFormat",
-                message: "Exception occured: The SAFE EVSE XML element must not contain more than one connector element!"
+                message: {
+                    en: "Exception occured: The SAFE EVSE XML element must not contain more than one connector element!"
+                }
             }
         );
 

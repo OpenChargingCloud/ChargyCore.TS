@@ -1,4 +1,4 @@
-﻿/*
+/*
  * Copyright (c) 2018-2026 GraphDefined GmbH <achim.friedland@graphdefined.com>
  * This file is part of Chargy Desktop App <https://github.com/OpenChargingCloud/ChargyDesktopApp>
  *
@@ -84,13 +84,13 @@ export class Chargy {
 
     //#region Data
 
-    public  readonly i18n:            chargyInterfaces.I18NDictionary;
-    public  UILanguage:               string;
-    public  readonly elliptic:        EllipticModule;
-    public  readonly moment:          MomentModule;
-    public  readonly asn1:            Asn1Module;
-    public  readonly base32Decode:    Base32Decode;
-    public  readonly showPKIDetails:  chargyInterfaces.ShowPKIDetailsFunction;
+    public  readonly i18n:             chargyInterfaces.I18NDictionary;
+    public           uiLanguages:      chargyInterfaces.LanguageStrings;
+    public  readonly elliptic:         EllipticModule;
+    public  readonly moment:           MomentModule;
+    public  readonly asn1:             Asn1Module;
+    public  readonly base32Decode:     Base32Decode;
+    public  readonly showPKIDetails:   chargyInterfaces.ShowPKIDetailsFunction;
     public  readonly validationRules:  chargyInterfaces.IValidationRules;
 
     private chargingStationOperators  = new Array<chargyInterfaces.IChargingStationOperator>();
@@ -108,30 +108,90 @@ export class Chargy {
 
     //#endregion
 
-    constructor(i18n:            chargyInterfaces.I18NDictionary,
-                UILanguage:      string,
-                elliptic:        EllipticModule,
-                moment:          MomentModule,
-                asn1:            Asn1Module,
-                base32Decode:    Base32Decode,
-                ShowPKIDetails:  chargyInterfaces.ShowPKIDetailsFunction,
-                validationRules: chargyInterfaces.IValidationRules = defaultValidationRules as chargyInterfaces.IValidationRules) {
+    constructor(i18n:             chargyInterfaces.I18NDictionary,
+                UILanguages:      chargyInterfaces.LanguageStrings,
+                elliptic:         EllipticModule,
+                moment:           MomentModule,
+                asn1:             Asn1Module,
+                base32Decode:     Base32Decode,
+                ShowPKIDetails:   chargyInterfaces.ShowPKIDetailsFunction,
+                validationRules:  chargyInterfaces.IValidationRules = defaultValidationRules as chargyInterfaces.IValidationRules) {
 
-        this.i18n            = i18n;
-        this.UILanguage      = UILanguage;
-        this.elliptic        = elliptic;
-        this.moment          = moment;
-        this.asn1            = asn1;
-        this.base32Decode    = base32Decode;
-        this.showPKIDetails  = ShowPKIDetails;
+        this.i18n             = i18n;
+        this.uiLanguages      = this.NormalizeUILanguages(UILanguages);
+        this.elliptic         = elliptic;
+        this.moment           = moment;
+        this.asn1             = asn1;
+        this.base32Decode     = base32Decode;
+        this.showPKIDetails   = ShowPKIDetails;
         this.validationRules  = validationRules;
 
     }
 
 
-    public SetUILanguage(UILanguage: string): void {
+    public SetUILanguages(UILanguages: chargyInterfaces.LanguageStrings): void {
 
-        this.UILanguage = UILanguage;
+        this.uiLanguages = this.NormalizeUILanguages(UILanguages);
+
+    }
+
+
+    private NormalizeUILanguages(UILanguages: chargyInterfaces.LanguageStrings): chargyInterfaces.LanguageStrings {
+
+        const languages = new Array<chargyInterfaces.LanguageString>();
+
+        for (const language of UILanguages) {
+
+            const normalized = language.trim();
+
+            if (normalized.length > 0 &&
+                !languages.includes(normalized))
+            {
+                languages.push(normalized);
+            }
+
+        }
+
+        return languages.length > 0
+                   ? languages
+                   : [ "en" ];
+
+    }
+
+
+    private FindBestMultilanguageText(Text: chargyInterfaces.IMultilanguageText): string | undefined {
+
+        for (const language of this.uiLanguages) {
+
+            const localLanguage = Text[language];
+
+            if (localLanguage !== undefined)
+                return localLanguage;
+
+        }
+
+        const english = Text["en"];
+        if (english !== undefined)
+            return english;
+
+        return Object.values(Text).find(value => value !== undefined);
+
+    }
+
+
+    private CompleteMultilanguageText(Text:         chargyInterfaces.IMultilanguageText | undefined,
+                                      fallbackText: string): chargyInterfaces.IMultilanguageText {
+
+        const result: chargyInterfaces.IMultilanguageText = {
+            ...(Text ?? {})
+        };
+
+        const fallback = this.FindBestMultilanguageText(result) ?? fallbackText;
+
+        for (const language of this.uiLanguages)
+            result[language] ??= fallback;
+
+        return result;
 
     }
 
@@ -145,8 +205,8 @@ export class Chargy {
     }
 
 
-    private TryToParseDERPublicKey(keyId: string,
-                                   publicKeyBuffer: Buffer): publicKeyInfo.IPublicKeyLookup & { "@id": string, "@context": string } {
+    private TryToParseDERPublicKey(keyId:            string,
+                                   publicKeyBuffer:  Buffer): publicKeyInfo.IPublicKeyLookup & { "@id": string, "@context": string } {
 
         // https://lapo.it/asn1js/ for a visual check...
         // https://github.com/indutny/asn1.js
@@ -450,17 +510,22 @@ export class Chargy {
         if (multiLanguage !== undefined)
         {
 
-            const localLanguage = multiLanguage[this.UILanguage];
-            if (localLanguage !== undefined)
-                return localLanguage;
-
-            const english = multiLanguage["en"];
-            if (english !== undefined)
-                return english;
+            const localizedMessage = this.FindBestMultilanguageText(multiLanguage);
+            if (localizedMessage !== undefined)
+                return localizedMessage;
 
         }
 
         return Text;
+
+    }
+
+    public GetMultilanguageText(Text: string): chargyInterfaces.IMultilanguageText
+    {
+
+        const multiLanguage = this.i18n[Text];
+
+        return this.CompleteMultilanguageText(multiLanguage, Text);
 
     }
 
@@ -473,17 +538,37 @@ export class Chargy {
         if (multiLanguage !== undefined)
         {
 
-            const localLanguage = multiLanguage[this.UILanguage];
-            if (localLanguage !== undefined)
-                return localLanguage.replace("%p", String(Parameter));
-
-            const english = multiLanguage["en"];
-            if (english !== undefined)
-                return english.replace("%p", String(Parameter));
+            const localizedMessage = this.FindBestMultilanguageText(multiLanguage);
+            if (localizedMessage !== undefined)
+                return localizedMessage.replace("%p", String(Parameter));
 
         }
 
         return Text.replace("%p", String(Parameter));
+
+    }
+
+    public GetMultilanguageTextWithParameter(Text:       string,
+                                             Parameter:  string | number): chargyInterfaces.IMultilanguageText
+    {
+
+        const multiLanguage = this.i18n[Text];
+
+        const parameterizedText: chargyInterfaces.IMultilanguageText = {};
+
+        if (multiLanguage !== undefined)
+        {
+
+            for (const [language, message] of Object.entries(multiLanguage)) {
+
+                if (message !== undefined)
+                    parameterizedText[language] = message.replace("%p", String(Parameter));
+
+            }
+
+        }
+
+        return this.CompleteMultilanguageText(parameterizedText, Text.replace("%p", String(Parameter)));
 
     }
 
@@ -1118,11 +1203,11 @@ export class Chargy {
 
         if (FileInfos.length == 0) return {
             status:    chargyInterfaces.SessionVerificationResult.NoChargeTransparencyRecordsFound,
-            message:   this.GetLocalizedMessage("No charge transparency records found!"),
+            message:   this.GetMultilanguageText("No charge transparency records found!"),
             certainty: 0
         }
 
-        let expandedFiles  = new Array<chargyInterfaces.IFileInfo>();
+        let expandedFiles    = new Array<chargyInterfaces.IFileInfo>();
         const processedFiles = new Array<chargeTransparencyRecord.IExtendedFileInfo>();
 
         //#endregion
@@ -1355,7 +1440,7 @@ export class Chargy {
                 {
                     processedFile.result = {
                         status:     chargyInterfaces.SessionVerificationResult.InvalidSessionFormat,
-                        message:    this.GetLocalizedMessage("UnknownOrInvalidXMLChargeTransparencyFormat"),
+                        message:    this.GetMultilanguageText("UnknownOrInvalidXMLChargeTransparencyFormat"),
                         exception:  exception,
                         certainty:  0
                     }
@@ -1447,7 +1532,7 @@ export class Chargy {
                 {
                     processedFile.result = {
                         status:     chargyInterfaces.SessionVerificationResult.InvalidPublicKey,
-                        message:    this.GetLocalizedMessage("UnknownOrInvalidPublicKeyFormat"),
+                        message:    this.GetMultilanguageText("UnknownOrInvalidPublicKeyFormat"),
                         exception:  exception,
                         certainty: 0
                     }
@@ -1475,7 +1560,7 @@ export class Chargy {
                 {
                     processedFile.result = {
                         status:     chargyInterfaces.SessionVerificationResult.InvalidPublicKey,
-                        message:    this.GetLocalizedMessage("UnknownOrInvalidPublicKeyFormat"),
+                        message:    this.GetMultilanguageText("UnknownOrInvalidPublicKeyFormat"),
                         exception:  exception,
                         certainty: 0
                     }
@@ -1578,7 +1663,7 @@ export class Chargy {
                 catch (exception) {
                     processedFile.result = {
                         status:     chargyInterfaces.SessionVerificationResult.InvalidSessionFormat,
-                        message:    this.GetLocalizedMessage("UnknownOrInvalidJSONChargeTransparencyFormat"),
+                        message:    this.GetMultilanguageText("UnknownOrInvalidJSONChargeTransparencyFormat"),
                         exception:  exception,
                         certainty:  0
                     }
@@ -1591,7 +1676,7 @@ export class Chargy {
             // if (processedFile.result == undefined) {
             //     processedFile.result = {
             //         status:    chargyInterfaces.SessionVerificationResult.InvalidSessionFormat,
-            //         message:   this.GetLocalizedMessage("UnknownOrInvalidChargeTransparencyRecord"),
+            //         message:   this.GetMultilanguageText("UnknownOrInvalidChargeTransparencyRecord"),
             //         certainty: 0
             //     }
             // }
@@ -1621,7 +1706,7 @@ export class Chargy {
                 if (publicKeyInfo.IsAPublicKeyLookup(processedFile.result))
                     return {
                         status:     chargyInterfaces.SessionVerificationResult.InvalidSessionFormat,
-                        message:    this.GetLocalizedMessage("UnknownOrInvalidChargeTransparencyRecord"),
+                        message:    this.GetMultilanguageText("UnknownOrInvalidChargeTransparencyRecord"),
                         certainty:  0
                     };
 
@@ -1632,7 +1717,7 @@ export class Chargy {
 
             return {
                 status:     chargyInterfaces.SessionVerificationResult.InvalidSessionFormat,
-                message:    this.GetLocalizedMessage("UnknownOrInvalidChargeTransparencyRecord"),
+                message:    this.GetMultilanguageText("UnknownOrInvalidChargeTransparencyRecord"),
                 certainty:  0
             };
 
@@ -1761,7 +1846,7 @@ export class Chargy {
 
         return {
             status:    chargyInterfaces.SessionVerificationResult.InvalidSessionFormat,
-            message:   this.GetLocalizedMessage("No charge transparency records found!"),
+            message:   this.GetMultilanguageText("No charge transparency records found!"),
             certainty: 0
         }
 
@@ -1779,7 +1864,7 @@ export class Chargy {
         if (!chargeTransparencyRecord.IsAChargeTransparencyRecord(CTR))
             return {
                 status:    chargyInterfaces.SessionVerificationResult.InvalidSessionFormat,
-                message:   this.GetLocalizedMessage("UnknownOrInvalidJSONChargeTransparencyFormat"),
+                message:   this.GetMultilanguageText("UnknownOrInvalidJSONChargeTransparencyFormat"),
                 certainty: 0
             }
 
@@ -2051,7 +2136,7 @@ export class Chargy {
         {
             return {
                 status:    chargyInterfaces.SessionVerificationResult.InvalidSessionFormat,
-                message:   "Exception occured: " + (exception instanceof Error ? exception.message : String(exception)),
+                message:   this.GetMultilanguageText("Exception occured: " + (exception instanceof Error ? exception.message : String(exception))),
                 certainty:  0
             }
         }
@@ -2291,7 +2376,7 @@ export class Chargy {
             default:
                 verificationResult = {
                     status:    chargyInterfaces.SessionVerificationResult.UnknownSessionFormat,
-                    message:   this.GetLocalizedMessage("UnknownOrInvalidChargingSessionFormat"),
+                    message:   this.GetMultilanguageText("UnknownOrInvalidChargingSessionFormat"),
                     certainty: 0
                 }
                 break;
@@ -2306,7 +2391,7 @@ export class Chargy {
                 chargingSession.ctr,
                 {
                     level:   this.getChargingSessionTotalEnergyWarningLevel(),
-                    message: this.GetLocalizedMessage("InplausibleTotalEnergyMeasurementWarning")
+                    message: this.GetMultilanguageText("InplausibleTotalEnergyMeasurementWarning")
                 }
             );
 

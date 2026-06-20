@@ -19,6 +19,7 @@ import {
 import type {
     ICryptoResult,
     IFileInfo,
+    IMultilanguageText,
     ISessionCryptoResult,
     IValidationRules
 } from '@open-charging-cloud/chargy-core';
@@ -114,7 +115,7 @@ function createChargy(validationRules?: IValidationRules): Chargy {
 
     return new Chargy(
         JSON.parse(readFileSync(new URL("../i18n.json", import.meta.url), "utf8")),
-        "en",
+        [ "en" ],
         require("elliptic"),
         require("moment"),
         require("asn1.js"),
@@ -294,12 +295,15 @@ function formatChargeDataVerificationReport(report: IChargeTransparencyRecord | 
             "transports: " + ((report.transports?.length ?? 0).toString())
         ].join("\n");
 
-    if (!IsAChargeTransparencyRecord(report))
+    if (!IsAChargeTransparencyRecord(report)) {
+        const sessionResult = report as ISessionCryptoResult;
+
         return [
             "format: session-result",
-            "status: "  +  report.status,
-            "message: " + (report.message ?? "")
+            "status: "  +  sessionResult.status,
+            "message: " + formatOptionalMultilanguageText(sessionResult.message)
         ].join("\n");
+    }
 
     const sessions = report.chargingSessions ?? [];
     const lines    = [
@@ -368,8 +372,23 @@ function formatCryptoResult(result: ICryptoResult | undefined): string {
     return result?.status ?? "unknown";
 }
 
-function formatWarning(warning: { level: string; message: string }): string {
+function formatWarning(warning: { level: string; message: IMultilanguageText }): string {
 
-    return warning.level + ": " + warning.message;
+    return warning.level + ": " + formatMultilanguageText(warning.message);
+
+}
+
+function formatMultilanguageText(text: IMultilanguageText): string {
+
+    return text.en ?? Object.values(text)[0] ?? "";
+
+}
+
+function formatOptionalMultilanguageText(text: IMultilanguageText | undefined): string {
+
+    if (text == null)
+        return "";
+
+    return formatMultilanguageText(text);
 
 }

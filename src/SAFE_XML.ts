@@ -198,7 +198,7 @@ export class SAFEXML {
                     if (signedData == null)
                         return {
                             status:    chargyInterfaces.SessionVerificationResult.InvalidSessionFormat,
-                            message:   "Each value within the given XML container must contain signed data!",
+                            message:   this.chargy.GetMultilanguageText("Each value within the given XML container must contain signed data!"),
                             certainty:  0
                         }
 
@@ -209,7 +209,7 @@ export class SAFEXML {
                     else if (signedDataFormat !== commonSignedDataFormat)
                         return {
                             status:    chargyInterfaces.SessionVerificationResult.InvalidSessionFormat,
-                            message:   "Invalid mixture of different signed data formats within the given XML container!",
+                            message:   this.chargy.GetMultilanguageText("Invalid mixture of different signed data formats within the given XML container!"),
                             certainty:  0
                         }
 
@@ -221,7 +221,7 @@ export class SAFEXML {
                     else if (signedDataEncoding !== commonSignedDataEncoding)
                         return {
                             status:    chargyInterfaces.SessionVerificationResult.InvalidSessionFormat,
-                            message:   "Invalid mixture of different signed data encodings within the given XML container!",
+                            message:   this.chargy.GetMultilanguageText("Invalid mixture of different signed data encodings within the given XML container!"),
                             certainty:  0
                         }
 
@@ -231,7 +231,7 @@ export class SAFEXML {
                     if (chargyLib.IsNullOrEmpty(signedDataValue))
                         return {
                             status:    chargyInterfaces.SessionVerificationResult.InvalidSessionFormat,
-                            message:   "The signed data value within the given XML container must not be empty!",
+                            message:   this.chargy.GetMultilanguageText("The signed data value within the given XML container must not be empty!"),
                             certainty:  0
                         }
 
@@ -243,7 +243,7 @@ export class SAFEXML {
                     else if (publicKeyEncoding !== commonPublicKeyEncoding)
                         return {
                             status:    chargyInterfaces.SessionVerificationResult.InvalidSessionFormat,
-                            message:   "Invalid mixture of different public key encodings within the given XML container!",
+                            message:   this.chargy.GetMultilanguageText("Invalid mixture of different public key encodings within the given XML container!"),
                             certainty:  0
                         }
 
@@ -252,7 +252,7 @@ export class SAFEXML {
                     //     commonPublicKeyEncoding !== "plain" )
                     //     return {
                     //         status:    chargyInterfaces.SessionVerificationResult.InvalidSessionFormat,
-                    //         message:   "Unkown public key encoding within the given XML container!",
+                    //         message:   chargyInterfaces.CreateMultilanguageText("Unkown public key encoding within the given XML container!"),
                     //         certainty:  0
                     //     }
 
@@ -264,7 +264,7 @@ export class SAFEXML {
                     else if (publicKeyValue !== commonPublicKey)
                         return {
                             status:    chargyInterfaces.SessionVerificationResult.InvalidSessionFormat,
-                            message:   "Invalid mixture of different public keys within the given XML container!",
+                            message:   this.chargy.GetMultilanguageText("Invalid mixture of different public keys within the given XML container!"),
                             certainty:  0
                         }
 
@@ -291,7 +291,7 @@ export class SAFEXML {
                         default:
                             return {
                                 status:    chargyInterfaces.SessionVerificationResult.InvalidSessionFormat,
-                                message:   "Unkown signed data encoding within the given SAFE XML!",
+                                message:   this.chargy.GetMultilanguageText("Unkown signed data encoding within the given SAFE XML!"),
                                 certainty:  0
                             }
 
@@ -324,7 +324,7 @@ export class SAFEXML {
                         default:
                             return {
                                 status:     chargyInterfaces.SessionVerificationResult.InvalidSessionFormat,
-                                message:    this.chargy.GetLocalizedMessage("UnknownOrInvalidChargingSessionFormat"),
+                                message:    this.chargy.GetMultilanguageText("UnknownOrInvalidChargingSessionFormat"),
                                 certainty:  0
                             }
 
@@ -338,14 +338,14 @@ export class SAFEXML {
         {
             return {
                 status:    chargyInterfaces.SessionVerificationResult.InvalidSessionFormat,
-                message:   "Exception occured: " + (exception instanceof Error ? exception.message : String(exception)),
+                message:   this.chargy.GetMultilanguageText("Exception occured: " + (exception instanceof Error ? exception.message : String(exception))),
                 certainty:  0
             }
         }
 
         return {
             status:     chargyInterfaces.SessionVerificationResult.InvalidSessionFormat,
-            message:    this.chargy.GetLocalizedMessage("UnknownOrInvalidChargingSessionFormat"),
+            message:    this.chargy.GetMultilanguageText("UnknownOrInvalidChargingSessionFormat"),
             certainty:  0
         }
 

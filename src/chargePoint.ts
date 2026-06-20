@@ -50,7 +50,7 @@ export class ChargePoint {
             if (!chargyLib.isMandatoryJSONObject(SomeJSON))
                 return {
                     status:    chargyInterfaces.SessionVerificationResult.InvalidSessionFormat,
-                    message:   this.chargy.GetLocalizedMessage("UnknownOrInvalidChargingSessionFormat"),
+                    message:   this.chargy.GetMultilanguageText("UnknownOrInvalidChargingSessionFormat"),
                     certainty: 0
                 }
 
@@ -652,14 +652,14 @@ export class ChargePoint {
         {
             return {
                 status:    chargyInterfaces.SessionVerificationResult.InvalidSessionFormat,
-                message:   "Exception occured: " + (exception instanceof Error ? exception.message : String(exception)),
+                message:   this.chargy.GetMultilanguageText("Exception occured: " + (exception instanceof Error ? exception.message : String(exception))),
                 certainty: 0
             }
         }
 
         return {
             status:    chargyInterfaces.SessionVerificationResult.InvalidSessionFormat,
-            message:   this.chargy.GetLocalizedMessage("UnknownOrInvalidChargingSessionFormat"),
+            message:   this.chargy.GetMultilanguageText("UnknownOrInvalidChargingSessionFormat"),
             certainty: 0
         }
 
@@ -725,7 +725,7 @@ export class ChargePointCrypt01 extends ACrypt {
         {
             return {
                 status:    chargyInterfaces.SessionVerificationResult.InvalidSignature,
-                message:   this.chargy.GetLocalizedMessage("InvalidSignature"),
+                message:   this.chargy.GetMultilanguageText("InvalidSignature"),
                 certainty: 0
             }
         }
@@ -786,7 +786,7 @@ export class ChargePointCrypt01 extends ACrypt {
             if (publicKeys.length == 0)
                 return {
                     status:    chargyInterfaces.SessionVerificationResult.PublicKeyNotFound,
-                    message:   this.chargy.GetLocalizedMessage("Public key notFound"),
+                    message:   this.chargy.GetMultilanguageText("Public key notFound"),
                     certainty: 0
                 }
 
@@ -919,7 +919,7 @@ export class ChargePointCrypt01 extends ACrypt {
                         {
                             return {
                                 status:    chargyInterfaces.SessionVerificationResult.InvalidSignature,
-                                message:   this.chargy.GetLocalizedMessage("InvalidSignature"),
+                                message:   this.chargy.GetMultilanguageText("InvalidSignature"),
                                 certainty: 0
                             }
                         }
@@ -1029,7 +1029,7 @@ export class ChargePointCrypt01 extends ACrypt {
         {
             return {
                 status:    chargyInterfaces.SessionVerificationResult.InvalidSignature,
-                message:   "Exception occured: " + (exception instanceof Error ? exception.message : String(exception)),
+                message:   this.chargy.GetMultilanguageText("Exception occured: " + (exception instanceof Error ? exception.message : String(exception))),
                 certainty: 0
             }
         }

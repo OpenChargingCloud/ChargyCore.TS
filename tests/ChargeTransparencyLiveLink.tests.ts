@@ -46,7 +46,7 @@ function createChargy(): InstanceType<ChargyConstructor> {
 
     return new Chargy(
         i18n,
-        "en",
+        [ "en" ],
         require("elliptic"),
         require("moment"),
         require("asn1.js"),

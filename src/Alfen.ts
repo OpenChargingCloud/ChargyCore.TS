@@ -123,7 +123,7 @@ export class Alfen  {
                 if (elements?.length != 6 && elements?.length != 7)
                     return {
                         status:    chargyInterfaces.SessionVerificationResult.InvalidSessionFormat,
-                        message:   this.chargy.GetLocalizedMessage("Invalid number of signed meter values!"),
+                        message:   this.chargy.GetMultilanguageText("Invalid number of signed meter values!"),
                         certainty: 0
                     };
 
@@ -140,7 +140,7 @@ export class Alfen  {
                 else if (elements[3] !== common.PublicKey)
                     return {
                         status:    chargyInterfaces.SessionVerificationResult.InvalidSessionFormat,
-                        message:   this.chargy.GetLocalizedMessage("Inconsistent public keys!"),
+                        message:   this.chargy.GetMultilanguageText("Inconsistent public keys!"),
                         certainty: 0
                     };
 
@@ -154,7 +154,7 @@ export class Alfen  {
                 {
                     return {
                         status:    chargyInterfaces.SessionVerificationResult.InvalidSessionFormat,
-                        message:   this.chargy.GetLocalizedMessage("Invalid charging session format!"),
+                        message:   this.chargy.GetMultilanguageText("Invalid charging session format!"),
                         certainty: 0
                     };
                 }
@@ -185,7 +185,7 @@ export class Alfen  {
                 else if (AdapterId !== common.AdapterId)
                     return {
                         status:     chargyInterfaces.SessionVerificationResult.InvalidSessionFormat,
-                        message:    this.chargy.GetLocalizedMessage("Inconsistent Alfen adapter identification!"),
+                        message:    this.chargy.GetMultilanguageText("Inconsistent Alfen adapter identification!"),
                         certainty:  0
                     };
 
@@ -194,7 +194,7 @@ export class Alfen  {
                 else if (AdapterFWVersion !== common.AdapterFWVersion)
                     return {
                         status:     chargyInterfaces.SessionVerificationResult.InvalidSessionFormat,
-                        message:    this.chargy.GetLocalizedMessage("Inconsistent Alfen adapter firmware version!"),
+                        message:    this.chargy.GetMultilanguageText("Inconsistent Alfen adapter firmware version!"),
                         certainty:  0
                     };
 
@@ -203,7 +203,7 @@ export class Alfen  {
                 else if (AdapterFWChecksum !== common.AdapterFWChecksum)
                     return {
                         status:     chargyInterfaces.SessionVerificationResult.InvalidSessionFormat,
-                        message:    this.chargy.GetLocalizedMessage("Inconsistent Alfen adapter firmware checksum!"),
+                        message:    this.chargy.GetMultilanguageText("Inconsistent Alfen adapter firmware checksum!"),
                         certainty:  0
                     };
 
@@ -212,7 +212,7 @@ export class Alfen  {
                 else if (MeterId !== common.MeterId)
                     return {
                         status:     chargyInterfaces.SessionVerificationResult.InvalidSessionFormat,
-                        message:    this.chargy.GetLocalizedMessage("Inconsistent meter identification!"),
+                        message:    this.chargy.GetMultilanguageText("Inconsistent meter identification!"),
                         certainty:  0
                     };
 
@@ -221,7 +221,7 @@ export class Alfen  {
                 else if (ObisId !== common.ObisId)
                     return {
                         status:     chargyInterfaces.SessionVerificationResult.InvalidSessionFormat,
-                        message:    this.chargy.GetLocalizedMessage("Inconsistent OBIS code!"),
+                        message:    this.chargy.GetMultilanguageText("Inconsistent OBIS code!"),
                         certainty:  0
                     };
 
@@ -230,7 +230,7 @@ export class Alfen  {
                 else if (UnitEncoded !== common.UnitEncoded)
                     return {
                         status:     chargyInterfaces.SessionVerificationResult.InvalidSessionFormat,
-                        message:    this.chargy.GetLocalizedMessage("Inconsistent unit (encoded) value!"),
+                        message:    this.chargy.GetMultilanguageText("Inconsistent unit (encoded) value!"),
                         certainty:  0
                     };
 
@@ -239,7 +239,7 @@ export class Alfen  {
                 else if (Scalar !== common.Scalar)
                     return {
                         status:     chargyInterfaces.SessionVerificationResult.InvalidSessionFormat,
-                        message:    this.chargy.GetLocalizedMessage("Inconsistent measurement scalar!"),
+                        message:    this.chargy.GetMultilanguageText("Inconsistent measurement scalar!"),
                         certainty:  0
                     };
 
@@ -248,7 +248,7 @@ export class Alfen  {
                 else if (UID !== common.UID)
                     return {
                         status:     chargyInterfaces.SessionVerificationResult.InvalidSessionFormat,
-                        message:    this.chargy.GetLocalizedMessage("Inconsistent user identification!"),
+                        message:    this.chargy.GetMultilanguageText("Inconsistent user identification!"),
                         certainty:  0
                     };
 
@@ -257,14 +257,14 @@ export class Alfen  {
                 else if (InternalSessionId !== common.InternalSessionId)
                     return {
                         status:     chargyInterfaces.SessionVerificationResult.InvalidSessionFormat,
-                        message:    this.chargy.GetLocalizedMessage("Inconsistent internal charging session identification!"),
+                        message:    this.chargy.GetMultilanguageText("Inconsistent internal charging session identification!"),
                         certainty:  0
                     };
 
                 if (previousTimestamp !== "" && previousTimestamp > Timestamp)
                     return {
                         status:     chargyInterfaces.SessionVerificationResult.InconsistentTimestamps,
-                        message:    this.chargy.GetLocalizedMessage("Inconsistent timestamps!"),
+                        message:    this.chargy.GetMultilanguageText("Inconsistent timestamps!"),
                         certainty:  0
                     };
                 else
@@ -293,7 +293,7 @@ export class Alfen  {
             if (firstDataSet === undefined || lastDataSet === undefined)
                 return {
                     status:    chargyInterfaces.SessionVerificationResult.InvalidSessionFormat,
-                    message:   this.chargy.GetLocalizedMessage("Invalid number of signed meter values!"),
+                    message:   this.chargy.GetMultilanguageText("Invalid number of signed meter values!"),
                     certainty: 0
                 };
 
@@ -456,7 +456,7 @@ export class Alfen  {
         {
             return {
                 status:     chargyInterfaces.SessionVerificationResult.InvalidSessionFormat,
-                message:    this.chargy.GetLocalizedMessage("Exception occured: ") + (exception instanceof Error ? exception.message : String(exception)),
+                message:    this.chargy.GetMultilanguageText("Exception occured: " + (exception instanceof Error ? exception.message : String(exception))),
                 certainty:  0
             }
         }

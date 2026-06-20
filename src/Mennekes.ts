@@ -110,7 +110,7 @@ export class Mennekes {
             if (chargingProcesses.length === 0)
                 return {
                     status:    chargyInterfaces.SessionVerificationResult.InvalidSessionFormat,
-                    message:   this.chargy.GetLocalizedMessage("UnknownOrInvalidChargingSessionFormat"),
+                    message:   this.chargy.GetMultilanguageText("UnknownOrInvalidChargingSessionFormat"),
                     certainty: 0
                 };
 
@@ -121,7 +121,7 @@ export class Mennekes {
         {
             return {
                 status:    chargyInterfaces.SessionVerificationResult.InvalidSessionFormat,
-                message:   "Exception occured: " + (exception instanceof Error ? exception.message : String(exception)),
+                message:   this.chargy.GetMultilanguageText("Exception occured: " + (exception instanceof Error ? exception.message : String(exception))),
                 certainty: 0
             }
         }
@@ -297,7 +297,10 @@ export class MennekesCrypt01 extends ACrypt {
 
                 if (sessionResult === chargyInterfaces.SessionVerificationResult.ValidSignature)
                 {
-                    const lawErrors = validateMennekesLawConformity(measurement.values as IMennekesMeasurementValue[]);
+                    const lawErrors = validateMennekesLawConformity(
+                                          measurement.values as IMennekesMeasurementValue[],
+                                          this.chargy
+                                      );
 
                     if (lawErrors.length > 0)
                     {
@@ -688,23 +691,26 @@ function toMennekesMeasurementValue(measurement: IMennekesMeasurement): IMenneke
 
 }
 
-function validateMennekesLawConformity(measurementValues: IMennekesMeasurementValue[]): string[] {
+function validateMennekesLawConformity(measurementValues: IMennekesMeasurementValue[],
+                                       chargy:            Chargy): chargyInterfaces.IError[] {
 
-    const errors = new Array<string>();
+    const errors = new Array<chargyInterfaces.IError>();
     const start  = measurementValues[0];
     const end    = measurementValues[measurementValues.length - 1];
 
     if (start == null || end == null)
-        return [ "Mennekes EDL40 requires at least two measurement values." ];
+        return [
+            chargyInterfaces.CreateError(chargy.GetMultilanguageText("Mennekes EDL40 requires at least two measurement values."))
+        ];
 
     if (start.eventCounter !== end.eventCounter)
-        errors.push("Event counter mismatch.");
+        errors.push(chargyInterfaces.CreateError(chargy.GetMultilanguageText("Event counter mismatch.")));
 
     if (Number(start.paginationId) >= Number(end.paginationId))
-        errors.push("Pagination must increase from start to end.");
+        errors.push(chargyInterfaces.CreateError(chargy.GetMultilanguageText("Pagination must increase from start to end.")));
 
     if (start.value.gt(end.value))
-        errors.push("Meter value must not decrease.");
+        errors.push(chargyInterfaces.CreateError(chargy.GetMultilanguageText("Meter value must not decrease.")));
 
     return errors;
 

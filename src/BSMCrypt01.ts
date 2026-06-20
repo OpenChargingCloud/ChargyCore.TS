@@ -111,7 +111,7 @@ interface IBSMDataSet
     valuePrecision:             number;
     measurementId:              unknown;
     signature:                  string;
-    errors:                     string[];
+    errors:                     chargyInterfaces.IError[];
     warnings:                   chargyInterfaces.IWarning[];
 }
 
@@ -184,13 +184,13 @@ export class BSMCrypt01 extends ACrypt {
 
         if (!Array.isArray(Measurements)) return {
             status:    chargyInterfaces.SessionVerificationResult.InvalidSessionFormat,
-            message:   this.chargy.GetLocalizedMessage("MissingOrInvalidSignedMeterValues"),
+            message:   this.chargy.GetMultilanguageText("MissingOrInvalidSignedMeterValues"),
             certainty: 0
         }
 
         if (Measurements.length < 2) return {
             status:    chargyInterfaces.SessionVerificationResult.InvalidSessionFormat,
-            message:   this.chargy.GetLocalizedMessage("AtLeastTwoSignedMeterValuesRequired"),
+            message:   this.chargy.GetMultilanguageText("AtLeastTwoSignedMeterValuesRequired"),
             certainty: 0
         }
 
@@ -198,11 +198,11 @@ export class BSMCrypt01 extends ACrypt {
 
         if (!chargyLib.isMandatoryJSONObject(firstMeasurement)) return {
             status:    chargyInterfaces.SessionVerificationResult.InvalidSessionFormat,
-            message:   this.chargy.GetLocalizedMessageWithParameter("MissingOrInvalidSignedMeterValueP", 1),
+            message:   this.chargy.GetMultilanguageTextWithParameter("MissingOrInvalidSignedMeterValueP", 1),
             certainty: 0
         }
 
-        const errors    = new Array<string>();
+        const errors    = new Array<chargyInterfaces.IError>();
         const warnings  = new Array<chargyInterfaces.IWarning>();
 
         // How sure we are, that this is really a BSM meter value format
@@ -217,56 +217,56 @@ export class BSMCrypt01 extends ACrypt {
             //#region Validate values
 
             if (!chargyLib.isMandatoryString(firstMeasurement["@context"]))
-                errors.push(this.chargy.GetLocalizedMessageWithParameter("MissingOrInvalid_SignedMeterValue_JSONContextP",               1));
+                errors.push(chargyInterfaces.CreateError(this.chargy.GetMultilanguageTextWithParameter("MissingOrInvalid_SignedMeterValue_JSONContextP",               1)));
 
 
             const meterInfo = firstMeasurement["meterInfo"];
             if (!chargyLib.isMandatoryJSONObject(meterInfo))
             {
-                errors.push(this.chargy.GetLocalizedMessageWithParameter("MissingOrInvalid_SignedMeterValue_MeterInfoP", 1));
+                errors.push(chargyInterfaces.CreateError(this.chargy.GetMultilanguageTextWithParameter("MissingOrInvalid_SignedMeterValue_MeterInfoP", 1)));
                 secondaryErrors += 5;
             }
             else
             {
 
                 if (!chargyLib.isMandatoryString(meterInfo["firmwareVersion"]))
-                    errors.push(this.chargy.GetLocalizedMessageWithParameter("MissingOrInvalid_SignedMeterValue_MeterInfo_FirmwareVersionP", 1));
+                    errors.push(chargyInterfaces.CreateError(this.chargy.GetMultilanguageTextWithParameter("MissingOrInvalid_SignedMeterValue_MeterInfo_FirmwareVersionP", 1)));
 
                 if (!chargyLib.isMandatoryString(meterInfo["publicKey"]))
-                    errors.push(this.chargy.GetLocalizedMessageWithParameter("MissingOrInvalid_SignedMeterValue_MeterInfo_PublicKeyP",       1));
+                    errors.push(chargyInterfaces.CreateError(this.chargy.GetMultilanguageTextWithParameter("MissingOrInvalid_SignedMeterValue_MeterInfo_PublicKeyP",       1)));
 
                 if (!chargyLib.isMandatoryString(meterInfo["meterId"]))
-                    errors.push(this.chargy.GetLocalizedMessageWithParameter("MissingOrInvalid_SignedMeterValue_MeterInfo_MeterIdP",         1));
+                    errors.push(chargyInterfaces.CreateError(this.chargy.GetMultilanguageTextWithParameter("MissingOrInvalid_SignedMeterValue_MeterInfo_MeterIdP",         1)));
 
                 if (!chargyLib.isMandatoryString(meterInfo["manufacturer"]))
-                    errors.push(this.chargy.GetLocalizedMessageWithParameter("MissingOrInvalid_SignedMeterValue_MeterInfo_ManufacturerP",    1));
+                    errors.push(chargyInterfaces.CreateError(this.chargy.GetMultilanguageTextWithParameter("MissingOrInvalid_SignedMeterValue_MeterInfo_ManufacturerP",    1)));
 
                 if (!chargyLib.isMandatoryString(meterInfo["type"]))
-                    errors.push(this.chargy.GetLocalizedMessageWithParameter("MissingOrInvalid_SignedMeterValue_MeterInfo_TypeP",            1));
+                    errors.push(chargyInterfaces.CreateError(this.chargy.GetMultilanguageTextWithParameter("MissingOrInvalid_SignedMeterValue_MeterInfo_TypeP",            1)));
 
             }
 
             const contract = firstMeasurement["contract"];
             if (!chargyLib.isMandatoryJSONObject(contract))
             {
-                errors.push(this.chargy.GetLocalizedMessageWithParameter("MissingOrInvalid_SignedMeterValue_ContractP", 1));
+                errors.push(chargyInterfaces.CreateError(this.chargy.GetMultilanguageTextWithParameter("MissingOrInvalid_SignedMeterValue_ContractP", 1)));
                 secondaryErrors += 2;
             }
             else
             {
 
                 if (!chargyLib.isMandatoryString(contract["id"]))
-                    errors.push(this.chargy.GetLocalizedMessageWithParameter("MissingOrInvalid_SignedMeterValue_Contract_IdP",               1));
+                    errors.push(chargyInterfaces.CreateError(this.chargy.GetMultilanguageTextWithParameter("MissingOrInvalid_SignedMeterValue_Contract_IdP",               1)));
 
                 if (!chargyLib.isOptionalString(contract["type"]))
-                    errors.push(this.chargy.GetLocalizedMessageWithParameter("MissingOrInvalid_SignedMeterValue_Contract_TypeP",             1));
+                    errors.push(chargyInterfaces.CreateError(this.chargy.GetMultilanguageTextWithParameter("MissingOrInvalid_SignedMeterValue_Contract_TypeP",             1)));
 
             }
 
             const value = firstMeasurement["value"];
             if (!chargyLib.isMandatoryJSONObject(value))
             {
-                errors.push(this.chargy.GetLocalizedMessageWithParameter("MissingOrInvalid_SignedMeterValue_ValueP",                         1));
+                errors.push(chargyInterfaces.CreateError(this.chargy.GetMultilanguageTextWithParameter("MissingOrInvalid_SignedMeterValue_ValueP",                         1)));
                 secondaryErrors += 8;
             }
             else
@@ -275,24 +275,24 @@ export class BSMCrypt01 extends ACrypt {
                 const measurand = value["measurand"];
                 if (!chargyLib.isMandatoryJSONObject(measurand))
                 {
-                    errors.push(this.chargy.GetLocalizedMessageWithParameter("MissingOrInvalid_SignedMeterValue_MeasurandP",                 1));
+                    errors.push(chargyInterfaces.CreateError(this.chargy.GetMultilanguageTextWithParameter("MissingOrInvalid_SignedMeterValue_MeasurandP",                 1)));
                     secondaryErrors += 2;
                 }
                 else
                 {
 
                     if (!chargyLib.isMandatoryString(measurand["id"]))
-                        errors.push(this.chargy.GetLocalizedMessageWithParameter("MissingOrInvalid_Measurand_IdentificationP",               1));
+                        errors.push(chargyInterfaces.CreateError(this.chargy.GetMultilanguageTextWithParameter("MissingOrInvalid_Measurand_IdentificationP",               1)));
 
                     if (!chargyLib.isMandatoryString(measurand["name"]))
-                        errors.push(this.chargy.GetLocalizedMessageWithParameter("MissingOrInvalid_Measurand_NameP",                         1));
+                        errors.push(chargyInterfaces.CreateError(this.chargy.GetMultilanguageTextWithParameter("MissingOrInvalid_Measurand_NameP",                         1)));
 
                 }
 
                 const measuredValue = value["measuredValue"];
                 if (!chargyLib.isMandatoryJSONObject(measuredValue))
                 {
-                    errors.push(this.chargy.GetLocalizedMessageWithParameter("MissingOrInvalid_SignedMeterValue_MeasuredValueP",             1));
+                    errors.push(chargyInterfaces.CreateError(this.chargy.GetMultilanguageTextWithParameter("MissingOrInvalid_SignedMeterValue_MeasuredValueP",             1)));
                     secondaryErrors += 4;
                 }
                 else
@@ -310,17 +310,17 @@ export class BSMCrypt01 extends ACrypt {
                 // const displayedFormat = value.displayedFormat;
                 // if (!chargyLib.isMandatoryJSONObject(displayedFormat))
                 // {
-                //     errors.push(this.chargy.GetLocalizedMessageWithParameter("MissingOrInvalid_SignedMeterValue_MeasurandP",                 1));
+                //     errors.push(chargyInterfaces.CreateError(this.chargy.GetMultilanguageTextWithParameter("MissingOrInvalid_SignedMeterValue_MeasurandP",                 1)));
                 //     secondaryErrors += 2;
                 // }
                 // else
                 // {
 
                 //     if (!chargyLib.isMandatoryString(measurand.id))
-                //         errors.push(this.chargy.GetLocalizedMessageWithParameter("MissingOrInvalid_Measurand_IdentificationP",               1));
+                //         errors.push(chargyInterfaces.CreateError(this.chargy.GetMultilanguageTextWithParameter("MissingOrInvalid_Measurand_IdentificationP",               1)));
 
                 //     if (!chargyLib.isMandatoryString(measurand.name))
-                //         errors.push(this.chargy.GetLocalizedMessageWithParameter("MissingOrInvalid_Measurand_NameP",                         1));
+                //         errors.push(chargyInterfaces.CreateError(this.chargy.GetMultilanguageTextWithParameter("MissingOrInvalid_Measurand_NameP",                         1)));
 
                 // }
 
@@ -424,7 +424,7 @@ export class BSMCrypt01 extends ACrypt {
             for (const measurementRaw of Measurements)
             {
 
-                const currentErrors:   Array<string>  = [];
+                const currentErrors:   Array<chargyInterfaces.IError>  = [];
                 const currentWarnings: Array<chargyInterfaces.IWarning>  = [];
 
                 measurementCounter++;
@@ -436,7 +436,7 @@ export class BSMCrypt01 extends ACrypt {
                 //#region Validate common values
 
                 if (currentMeasurement["@context"] !== common.context)
-                    currentErrors.push(this.chargy.GetLocalizedMessageWithParameter("Inconsistent_SignedMeterValue_JSONContextP", measurementCounter));
+                    currentErrors.push(chargyInterfaces.CreateError(this.chargy.GetMultilanguageTextWithParameter("Inconsistent_SignedMeterValue_JSONContextP", measurementCounter)));
 
                 const currentId = currentMeasurement["@id"];
                 if (previousId !== "" && typeof currentId === 'string')
@@ -461,7 +461,7 @@ export class BSMCrypt01 extends ACrypt {
                         // are numeric too.
                         parseInt(previousParts[1], 10) >= parseInt(currentParts[1], 10))
                     {
-                        currentErrors.push(this.chargy.GetLocalizedMessageWithParameter("Inconsistent_SignedMeterValue_MeasurementIdP", measurementCounter));
+                        currentErrors.push(chargyInterfaces.CreateError(this.chargy.GetMultilanguageTextWithParameter("Inconsistent_SignedMeterValue_MeasurementIdP", measurementCounter)));
                     }
 
                 }
@@ -474,12 +474,12 @@ export class BSMCrypt01 extends ACrypt {
                 const currentTime         = chargyLib.asString    (currentMeasurement["time"]) ?? "";
 
                 if (previousTime !== "" && currentTime <= previousTime)
-                    currentErrors.push(this.chargy.GetLocalizedMessageWithParameter("Inconsistent_SignedMeterValue_TimestampP", measurementCounter));
+                    currentErrors.push(chargyInterfaces.CreateError(this.chargy.GetMultilanguageTextWithParameter("Inconsistent_SignedMeterValue_TimestampP", measurementCounter)));
                 previousTime = currentTime;
 
                 const currentValue = chargyLib.asNumber(measuredValueObj?.["value"]);
                 if (previousValue !== undefined && currentValue !== undefined && currentValue < previousValue)
-                    currentErrors.push(this.chargy.GetLocalizedMessageWithParameter("Inconsistent_Measurement_ValueP", measurementCounter));
+                    currentErrors.push(chargyInterfaces.CreateError(this.chargy.GetMultilanguageTextWithParameter("Inconsistent_Measurement_ValueP", measurementCounter)));
                 previousValue = currentValue;
 
                 //#region Flatten and validate the additional values
@@ -520,22 +520,22 @@ export class BSMCrypt01 extends ACrypt {
                     const meterInfoObj = chargyLib.asJSONObject(currentMeasurement["meterInfo"]);
 
                     if (meterInfoObj?.["firmwareVersion"]    !== common.meterInfo_firmwareVersion)
-                        currentErrors.push(this.chargy.GetLocalizedMessageWithParameter("Inconsistent_SignedMeterValue_MeterInfo_FirmwareVersionP", measurementCounter));
+                        currentErrors.push(chargyInterfaces.CreateError(this.chargy.GetMultilanguageTextWithParameter("Inconsistent_SignedMeterValue_MeterInfo_FirmwareVersionP", measurementCounter)));
 
                     if (meterInfoObj?.["publicKey"]          !== common.meterInfo_publicKey)
-                        currentErrors.push(this.chargy.GetLocalizedMessageWithParameter("Inconsistent_SignedMeterValue_MeterInfo_PublicKeyP",       measurementCounter));
+                        currentErrors.push(chargyInterfaces.CreateError(this.chargy.GetMultilanguageTextWithParameter("Inconsistent_SignedMeterValue_MeterInfo_PublicKeyP",       measurementCounter)));
 
                     if (meterInfoObj?.["meterId"]            !== common.meterInfo_meterId)
-                        currentErrors.push(this.chargy.GetLocalizedMessageWithParameter("Inconsistent_SignedMeterValue_MeterInfo_MeterIdP",         measurementCounter));
+                        currentErrors.push(chargyInterfaces.CreateError(this.chargy.GetMultilanguageTextWithParameter("Inconsistent_SignedMeterValue_MeterInfo_MeterIdP",         measurementCounter)));
 
                     if (meterInfoObj?.["meterId"]            !== additionalValues.filter(element => element.measurandName === "MA1")[0]?.value)
-                        currentErrors.push(this.chargy.GetLocalizedMessageWithParameter("Inconsistent_SignedMeterValue_MeterInfo_MeterIdP",         measurementCounter));
+                        currentErrors.push(chargyInterfaces.CreateError(this.chargy.GetMultilanguageTextWithParameter("Inconsistent_SignedMeterValue_MeterInfo_MeterIdP",         measurementCounter)));
 
                     if (meterInfoObj?.["manufacturer"]       !== common.meterInfo_manufacturer)
-                        currentErrors.push(this.chargy.GetLocalizedMessageWithParameter("Inconsistent_SignedMeterValue_MeterInfo_ManufacturerP",    measurementCounter));
+                        currentErrors.push(chargyInterfaces.CreateError(this.chargy.GetMultilanguageTextWithParameter("Inconsistent_SignedMeterValue_MeterInfo_ManufacturerP",    measurementCounter)));
 
                     if (meterInfoObj?.["type"]               !== common.meterInfo_type)
-                        currentErrors.push(this.chargy.GetLocalizedMessageWithParameter("Inconsistent_SignedMeterValue_MeterInfo_TypeP",            measurementCounter));
+                        currentErrors.push(chargyInterfaces.CreateError(this.chargy.GetMultilanguageTextWithParameter("Inconsistent_SignedMeterValue_MeterInfo_TypeP",            measurementCounter)));
 
                 }
 
@@ -544,7 +544,7 @@ export class BSMCrypt01 extends ACrypt {
                 //     if (currentMeasurement.operatorInfo                  !== common.operatorInfo)
                 //         return {
                 //             status:   chargyInterfaces.SessionVerificationResult.InvalidSessionFormat,
-                //             message:  "Inconsistent operatorInfo!",
+                //             message:  chargyInterfaces.CreateMultilanguageText("Inconsistent operatorInfo!"),
                 //             certainty: 0
                 //         };
                 // }
@@ -555,23 +555,23 @@ export class BSMCrypt01 extends ACrypt {
                     const contractObj = chargyLib.asJSONObject(currentMeasurement["contract"]);
 
                     if (additionalValues.filter(element => element.measurandName?.startsWith('Meta') && chargyLib.asString(element.value)?.startsWith('contract-id:')).length == 0)
-                        currentErrors.push(this.chargy.GetLocalizedMessageWithParameter("Inconsistent_SignedMeterValue_Contract_IdP",      measurementCounter));
+                        currentErrors.push(chargyInterfaces.CreateError(this.chargy.GetMultilanguageTextWithParameter("Inconsistent_SignedMeterValue_Contract_IdP",      measurementCounter)));
 
                     if (contractObj?.["id"]   !== common.contract_id)
-                        currentErrors.push(this.chargy.GetLocalizedMessageWithParameter("Inconsistent_SignedMeterValue_Contract_IdP",      measurementCounter));
+                        currentErrors.push(chargyInterfaces.CreateError(this.chargy.GetMultilanguageTextWithParameter("Inconsistent_SignedMeterValue_Contract_IdP",      measurementCounter)));
 
                     if (contractObj?.["type"] !== common.contract_type)
-                        currentErrors.push(this.chargy.GetLocalizedMessageWithParameter("Inconsistent_SignedMeterValue_Contract_TypeP",    measurementCounter));
+                        currentErrors.push(chargyInterfaces.CreateError(this.chargy.GetMultilanguageTextWithParameter("Inconsistent_SignedMeterValue_Contract_TypeP",    measurementCounter)));
 
                     const contractInfo = additionalValues.filter(element => element.measurandName?.startsWith('Meta') && chargyLib.asString(element.value)?.startsWith('contract-id:'))[0]?.value;
                     if (contractInfo != null)
                     {
 
                         if ( contractObj?.["type"] && contractInfo !== "contract-id: " + (common.contract_type ?? "-") + ":" + common.contract_id)
-                            currentErrors.push(this.chargy.GetLocalizedMessageWithParameter("Inconsistent_SignedMeterValue_Contract_IdP",  measurementCounter));
+                            currentErrors.push(chargyInterfaces.CreateError(this.chargy.GetMultilanguageTextWithParameter("Inconsistent_SignedMeterValue_Contract_IdP",  measurementCounter)));
 
                         if (!contractObj?.["type"] && contractInfo !== "contract-id: " + common.contract_id)
-                            currentErrors.push(this.chargy.GetLocalizedMessageWithParameter("Inconsistent_SignedMeterValue_Contract_IdP",  measurementCounter));
+                            currentErrors.push(chargyInterfaces.CreateError(this.chargy.GetMultilanguageTextWithParameter("Inconsistent_SignedMeterValue_Contract_IdP",  measurementCounter)));
 
                     }
 
@@ -596,10 +596,10 @@ export class BSMCrypt01 extends ACrypt {
                     const measurandObj = chargyLib.asJSONObject(valueObj["measurand"]);
 
                     if (measurandObj?.["id"]   !== common.value_measurand_id   || measurandObj["id"]   !== rcrInAdditional?.measurandId)
-                        currentErrors.push(this.chargy.GetLocalizedMessageWithParameter("Inconsistent_Measurand_IdentificationP", measurementCounter));
+                        currentErrors.push(chargyInterfaces.CreateError(this.chargy.GetMultilanguageTextWithParameter("Inconsistent_Measurand_IdentificationP", measurementCounter)));
 
                     if (measurandObj?.["name"] !== common.value_measurand_name || measurandObj["name"] !== rcrInAdditional?.measurandName)
-                        currentErrors.push(this.chargy.GetLocalizedMessageWithParameter("Inconsistent_Measurand_NameP",           measurementCounter));
+                        currentErrors.push(chargyInterfaces.CreateError(this.chargy.GetMultilanguageTextWithParameter("Inconsistent_Measurand_NameP",           measurementCounter)));
 
                 }
 
@@ -607,24 +607,24 @@ export class BSMCrypt01 extends ACrypt {
                 {
 
                     if (measuredValueObj?.["value"]       !== rcrInAdditional?.value)
-                        currentErrors.push(this.chargy.GetLocalizedMessageWithParameter("Inconsistent_SignedMeterValueP",             measurementCounter));
+                        currentErrors.push(chargyInterfaces.CreateError(this.chargy.GetMultilanguageTextWithParameter("Inconsistent_SignedMeterValueP",             measurementCounter)));
 
                     if (measuredValueObj?.["scale"]       !== common.value_measuredValue_scale       || measuredValueObj?.["scale"]       !== rcrInAdditional?.scale)
-                        currentErrors.push(this.chargy.GetLocalizedMessageWithParameter("Inconsistent_SignedMeterValue_ScaleP",       measurementCounter));
+                        currentErrors.push(chargyInterfaces.CreateError(this.chargy.GetMultilanguageTextWithParameter("Inconsistent_SignedMeterValue_ScaleP",       measurementCounter)));
 
                     if (measuredValueObj?.["unit"]        !== common.value_measuredValue_unit        || measuredValueObj  ["unit"]        !== rcrInAdditional?.unit)
-                        currentErrors.push(this.chargy.GetLocalizedMessageWithParameter("Inconsistent_SignedMeterValue_UnitP",        measurementCounter));
+                        currentErrors.push(chargyInterfaces.CreateError(this.chargy.GetMultilanguageTextWithParameter("Inconsistent_SignedMeterValue_UnitP",        measurementCounter)));
 
                     if (measuredValueObj?.["unitEncoded"] !== common.value_measuredValue_unitEncoded || measuredValueObj?.["unitEncoded"] !== rcrInAdditional?.unitEncoded)
-                        currentErrors.push(this.chargy.GetLocalizedMessageWithParameter("Inconsistent_SignedMeterValue_UnitEncodedP", measurementCounter));
+                        currentErrors.push(chargyInterfaces.CreateError(this.chargy.GetMultilanguageTextWithParameter("Inconsistent_SignedMeterValue_UnitEncodedP", measurementCounter)));
 
                     if (measuredValueObj?.["valueType"]   !== common.value_measuredValue_valueType   || measuredValueObj?.["valueType"]   !== rcrInAdditional?.valueType)
-                        currentErrors.push(this.chargy.GetLocalizedMessageWithParameter("Inconsistent_SignedMeterValue_TypeP",        measurementCounter));
+                        currentErrors.push(chargyInterfaces.CreateError(this.chargy.GetMultilanguageTextWithParameter("Inconsistent_SignedMeterValue_TypeP",        measurementCounter)));
 
                 }
 
                 if (currentMeasurement["chargePoint"] && chargyLib.asJSONObject(currentMeasurement["chargePoint"])?.["softwareVersion"] !== common.chargePoint_softwareVersion)
-                    currentErrors.push(this.chargy.GetLocalizedMessage("Inconsistent_ChargingStation_FirmwareVersion"));
+                    currentErrors.push(chargyInterfaces.CreateError(this.chargy.GetMultilanguageText("Inconsistent_ChargingStation_FirmwareVersion")));
 
                 //#region Find "evse-id:"        within the "Meta" data blocks
 
@@ -635,7 +635,7 @@ export class BSMCrypt01 extends ACrypt {
                     const evse__id = (chargyLib.asString(signedEVSEId[0]?.value) ?? "").replace('evse-id:', '').trim();
 
                     if (evse__id !== 'unknown' && ExpectedEVSEId !== evse__id)
-                        currentErrors.push(this.chargy.GetLocalizedMessage("Inconsistent_EVSE_Identification"));
+                        currentErrors.push(chargyInterfaces.CreateError(this.chargy.GetMultilanguageText("Inconsistent_EVSE_Identification")));
 
                 }
 
@@ -652,7 +652,7 @@ export class BSMCrypt01 extends ACrypt {
                     // Just check that all measurements are done with the same
                     // charging controller software version.
                     if (previousCscSwVersion !== null && previousCscSwVersion !== csc_sw_version)
-                        currentErrors.push(this.chargy.GetLocalizedMessage("Inconsistent_ChargingStation_FirmwareVersion"));
+                        currentErrors.push(chargyInterfaces.CreateError(this.chargy.GetMultilanguageText("Inconsistent_ChargingStation_FirmwareVersion")));
 
                     // The document header also contains this information but
                     // in a combined form of the actual version and a build
@@ -663,7 +663,7 @@ export class BSMCrypt01 extends ACrypt {
                     if (ExpectedCscSwVersion !== null && ExpectedCscSwVersion !== csc_sw_version)
                         currentWarnings.push({
                             level:   chargyInterfaces.WarningLevel.medium,
-                            message: this.chargy.GetLocalizedMessage("Inconsistent_ChargingStation_FirmwareVersion")
+                            message: this.chargy.GetMultilanguageText("Inconsistent_ChargingStation_FirmwareVersion")
                         });
 
                     previousCscSwVersion = csc_sw_version;
@@ -704,24 +704,24 @@ export class BSMCrypt01 extends ACrypt {
                 const currentRCRValue = chargyLib.asNumber(RCR?.value) ?? NaN;
 
                 if (previousRCR !== -1 && currentRCRValue < previousRCR)
-                    currentErrors.push(this.chargy.GetLocalizedMessageWithParameter("Inconsistent_Measurement_ValueP", measurementCounter));
+                    currentErrors.push(chargyInterfaces.CreateError(this.chargy.GetMultilanguageTextWithParameter("Inconsistent_Measurement_ValueP", measurementCounter)));
                 previousRCR = currentRCRValue;
 
                 if (RCnt !== currentMeasurement["measurementId"])
-                    currentErrors.push(this.chargy.GetLocalizedMessageWithParameter("Inconsistent_SignedMeterValue_MeasurementIdP", measurementCounter));
+                    currentErrors.push(chargyInterfaces.CreateError(this.chargy.GetMultilanguageTextWithParameter("Inconsistent_SignedMeterValue_MeasurementIdP", measurementCounter)));
 
                 // Snapshot counter
                 if (previousRCnt !== -1 && RCnt != previousRCnt + 1)
-                    currentErrors.push(this.chargy.GetLocalizedMessageWithParameter("Inconsistent_SignedMeterValue_CounterP", measurementCounter));
+                    currentErrors.push(chargyInterfaces.CreateError(this.chargy.GetMultilanguageTextWithParameter("Inconsistent_SignedMeterValue_CounterP", measurementCounter)));
                 previousRCnt = RCnt;
 
                 // Uptime counter
                 if (previousOS !== -1 && OS <= previousOS)
-                    currentErrors.push(this.chargy.GetLocalizedMessageWithParameter("Inconsistent_SignedMeterValue_OperationSecondsCounterP", measurementCounter));
+                    currentErrors.push(chargyInterfaces.CreateError(this.chargy.GetMultilanguageTextWithParameter("Inconsistent_SignedMeterValue_OperationSecondsCounterP", measurementCounter)));
                 previousOS = OS;
 
                 if (previousEpoch !== -1 && Epoch <= previousEpoch)
-                    currentErrors.push(this.chargy.GetLocalizedMessageWithParameter("Inconsistent_SignedMeterValue_UNIXEpochP", measurementCounter));
+                    currentErrors.push(chargyInterfaces.CreateError(this.chargy.GetMultilanguageTextWithParameter("Inconsistent_SignedMeterValue_UNIXEpochP", measurementCounter)));
                 previousEpoch = Epoch;
 
 
@@ -730,19 +730,19 @@ export class BSMCrypt01 extends ACrypt {
                 const measurementTimestamp3 = measurementTimestamp2 + (TZO > 0 ? "+" : "-") + (Math.abs(TZO) / 60).toString().padStart(2, '0') + ":" + (Math.abs(TZO) % 60).toString().padStart(2, '0');
 
                 if (currentTime !== measurementTimestamp3)
-                    currentErrors.push(this.chargy.GetLocalizedMessageWithParameter("Inconsistent_SignedMeterValue_TimestampP", measurementCounter));
+                    currentErrors.push(chargyInterfaces.CreateError(this.chargy.GetMultilanguageTextWithParameter("Inconsistent_SignedMeterValue_TimestampP", measurementCounter)));
 
                 // Meter Address 1 == Meter Id
                 if (common.MA1 !== null && MA1 !== common.MA1)
-                    currentErrors.push(this.chargy.GetLocalizedMessageWithParameter("Inconsistent_SignedMeterValue_MeterInfo_MeterIdP", measurementCounter));
+                    currentErrors.push(chargyInterfaces.CreateError(this.chargy.GetMultilanguageTextWithParameter("Inconsistent_SignedMeterValue_MeterInfo_MeterIdP", measurementCounter)));
                 common.MA1 = MA1;
 
                 if (common.epochSetCnt !== -1 && EpochSetCnt !== common.epochSetCnt)
-                    currentErrors.push(this.chargy.GetLocalizedMessageWithParameter("Inconsistent_SignedMeterValue_EpochSet_CounterP", measurementCounter));
+                    currentErrors.push(chargyInterfaces.CreateError(this.chargy.GetMultilanguageTextWithParameter("Inconsistent_SignedMeterValue_EpochSet_CounterP", measurementCounter)));
                 common.epochSetCnt = EpochSetCnt;
 
                 if (common.epochSetOS !== -1 && EpochSetOS !== common.epochSetOS)
-                    currentErrors.push(this.chargy.GetLocalizedMessageWithParameter("Inconsistent_SignedMeterValue_EpochSet_OperationSecondsP", measurementCounter));
+                    currentErrors.push(chargyInterfaces.CreateError(this.chargy.GetMultilanguageTextWithParameter("Inconsistent_SignedMeterValue_EpochSet_OperationSecondsP", measurementCounter)));
                 common.epochSetOS = EpochSetOS;
 
                 //#endregion
@@ -791,7 +791,7 @@ export class BSMCrypt01 extends ACrypt {
 
             for (let i=1; i<common.dataSets.length-1; i++) {
                 if (common.dataSets[i]?.TypParsed !== "CURRENT")
-                    errors.push(this.chargy.GetLocalizedMessageWithParameter("Inconsistent_EnergyMeterValueP", measurementCounter + 1));
+                    errors.push(chargyInterfaces.CreateError(this.chargy.GetMultilanguageTextWithParameter("Inconsistent_EnergyMeterValueP", measurementCounter + 1)));
             }
 
             if (lastDataSet === undefined || (lastDataSet.TypParsed !== "END"   && lastDataSet.TypParsed !== "TURN OFF"))
@@ -885,7 +885,13 @@ export class BSMCrypt01 extends ACrypt {
                     // Note: Some manipulations will not result in an invalid signature and
                     //       may also not cause an invalid signature validation. This is caused
                     //       by the mathematical nature of these big numbers and not a bug!
-                    errors.push(this.chargy.GetLocalizedMessageWithParameter("MissingOrInvalid_SignedMeterValue_SignatureP", 1) + ": " + (exception instanceof Error ? exception.message : String(exception)));          }
+                    const signatureError = this.chargy.GetMultilanguageTextWithParameter("MissingOrInvalid_SignedMeterValue_SignatureP", 1);
+                    const exceptionText  = ": " + (exception instanceof Error ? exception.message : String(exception));
+
+                    for (const language of Object.keys(signatureError))
+                        signatureError[language] = (signatureError[language] ?? "") + exceptionText;
+
+                    errors.push(chargyInterfaces.CreateError(signatureError));          }
 
                 const bsmMeasurementValue: IBSMMeasurementValue = {
 
@@ -1016,12 +1022,12 @@ export class BSMCrypt01 extends ACrypt {
         }
         catch (exception)
         {
-            errors.push("Exception occured: " + (exception instanceof Error ? exception.message : String(exception)));
+            errors.push(chargyInterfaces.CreateError("Exception occured: " + (exception instanceof Error ? exception.message : String(exception))));
         }
 
         return {
             status:    chargyInterfaces.SessionVerificationResult.InvalidSessionFormat,
-            errors:    errors,
+            errors:     errors,
             warnings:  warnings,
             certainty: 0
         }

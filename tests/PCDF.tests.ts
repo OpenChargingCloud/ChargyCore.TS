@@ -48,7 +48,7 @@ function createChargy(): Chargy {
 
     return new Chargy(
         {},
-        "en",
+        [ "en" ],
         require("elliptic"),
         require("moment"),
         require("asn1.js"),

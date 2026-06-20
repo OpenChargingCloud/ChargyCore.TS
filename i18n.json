@@ -1353,6 +1353,46 @@
     "Intermediate value": {
         "de": "Zwischenwert",
         "en": "Intermediate value"
+    },
+
+    "sessionValidationLabel": {
+        "de": "Session Validierung",
+        "en": "Session validation"
+    },
+
+    "sessionValidationWarningsLabel": {
+        "de": "Ladevorgang mit Warnungen",
+        "en": "Charging session with warnings"
+    },
+
+    "chargeTransparencyRecordLabel": {
+        "de": "Transparenzdatensatz",
+        "en": "Charge transparency record"
+    },
+
+    "warningLevelLabel": {
+        "de": "Level",
+        "en": "Level"
+    },
+
+    "warningTextLabel": {
+        "de": "Text",
+        "en": "Text"
+    },
+
+    "warningLevel_low": {
+        "de": "niedrig",
+        "en": "low"
+    },
+
+    "warningLevel_medium": {
+        "de": "mittel",
+        "en": "medium"
+    },
+
+    "warningLevel_high": {
+        "de": "hoch",
+        "en": "high"
     }
 
 }

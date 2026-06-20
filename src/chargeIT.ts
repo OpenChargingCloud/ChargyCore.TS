@@ -294,7 +294,7 @@ export class ChargeIT {
         if (firstMeterValue === undefined || lastMeterValue === undefined)
             return {
                 status:    chargyInterfaces.SessionVerificationResult.InvalidSessionFormat,
-                message:   this.chargy.GetLocalizedMessage("UnknownOrInvalidChargingSessionFormat"),
+                message:   this.chargy.GetMultilanguageText("UnknownOrInvalidChargingSessionFormat"),
                 certainty: 0
             };
 
@@ -493,7 +493,7 @@ export class ChargeIT {
 
     {
 
-        const errors    = new Array<string>();
+        const errors    = new Array<chargyInterfaces.IError>();
         const warnings  = new Array<chargyInterfaces.IWarning>();
 
         if (!chargyLib.isMandatoryJSONObject(SomeJSON))
@@ -533,7 +533,7 @@ export class ChargeIT {
                     const placeInfo = chargyLib.asJSONObject(SomeJSON["placeInfo"]);
                     if (placeInfo === undefined)
                     {
-                        errors.push(this.chargy.GetLocalizedMessage("MissingOrInvalidPlaceInfo"));
+                        errors.push(chargyInterfaces.CreateError(this.chargy.GetMultilanguageText("MissingOrInvalidPlaceInfo")));
                         secondaryErrors += 13;
                     }
                     else
@@ -541,30 +541,30 @@ export class ChargeIT {
 
                         const evseId = placeInfo["evseId"];
                         if (!chargyLib.isMandatoryString(evseId))
-                            errors.push(this.chargy.GetLocalizedMessage("MissingOrInvalidEVSEId"));
+                            errors.push(chargyInterfaces.CreateError(this.chargy.GetMultilanguageText("MissingOrInvalidEVSEId")));
 
                         //#region placeInfo.address
 
                         const address = chargyLib.asJSONObject(placeInfo["address"]);
                         if (address === undefined)
                         {
-                            errors.push(this.chargy.GetLocalizedMessage("MissingOrInvalidAddress"));
+                            errors.push(chargyInterfaces.CreateError(this.chargy.GetMultilanguageText("MissingOrInvalidAddress")));
                             secondaryErrors += 3;
                         }
                         else
                         {
 
                             if (!chargyLib.isMandatoryString(address["street"]))
-                                errors.push(this.chargy.GetLocalizedMessage("MissingOrInvalidAddressStreetName"));
+                                errors.push(chargyInterfaces.CreateError(this.chargy.GetMultilanguageText("MissingOrInvalidAddressStreetName")));
 
                             if (!chargyLib.isMandatoryString(address["zipCode"]))
-                                errors.push(this.chargy.GetLocalizedMessage("MissingOrInvalidAddressZIPCode"));
+                                errors.push(chargyInterfaces.CreateError(this.chargy.GetMultilanguageText("MissingOrInvalidAddressZIPCode")));
 
                             if (!chargyLib.isMandatoryString(address["town"]))
-                                errors.push(this.chargy.GetLocalizedMessage("MissingOrInvalidAddressCityName"));
+                                errors.push(chargyInterfaces.CreateError(this.chargy.GetMultilanguageText("MissingOrInvalidAddressCityName")));
 
                             //if (!chargyLib.isMandatoryString(address["country"]))
-                            //    errors.push(this.chargy.GetLocalizedMessage("MissingOrInvalidAddressCountryName"));
+                            //    errors.push(chargyInterfaces.CreateError(this.chargy.GetMultilanguageText("MissingOrInvalidAddressCountryName")));
 
                         }
 
@@ -575,17 +575,17 @@ export class ChargeIT {
                         const geoLocation = chargyLib.asJSONObject(placeInfo["geoLocation"]);
                         if (geoLocation === undefined)
                         {
-                            errors.push(this.chargy.GetLocalizedMessage("MissingOrInvalidGeoLocation"));
+                            errors.push(chargyInterfaces.CreateError(this.chargy.GetMultilanguageText("MissingOrInvalidGeoLocation")));
                             secondaryErrors += 2;
                         }
                         else
                         {
 
                             if (!chargyLib.isMandatoryNumber(geoLocation["lat"]))
-                                errors.push(this.chargy.GetLocalizedMessage("MissingOrInvalidGeoLocationLatitude"));
+                                errors.push(chargyInterfaces.CreateError(this.chargy.GetMultilanguageText("MissingOrInvalidGeoLocationLatitude")));
 
                             if (!chargyLib.isMandatoryNumber(geoLocation["lon"]))
-                                errors.push(this.chargy.GetLocalizedMessage("MissingOrInvalidGeoLocationLongitude"));
+                                errors.push(chargyInterfaces.CreateError(this.chargy.GetMultilanguageText("MissingOrInvalidGeoLocationLongitude")));
 
                         }
 
@@ -599,7 +599,7 @@ export class ChargeIT {
 
                     const signedMeterValues = SomeJSON["signedMeterValues"];
                     if (!chargyLib.isMandatoryJSONArray(signedMeterValues) || signedMeterValues.length < 2) {
-                        errors.push(this.chargy.GetLocalizedMessage("MissingOrInvalidSignedMeterValues"));
+                        errors.push(chargyInterfaces.CreateError(this.chargy.GetMultilanguageText("MissingOrInvalidSignedMeterValues")));
                         secondaryErrors += 2*39;
                     }
                     else
@@ -621,7 +621,7 @@ export class ChargeIT {
                             if ((signedMeterValue?.["@context"] ?? oldChargeITMeterValueFormat) !== signedMeterValueContext) {
 
                                 if (consistent)
-                                    errors.push(this.chargy.GetLocalizedMessage("InconsistentJSONContextInformation"));
+                                    errors.push(chargyInterfaces.CreateError(this.chargy.GetMultilanguageText("InconsistentJSONContextInformation")));
 
                                 consistent = false;
 
@@ -670,54 +670,54 @@ export class ChargeIT {
                                     measurementCounter++;
 
                                     if (!chargyLib.isMandatoryJSONObject(signedMeterValue)) {
-                                        errors.push(this.chargy.GetLocalizedMessageWithParameter("MissingOrInvalidSignedMeterValueP",                     measurementCounter));
+                                        errors.push(chargyInterfaces.CreateError(this.chargy.GetMultilanguageTextWithParameter("MissingOrInvalidSignedMeterValueP",                     measurementCounter)));
                                         secondaryErrors += 38;
                                     }
                                     else
                                     {
 
                                         if (!chargyLib.isMandatoryString(signedMeterValue["measurementId"]))
-                                            errors.push(this.chargy.GetLocalizedMessageWithParameter("MissingOrInvalid_SignedMeterValue_MeasurementIdP",  measurementCounter));
+                                            errors.push(chargyInterfaces.CreateError(this.chargy.GetMultilanguageTextWithParameter("MissingOrInvalid_SignedMeterValue_MeasurementIdP",  measurementCounter)));
 
                                         if (!chargyLib.isMandatoryNumber(signedMeterValue["timestamp"]))
-                                            errors.push(this.chargy.GetLocalizedMessageWithParameter("MissingOrInvalid_SignedMeterValue_TimestampP",      measurementCounter));
+                                            errors.push(chargyInterfaces.CreateError(this.chargy.GetMultilanguageTextWithParameter("MissingOrInvalid_SignedMeterValue_TimestampP",      measurementCounter)));
 
                                         if (!chargyLib.isMandatoryString(signedMeterValue["transactionId"]))
-                                            errors.push(this.chargy.GetLocalizedMessageWithParameter("MissingOrInvalid_SignedMeterValue_TransactionIdP",  measurementCounter));
+                                            errors.push(chargyInterfaces.CreateError(this.chargy.GetMultilanguageTextWithParameter("MissingOrInvalid_SignedMeterValue_TransactionIdP",  measurementCounter)));
 
                                         if (!chargyLib.isMandatoryString(signedMeterValue["signature"]))
-                                            errors.push(this.chargy.GetLocalizedMessageWithParameter("MissingOrInvalid_SignedMeterValue_SignatureP",      measurementCounter));
+                                            errors.push(chargyInterfaces.CreateError(this.chargy.GetMultilanguageTextWithParameter("MissingOrInvalid_SignedMeterValue_SignatureP",      measurementCounter)));
 
                                         //#region Meter information
 
                                         const meterInfo = signedMeterValue["meterInfo"];
                                         if (!chargyLib.isMandatoryJSONObject(meterInfo))
                                         {
-                                            errors.push(this.chargy.GetLocalizedMessageWithParameter("MissingOrInvalid_SignedMeterValue_MeterInfoP",                 measurementCounter));
+                                            errors.push(chargyInterfaces.CreateError(this.chargy.GetMultilanguageTextWithParameter("MissingOrInvalid_SignedMeterValue_MeterInfoP",                 measurementCounter)));
                                             secondaryErrors += 5;
                                         }
                                         else
                                         {
 
                                             if (!chargyLib.isMandatoryString(meterInfo["meterId"]))
-                                                errors.push(this.chargy.GetLocalizedMessageWithParameter("MissingOrInvalid_SignedMeterValue_MeterInfo_MeterIdP",         measurementCounter));
+                                                errors.push(chargyInterfaces.CreateError(this.chargy.GetMultilanguageTextWithParameter("MissingOrInvalid_SignedMeterValue_MeterInfo_MeterIdP",         measurementCounter)));
 
                                             if (!chargyLib.isMandatoryString(meterInfo["type"]))
-                                                errors.push(this.chargy.GetLocalizedMessageWithParameter("MissingOrInvalid_SignedMeterValue_MeterInfo_TypeP",            measurementCounter));
+                                                errors.push(chargyInterfaces.CreateError(this.chargy.GetMultilanguageTextWithParameter("MissingOrInvalid_SignedMeterValue_MeterInfo_TypeP",            measurementCounter)));
 
                                             if (!chargyLib.isMandatoryString(meterInfo["firmwareVersion"]))
-                                                errors.push(this.chargy.GetLocalizedMessageWithParameter("MissingOrInvalid_SignedMeterValue_MeterInfo_FirmwareVersionP", measurementCounter));
+                                                errors.push(chargyInterfaces.CreateError(this.chargy.GetMultilanguageTextWithParameter("MissingOrInvalid_SignedMeterValue_MeterInfo_FirmwareVersionP", measurementCounter)));
 
                                             if (!chargyLib.isMandatoryString(meterInfo["publicKey"]))
-                                                errors.push(this.chargy.GetLocalizedMessageWithParameter("MissingOrInvalid_SignedMeterValue_MeterInfo_PublicKeyP",       measurementCounter));
+                                                errors.push(chargyInterfaces.CreateError(this.chargy.GetMultilanguageTextWithParameter("MissingOrInvalid_SignedMeterValue_MeterInfo_PublicKeyP",       measurementCounter)));
 
                                             if (!chargyLib.isMandatoryString(meterInfo["manufacturer"]))
-                                                errors.push(this.chargy.GetLocalizedMessageWithParameter("MissingOrInvalid_SignedMeterValue_MeterInfo_ManufacturerP",    measurementCounter));
+                                                errors.push(chargyInterfaces.CreateError(this.chargy.GetMultilanguageTextWithParameter("MissingOrInvalid_SignedMeterValue_MeterInfo_ManufacturerP",    measurementCounter)));
 
                                             //#region Meter information - PublicKey signatures (optional)
 
                                             if (chargyLib.isOptionalJSONArrayError(meterInfo["publicKeySignatures"]))
-                                                errors.push(this.chargy.GetLocalizedMessageWithParameter("Invalid_SignedMeterValue_MeterInfo_PublicKeySignaturesP", measurementCounter));
+                                                errors.push(chargyInterfaces.CreateError(this.chargy.GetMultilanguageTextWithParameter("Invalid_SignedMeterValue_MeterInfo_PublicKeySignaturesP", measurementCounter)));
 
                                             //#endregion
 
@@ -730,40 +730,40 @@ export class ChargeIT {
                                         const contract = signedMeterValue["contract"];
                                         if (!chargyLib.isMandatoryJSONObject(contract))
                                         {
-                                            errors.push(this.chargy.GetLocalizedMessageWithParameter("MissingOrInvalid_SignedMeterValue_ContractP",           measurementCounter));
+                                            errors.push(chargyInterfaces.CreateError(this.chargy.GetMultilanguageTextWithParameter("MissingOrInvalid_SignedMeterValue_ContractP",           measurementCounter)));
                                             secondaryErrors += 7;
                                         }
                                         else
                                         {
 
                                             if (!chargyLib.isMandatoryString(contract["id"]))
-                                                errors.push(this.chargy.GetLocalizedMessageWithParameter("MissingOrInvalid_SignedMeterValue_Contract_IdP",        measurementCounter));
+                                                errors.push(chargyInterfaces.CreateError(this.chargy.GetMultilanguageTextWithParameter("MissingOrInvalid_SignedMeterValue_Contract_IdP",        measurementCounter)));
 
                                             if (!chargyLib.isMandatoryString(contract["type"]))
-                                                errors.push(this.chargy.GetLocalizedMessageWithParameter("MissingOrInvalid_SignedMeterValue_Contract_TypeP",      measurementCounter));
+                                                errors.push(chargyInterfaces.CreateError(this.chargy.GetMultilanguageTextWithParameter("MissingOrInvalid_SignedMeterValue_Contract_TypeP",      measurementCounter)));
 
                                             if (!chargyLib.isMandatoryNumber(contract["timestamp"]))
-                                                errors.push(this.chargy.GetLocalizedMessageWithParameter("MissingOrInvalid_SignedMeterValue_Contract_TimestampP", measurementCounter));
+                                                errors.push(chargyInterfaces.CreateError(this.chargy.GetMultilanguageTextWithParameter("MissingOrInvalid_SignedMeterValue_Contract_TimestampP", measurementCounter)));
 
                                             //#region Contract information - Timestamp local
 
                                             const timestampLocal = contract["timestampLocal"];
                                             if (!chargyLib.isMandatoryJSONObject(timestampLocal))
                                             {
-                                                errors.push(this.chargy.GetLocalizedMessageWithParameter("MissingOrInvalid_SignedMeterValue_Contract_TimestampLocalP",              measurementCounter));
+                                                errors.push(chargyInterfaces.CreateError(this.chargy.GetMultilanguageTextWithParameter("MissingOrInvalid_SignedMeterValue_Contract_TimestampLocalP",              measurementCounter)));
                                                 secondaryErrors += 3;
                                             }
                                             else
                                             {
 
                                                 if (!chargyLib.isMandatoryNumber(timestampLocal["timestamp"]))
-                                                    errors.push(this.chargy.GetLocalizedMessageWithParameter("MissingOrInvalid_SignedMeterValue_Contract_TimestampLocal_TimestampP",    measurementCounter));
+                                                    errors.push(chargyInterfaces.CreateError(this.chargy.GetMultilanguageTextWithParameter("MissingOrInvalid_SignedMeterValue_Contract_TimestampLocal_TimestampP",    measurementCounter)));
 
                                                 if (!chargyLib.isMandatoryNumber(timestampLocal["localOffset"]))
-                                                    errors.push(this.chargy.GetLocalizedMessageWithParameter("MissingOrInvalid_SignedMeterValue_Contract_TimestampLocal_LocalOffsetP",  measurementCounter));
+                                                    errors.push(chargyInterfaces.CreateError(this.chargy.GetMultilanguageTextWithParameter("MissingOrInvalid_SignedMeterValue_Contract_TimestampLocal_LocalOffsetP",  measurementCounter)));
 
                                                 if (!chargyLib.isMandatoryNumber(timestampLocal["seasonOffset"]))
-                                                    errors.push(this.chargy.GetLocalizedMessageWithParameter("MissingOrInvalid_SignedMeterValue_Contract_TimestampLocal_SeasonOffsetP", measurementCounter));
+                                                    errors.push(chargyInterfaces.CreateError(this.chargy.GetMultilanguageTextWithParameter("MissingOrInvalid_SignedMeterValue_Contract_TimestampLocal_SeasonOffsetP", measurementCounter)));
 
                                             }
 
@@ -778,46 +778,46 @@ export class ChargeIT {
                                         const measuredValue = signedMeterValue["measuredValue"];
                                         if (!chargyLib.isMandatoryJSONObject(measuredValue))
                                         {
-                                            errors.push(this.chargy.GetLocalizedMessageWithParameter("MissingOrInvalid_SignedMeterValue_MeasuredValueP",                  measurementCounter));
+                                            errors.push(chargyInterfaces.CreateError(this.chargy.GetMultilanguageTextWithParameter("MissingOrInvalid_SignedMeterValue_MeasuredValueP",                  measurementCounter)));
                                             secondaryErrors += 9;
                                         }
                                         else
                                         {
 
                                             if (!chargyLib.isMandatoryString(measuredValue["value"]))
-                                                errors.push(this.chargy.GetLocalizedMessageWithParameter("MissingOrInvalid_SignedMeterValue_MeasuredValue_ValueP",        measurementCounter));
+                                                errors.push(chargyInterfaces.CreateError(this.chargy.GetMultilanguageTextWithParameter("MissingOrInvalid_SignedMeterValue_MeasuredValue_ValueP",        measurementCounter)));
 
                                             if (!chargyLib.isMandatoryString(measuredValue["unit"]))
-                                                errors.push(this.chargy.GetLocalizedMessageWithParameter("MissingOrInvalid_SignedMeterValue_MeasuredValue_UnitP",         measurementCounter));
+                                                errors.push(chargyInterfaces.CreateError(this.chargy.GetMultilanguageTextWithParameter("MissingOrInvalid_SignedMeterValue_MeasuredValue_UnitP",         measurementCounter)));
 
                                             if (!chargyLib.isMandatoryNumber(measuredValue["scale"]))
-                                                errors.push(this.chargy.GetLocalizedMessageWithParameter("MissingOrInvalid_SignedMeterValue_MeasuredValue_ScaleP",        measurementCounter));
+                                                errors.push(chargyInterfaces.CreateError(this.chargy.GetMultilanguageTextWithParameter("MissingOrInvalid_SignedMeterValue_MeasuredValue_ScaleP",        measurementCounter)));
 
                                             if (!chargyLib.isMandatoryString(measuredValue["valueType"]))
-                                                errors.push(this.chargy.GetLocalizedMessageWithParameter("MissingOrInvalid_SignedMeterValue_MeasuredValue_ValueTypeP",    measurementCounter));
+                                                errors.push(chargyInterfaces.CreateError(this.chargy.GetMultilanguageTextWithParameter("MissingOrInvalid_SignedMeterValue_MeasuredValue_ValueTypeP",    measurementCounter)));
 
                                             if (!chargyLib.isMandatoryNumber(measuredValue["unitEncoded"]))
-                                                errors.push(this.chargy.GetLocalizedMessageWithParameter("MissingOrInvalid_SignedMeterValue_MeasuredValue_UnitEncodedP",  measurementCounter));
+                                                errors.push(chargyInterfaces.CreateError(this.chargy.GetMultilanguageTextWithParameter("MissingOrInvalid_SignedMeterValue_MeasuredValue_UnitEncodedP",  measurementCounter)));
 
                                             //#region Measured Value - Local timestamp
 
                                             const timestampLocal = measuredValue["timestampLocal"];
                                             if (!chargyLib.isMandatoryJSONObject(timestampLocal))
                                             {
-                                                errors.push(this.chargy.GetLocalizedMessageWithParameter("MissingOrInvalidMeasuredValueTimestampLocalP",                  measurementCounter));
+                                                errors.push(chargyInterfaces.CreateError(this.chargy.GetMultilanguageTextWithParameter("MissingOrInvalidMeasuredValueTimestampLocalP",                  measurementCounter)));
                                                 secondaryErrors += 3;
                                             }
                                             else
                                             {
 
                                                 if (!chargyLib.isMandatoryNumber(timestampLocal["timestamp"]))
-                                                    errors.push(this.chargy.GetLocalizedMessageWithParameter("MissingOrInvalidMeasuredValueTimestampLocalTimestampP",     measurementCounter));
+                                                    errors.push(chargyInterfaces.CreateError(this.chargy.GetMultilanguageTextWithParameter("MissingOrInvalidMeasuredValueTimestampLocalTimestampP",     measurementCounter)));
 
                                                 if (!chargyLib.isMandatoryNumber(timestampLocal["localOffset"]))
-                                                    errors.push(this.chargy.GetLocalizedMessageWithParameter("MissingOrInvalidMeasuredValueTimestampLocalOffsetP",        measurementCounter));
+                                                    errors.push(chargyInterfaces.CreateError(this.chargy.GetMultilanguageTextWithParameter("MissingOrInvalidMeasuredValueTimestampLocalOffsetP",        measurementCounter)));
 
                                                 if (!chargyLib.isMandatoryNumber(timestampLocal["seasonOffset"]))
-                                                    errors.push(this.chargy.GetLocalizedMessageWithParameter("MissingOrInvalidMeasuredValueTimestampSeasonOffsetP",       measurementCounter));
+                                                    errors.push(chargyInterfaces.CreateError(this.chargy.GetMultilanguageTextWithParameter("MissingOrInvalidMeasuredValueTimestampSeasonOffsetP",       measurementCounter)));
 
                                             }
 
@@ -832,17 +832,17 @@ export class ChargeIT {
                                         const measurand = signedMeterValue["measurand"];
                                         if (!chargyLib.isMandatoryJSONObject(measurand))
                                         {
-                                            errors.push(this.chargy.GetLocalizedMessageWithParameter("MissingOrInvalid_SignedMeterValue_MeasurandP",           measurementCounter));
+                                            errors.push(chargyInterfaces.CreateError(this.chargy.GetMultilanguageTextWithParameter("MissingOrInvalid_SignedMeterValue_MeasurandP",           measurementCounter)));
                                             secondaryErrors += 2;
                                         }
                                         else
                                         {
 
                                             if (!chargyLib.isMandatoryString(measurand["id"]))
-                                                errors.push(this.chargy.GetLocalizedMessageWithParameter("MissingOrInvalid_SignedMeterValue_Measurand_IdP",    measurementCounter));
+                                                errors.push(chargyInterfaces.CreateError(this.chargy.GetMultilanguageTextWithParameter("MissingOrInvalid_SignedMeterValue_Measurand_IdP",    measurementCounter)));
 
                                             if (!chargyLib.isMandatoryString(measurand["name"]))
-                                                errors.push(this.chargy.GetLocalizedMessageWithParameter("MissingOrInvalid_SignedMeterValue_Measurand_NameP",  measurementCounter));
+                                                errors.push(chargyInterfaces.CreateError(this.chargy.GetMultilanguageTextWithParameter("MissingOrInvalid_SignedMeterValue_Measurand_NameP",  measurementCounter)));
 
                                         }
 
@@ -853,31 +853,31 @@ export class ChargeIT {
                                         const additionalInfo = signedMeterValue["additionalInfo"];
                                         if (!chargyLib.isMandatoryJSONObject(additionalInfo))
                                         {
-                                            errors.push(this.chargy.GetLocalizedMessageWithParameter("MissingOrInvalid_SignedMeterValue_AdditionalInformationP",         measurementCounter));
+                                            errors.push(chargyInterfaces.CreateError(this.chargy.GetMultilanguageTextWithParameter("MissingOrInvalid_SignedMeterValue_AdditionalInformationP",         measurementCounter)));
                                             secondaryErrors += 4;
                                         }
                                         else
                                         {
 
                                             if (!chargyLib.isMandatoryString(additionalInfo["status"]))
-                                                errors.push(this.chargy.GetLocalizedMessageWithParameter("MissingOrInvalid_SignedMeterValue_AdditionalInformation_StatusP",  measurementCounter));
+                                                errors.push(chargyInterfaces.CreateError(this.chargy.GetMultilanguageTextWithParameter("MissingOrInvalid_SignedMeterValue_AdditionalInformation_StatusP",  measurementCounter)));
 
                                             //#region Additional info - Indexes
 
                                             const indexes = additionalInfo["indexes"];
                                             if (!chargyLib.isMandatoryJSONObject(indexes))
                                             {
-                                                errors.push(this.chargy.GetLocalizedMessageWithParameter("MissingOrInvalid_SignedMeterValue_AdditionalInformation_IndexesP",         measurementCounter));
+                                                errors.push(chargyInterfaces.CreateError(this.chargy.GetMultilanguageTextWithParameter("MissingOrInvalid_SignedMeterValue_AdditionalInformation_IndexesP",         measurementCounter)));
                                                 secondaryErrors += 2;
                                             }
                                             else
                                             {
 
                                                 if (!chargyLib.isMandatoryNumber(indexes["timer"]))
-                                                    errors.push(this.chargy.GetLocalizedMessageWithParameter("MissingOrInvalid_SignedMeterValue_AdditionalInformation_Indexes_TimerP",   measurementCounter));
+                                                    errors.push(chargyInterfaces.CreateError(this.chargy.GetMultilanguageTextWithParameter("MissingOrInvalid_SignedMeterValue_AdditionalInformation_Indexes_TimerP",   measurementCounter)));
 
                                                 if (!chargyLib.isMandatoryString(indexes["logBook"]))
-                                                    errors.push(this.chargy.GetLocalizedMessageWithParameter("MissingOrInvalid_SignedMeterValue_AdditionalInformation_Indexes_LogBookP", measurementCounter));
+                                                    errors.push(chargyInterfaces.CreateError(this.chargy.GetMultilanguageTextWithParameter("MissingOrInvalid_SignedMeterValue_AdditionalInformation_Indexes_LogBookP", measurementCounter)));
 
                                             }
 
@@ -892,14 +892,14 @@ export class ChargeIT {
                                         const chargePoint = signedMeterValue["chargePoint"];
                                         if (!chargyLib.isMandatoryJSONObject(chargePoint))
                                         {
-                                            errors.push(this.chargy.GetLocalizedMessageWithParameter("MissingOrInvalid_SignedMeterValue_ChargePointInformationP",                 measurementCounter));
+                                            errors.push(chargyInterfaces.CreateError(this.chargy.GetMultilanguageTextWithParameter("MissingOrInvalid_SignedMeterValue_ChargePointInformationP",                 measurementCounter)));
                                             secondaryErrors += 1;
                                         }
                                         else
                                         {
 
                                             if (!chargyLib.isMandatoryString(chargePoint["softwareVersion"]))
-                                                errors.push(this.chargy.GetLocalizedMessageWithParameter("MissingOrInvalid_SignedMeterValue_ChargePointInformation_SoftwareVersionP", measurementCounter));
+                                                errors.push(chargyInterfaces.CreateError(this.chargy.GetMultilanguageTextWithParameter("MissingOrInvalid_SignedMeterValue_ChargePointInformation_SoftwareVersionP", measurementCounter)));
 
                                         }
 
@@ -1154,7 +1154,7 @@ export class ChargeIT {
             {
                 return {
                     status:     chargyInterfaces.SessionVerificationResult.InvalidSessionFormat,
-                    message:    "Exception occured: " + (exception instanceof Error ? exception.message : String(exception)),
+                    message:    this.chargy.GetMultilanguageText("Exception occured: " + (exception instanceof Error ? exception.message : String(exception))),
                     errors:     errors,
                     warnings:   warnings,
                     certainty: (numberOfFormatChecks - errors.length - secondaryErrors)/numberOfFormatChecks
@@ -1256,26 +1256,26 @@ export class ChargeIT {
 
 
                 if (!chargyLib.isMandatoryString(chargingSessionId))
-                    errors.push(this.chargy.GetLocalizedMessage("Missing or invalid charge transparency record identification!"));
+                    errors.push(chargyInterfaces.CreateError(this.chargy.GetMultilanguageText("Missing or invalid charge transparency record identification!")));
 
                 //#region chargePointInfo
 
                 if (!chargyLib.isMandatoryJSONObject(chargePointInfo))
                 {
-                    errors.push(this.chargy.GetLocalizedMessage("MissingOrInvalidChargePointInfo"));
+                    errors.push(chargyInterfaces.CreateError(this.chargy.GetMultilanguageText("MissingOrInvalidChargePointInfo")));
                     secondaryErrors += 19;
                 }
                 else
                 {
 
                     if (!chargyLib.isMandatoryString(evseId))
-                        errors.push(this.chargy.GetLocalizedMessage("MissingOrInvalidEVSEIdentification"));
+                        errors.push(chargyInterfaces.CreateError(this.chargy.GetMultilanguageText("MissingOrInvalidEVSEIdentification")));
 
                     //#region placeInfo
 
                     if (!chargyLib.isMandatoryJSONObject(placeInfo))
                     {
-                        errors.push(this.chargy.GetLocalizedMessage("MissingOrInvalidPlaceInfo"));
+                        errors.push(chargyInterfaces.CreateError(this.chargy.GetMultilanguageText("MissingOrInvalidPlaceInfo")));
                         secondaryErrors += 8;
                     }
                     else
@@ -1285,17 +1285,17 @@ export class ChargeIT {
 
                         if (!chargyLib.isMandatoryJSONObject(geoLocation))
                         {
-                            errors.push(this.chargy.GetLocalizedMessage("MissingOrInvalidGeoLocation"));
+                            errors.push(chargyInterfaces.CreateError(this.chargy.GetMultilanguageText("MissingOrInvalidGeoLocation")));
                             secondaryErrors += 2;
                         }
                         else
                         {
 
                             if (!chargyLib.isMandatoryNumber(geoLocation_lat))
-                                errors.push(this.chargy.GetLocalizedMessage("MissingOrInvalidGeoLocationLatitude"));
+                                errors.push(chargyInterfaces.CreateError(this.chargy.GetMultilanguageText("MissingOrInvalidGeoLocationLatitude")));
 
                             if (!chargyLib.isMandatoryNumber(geoLocation_lon))
-                                errors.push(this.chargy.GetLocalizedMessage("MissingOrInvalidGeoLocationLongitude"));
+                                errors.push(chargyInterfaces.CreateError(this.chargy.GetMultilanguageText("MissingOrInvalidGeoLocationLongitude")));
 
                         }
 
@@ -1305,23 +1305,23 @@ export class ChargeIT {
 
                         if (!chargyLib.isMandatoryJSONObject(address))
                         {
-                            errors.push(this.chargy.GetLocalizedMessage("MissingOrInvalidAddress"));
+                            errors.push(chargyInterfaces.CreateError(this.chargy.GetMultilanguageText("MissingOrInvalidAddress")));
                             secondaryErrors += 4;
                         }
                         else
                         {
 
                             if (!chargyLib.isMandatoryString(address_street))
-                                errors.push(this.chargy.GetLocalizedMessage("MissingOrInvalidAddressStreetName"));
+                                errors.push(chargyInterfaces.CreateError(this.chargy.GetMultilanguageText("MissingOrInvalidAddressStreetName")));
 
                             if (!chargyLib.isMandatoryString(address_zipCode))
-                                errors.push(this.chargy.GetLocalizedMessage("MissingOrInvalidAddressZIPCode"));
+                                errors.push(chargyInterfaces.CreateError(this.chargy.GetMultilanguageText("MissingOrInvalidAddressZIPCode")));
 
                             if (!chargyLib.isMandatoryString(address_town))
-                                errors.push(this.chargy.GetLocalizedMessage("MissingOrInvalidAddressCityName"));
+                                errors.push(chargyInterfaces.CreateError(this.chargy.GetMultilanguageText("MissingOrInvalidAddressCityName")));
 
                             if (!chargyLib.isMandatoryString(address_country))
-                                errors.push(this.chargy.GetLocalizedMessage("MissingOrInvalidAddressCountryName"));
+                                errors.push(chargyInterfaces.CreateError(this.chargy.GetMultilanguageText("MissingOrInvalidAddressCountryName")));
 
                         }
 
@@ -1339,50 +1339,50 @@ export class ChargeIT {
 
                 if (!chargyLib.isMandatoryJSONObject(chargingStationInfo))
                 {
-                    errors.push(this.chargy.GetLocalizedMessage("MissingOrInvalidChargingStationInfo"));
+                    errors.push(chargyInterfaces.CreateError(this.chargy.GetMultilanguageText("MissingOrInvalidChargingStationInfo")));
                     secondaryErrors += 5;
                 }
                 else
                 {
 
                     if (!chargyLib.isOptionalString(chargingStation_manufacturer))
-                        errors.push(this.chargy.GetLocalizedMessage("Invalid charging station manufacturer!"));
+                        errors.push(chargyInterfaces.CreateError(this.chargy.GetMultilanguageText("Invalid charging station manufacturer!")));
 
                     if (!chargyLib.isOptionalString(chargingStation_type))
-                        errors.push(this.chargy.GetLocalizedMessage("Invalid charging station type!"));
+                        errors.push(chargyInterfaces.CreateError(this.chargy.GetMultilanguageText("Invalid charging station type!")));
 
                     if (!chargyLib.isOptionalString(chargingStation_serialNumber))
-                        errors.push(this.chargy.GetLocalizedMessage("Invalid charging station serial number!"));
+                        errors.push(chargyInterfaces.CreateError(this.chargy.GetMultilanguageText("Invalid charging station serial number!")));
 
                     if (!chargyLib.isOptionalString(chargingStation_controllerSoftwareVersion))
-                        errors.push(this.chargy.GetLocalizedMessage("Invalid charging station controller software version!"));
+                        errors.push(chargyInterfaces.CreateError(this.chargy.GetMultilanguageText("Invalid charging station controller software version!")));
 
 
                     if (!chargyLib.isOptionalString(chargingStation_compliance))
-                        errors.push(this.chargy.GetLocalizedMessage("Invalid charging station compliance!"));
+                        errors.push(chargyInterfaces.CreateError(this.chargy.GetMultilanguageText("Invalid charging station compliance!")));
 
                     if (!chargyLib.isOptionalURL   (chargingStation_complianceURL))
-                        errors.push(this.chargy.GetLocalizedMessage("Invalid charging station compliance URL!"));
+                        errors.push(chargyInterfaces.CreateError(this.chargy.GetMultilanguageText("Invalid charging station compliance URL!")));
 
 
                     if (!chargyLib.isOptionalString(chargingStation_conformity))
-                        errors.push(this.chargy.GetLocalizedMessage("Invalid charging station conformity!"));
+                        errors.push(chargyInterfaces.CreateError(this.chargy.GetMultilanguageText("Invalid charging station conformity!")));
 
                     if (!chargyLib.isOptionalURL   (chargingStation_conformity_URL))
-                        errors.push(this.chargy.GetLocalizedMessage("Invalid charging station conformity URL!"));
+                        errors.push(chargyInterfaces.CreateError(this.chargy.GetMultilanguageText("Invalid charging station conformity URL!")));
 
                     if (!chargyLib.isOptionalURL   (chargingStation_conformity_certificateId))
-                        errors.push(this.chargy.GetLocalizedMessage("Invalid charging station conformity certificate identification!"));
+                        errors.push(chargyInterfaces.CreateError(this.chargy.GetMultilanguageText("Invalid charging station conformity certificate identification!")));
 
 
                     if (!chargyLib.isOptionalString(chargingStation_calibration))
-                        errors.push(this.chargy.GetLocalizedMessage("Invalid charging station calibration!"));
+                        errors.push(chargyInterfaces.CreateError(this.chargy.GetMultilanguageText("Invalid charging station calibration!")));
 
                     if (!chargyLib.isOptionalURL   (chargingStation_calibration_URL))
-                        errors.push(this.chargy.GetLocalizedMessage("Invalid charging station calibration URL!"));
+                        errors.push(chargyInterfaces.CreateError(this.chargy.GetMultilanguageText("Invalid charging station calibration URL!")));
 
                     if (!chargyLib.isOptionalURL   (chargingStation_calibration_certificateId))
-                        errors.push(this.chargy.GetLocalizedMessage("Invalid charging station calibration certificate identification!"));
+                        errors.push(chargyInterfaces.CreateError(this.chargy.GetMultilanguageText("Invalid charging station calibration certificate identification!")));
 
                 }
 
@@ -1393,42 +1393,42 @@ export class ChargeIT {
                 if (meterInfo) {
 
                     if (!chargyLib.isOptionalString(meterInfo_meterId))
-                        errors.push(this.chargy.GetLocalizedMessageWithParameter("MissingOrInvalid_SignedMeterValue_MeterInfo_MeterIdP",         1));
+                        errors.push(chargyInterfaces.CreateError(this.chargy.GetMultilanguageTextWithParameter("MissingOrInvalid_SignedMeterValue_MeterInfo_MeterIdP",         1)));
 
                     if (!chargyLib.isOptionalString(meterInfo_manufacturer))
-                        errors.push(this.chargy.GetLocalizedMessageWithParameter("MissingOrInvalid_SignedMeterValue_MeterInfo_ManufacturerP",    1));
+                        errors.push(chargyInterfaces.CreateError(this.chargy.GetMultilanguageTextWithParameter("MissingOrInvalid_SignedMeterValue_MeterInfo_ManufacturerP",    1)));
 
                     if (!chargyLib.isOptionalString(meterInfo_manufacturerURL))
-                        errors.push(this.chargy.GetLocalizedMessageWithParameter("MissingOrInvalid_SignedMeterValue_MeterInfo_ManufacturerP",    1));
+                        errors.push(chargyInterfaces.CreateError(this.chargy.GetMultilanguageTextWithParameter("MissingOrInvalid_SignedMeterValue_MeterInfo_ManufacturerP",    1)));
 
                     if (!chargyLib.isOptionalString(meterInfo_model))
-                        errors.push(this.chargy.GetLocalizedMessageWithParameter("MissingOrInvalid_SignedMeterValue_MeterInfo_ManufacturerP",    1));
+                        errors.push(chargyInterfaces.CreateError(this.chargy.GetMultilanguageTextWithParameter("MissingOrInvalid_SignedMeterValue_MeterInfo_ManufacturerP",    1)));
 
                     if (!chargyLib.isOptionalString(meterInfo_modelURL))
-                        errors.push(this.chargy.GetLocalizedMessageWithParameter("MissingOrInvalid_SignedMeterValue_MeterInfo_ManufacturerP",    1));
+                        errors.push(chargyInterfaces.CreateError(this.chargy.GetMultilanguageTextWithParameter("MissingOrInvalid_SignedMeterValue_MeterInfo_ManufacturerP",    1)));
 
                     if (!chargyLib.isOptionalString(meterInfo_firmwareVersion))
-                        errors.push(this.chargy.GetLocalizedMessageWithParameter("MissingOrInvalid_SignedMeterValue_MeterInfo_FirmwareVersionP", 1));
+                        errors.push(chargyInterfaces.CreateError(this.chargy.GetMultilanguageTextWithParameter("MissingOrInvalid_SignedMeterValue_MeterInfo_FirmwareVersionP", 1)));
 
                     if (!chargyLib.isOptionalString(meterInfo_hardwareVersion))
-                        errors.push(this.chargy.GetLocalizedMessageWithParameter("MissingOrInvalid_SignedMeterValue_MeterInfo_FirmwareVersionP", 1));
+                        errors.push(chargyInterfaces.CreateError(this.chargy.GetMultilanguageTextWithParameter("MissingOrInvalid_SignedMeterValue_MeterInfo_FirmwareVersionP", 1)));
 
 
                     if (!chargyLib.isOptionalString(meterInfo_publicKey))
-                        errors.push(this.chargy.GetLocalizedMessageWithParameter("MissingOrInvalid_SignedMeterValue_MeterInfo_PublicKeyP",       1));
+                        errors.push(chargyInterfaces.CreateError(this.chargy.GetMultilanguageTextWithParameter("MissingOrInvalid_SignedMeterValue_MeterInfo_PublicKeyP",       1)));
 
                     if (!chargyLib.isOptionalString(meterInfo_publicKeyFormat))
-                        errors.push(this.chargy.GetLocalizedMessageWithParameter("MissingOrInvalid_SignedMeterValue_MeterInfo_PublicKeyP",       1));
+                        errors.push(chargyInterfaces.CreateError(this.chargy.GetMultilanguageTextWithParameter("MissingOrInvalid_SignedMeterValue_MeterInfo_PublicKeyP",       1)));
 
                     if (!chargyLib.isOptionalString(meterInfo_publicKeyEncoding))
-                        errors.push(this.chargy.GetLocalizedMessageWithParameter("MissingOrInvalid_SignedMeterValue_MeterInfo_PublicKeyP",       1));
+                        errors.push(chargyInterfaces.CreateError(this.chargy.GetMultilanguageTextWithParameter("MissingOrInvalid_SignedMeterValue_MeterInfo_PublicKeyP",       1)));
 
 
                     if (!chargyLib.isOptionalString(meterInfo_signatureFormat))
-                        errors.push(this.chargy.GetLocalizedMessageWithParameter("MissingOrInvalid_SignedMeterValue_MeterInfo_PublicKeyP",       1));
+                        errors.push(chargyInterfaces.CreateError(this.chargy.GetMultilanguageTextWithParameter("MissingOrInvalid_SignedMeterValue_MeterInfo_PublicKeyP",       1)));
 
                     if (!chargyLib.isOptionalString(meterInfo_signatureEncoding))
-                        errors.push(this.chargy.GetLocalizedMessageWithParameter("MissingOrInvalid_SignedMeterValue_MeterInfo_PublicKeyP",       1));
+                        errors.push(chargyInterfaces.CreateError(this.chargy.GetMultilanguageTextWithParameter("MissingOrInvalid_SignedMeterValue_MeterInfo_PublicKeyP",       1)));
 
                 }
 
@@ -1439,10 +1439,10 @@ export class ChargeIT {
                 if (connectorInfo) {
 
                     if (!chargyLib.isOptionalString(connectorInfo_type))
-                        errors.push(this.chargy.GetLocalizedMessageWithParameter("MissingOrInvalid_SignedMeterValue_MeterInfo_MeterIdP",         1));
+                        errors.push(chargyInterfaces.CreateError(this.chargy.GetMultilanguageTextWithParameter("MissingOrInvalid_SignedMeterValue_MeterInfo_MeterIdP",         1)));
 
                     if (!chargyLib.isOptionalString(connectorInfo_losses))
-                        errors.push(this.chargy.GetLocalizedMessageWithParameter("MissingOrInvalid_SignedMeterValue_MeterInfo_MeterIdP",         1));
+                        errors.push(chargyInterfaces.CreateError(this.chargy.GetMultilanguageTextWithParameter("MissingOrInvalid_SignedMeterValue_MeterInfo_MeterIdP",         1)));
 
                 }
 
@@ -1468,20 +1468,20 @@ export class ChargeIT {
                 {
 
                     if (!chargyLib.isMandatoryNumber(totalCosts_total))
-                        errors.push(this.chargy.GetLocalizedMessage("Missing or invalid total costs within the charging costs!"));
+                        errors.push(chargyInterfaces.CreateError(this.chargy.GetMultilanguageText("Missing or invalid total costs within the charging costs!")));
 
                     if (!chargyLib.isMandatoryString(totalCosts_currency))
-                        errors.push(this.chargy.GetLocalizedMessage("Missing or invalid currency within the charging costs!"));
+                        errors.push(chargyInterfaces.CreateError(this.chargy.GetMultilanguageText("Missing or invalid currency within the charging costs!")));
 
                     if (totalCosts_reservation)
                     {
 
                         if (!chargyLib.isMandatoryNumber(totalCosts_reservation_cost))
-                            errors.push(this.chargy.GetLocalizedMessage("Missing or invalid reservation cost within the charging costs!"));
+                            errors.push(chargyInterfaces.CreateError(this.chargy.GetMultilanguageText("Missing or invalid reservation cost within the charging costs!")));
 
                         // ToDo: Check for valid reservation unit
                         if (!chargyLib.isMandatoryString(totalCosts_reservation_unit))
-                            errors.push(this.chargy.GetLocalizedMessage("Missing or invalid reservation unit within the charging costs!"));
+                            errors.push(chargyInterfaces.CreateError(this.chargy.GetMultilanguageText("Missing or invalid reservation unit within the charging costs!")));
 
                     }
 
@@ -1489,11 +1489,11 @@ export class ChargeIT {
                     {
 
                         if (!chargyLib.isMandatoryNumber(totalCosts_energy_cost))
-                            errors.push(this.chargy.GetLocalizedMessage("Missing or invalid energy cost within the charging costs!"));
+                            errors.push(chargyInterfaces.CreateError(this.chargy.GetMultilanguageText("Missing or invalid energy cost within the charging costs!")));
 
                         // ToDo: Check for valid energy unit
                         if (!chargyLib.isMandatoryString(totalCosts_energy_unit))
-                            errors.push(this.chargy.GetLocalizedMessage("Missing or invalid energy unit within the charging costs!"));
+                            errors.push(chargyInterfaces.CreateError(this.chargy.GetMultilanguageText("Missing or invalid energy unit within the charging costs!")));
 
                     }
 
@@ -1501,11 +1501,11 @@ export class ChargeIT {
                     {
 
                         if (!chargyLib.isMandatoryNumber(totalCosts_time_cost))
-                            errors.push(this.chargy.GetLocalizedMessage("Missing or invalid time cost within the charging costs!"));
+                            errors.push(chargyInterfaces.CreateError(this.chargy.GetMultilanguageText("Missing or invalid time cost within the charging costs!")));
 
                         // ToDo: Check for valid time unit
                         if (!chargyLib.isMandatoryString(totalCosts_time_unit))
-                            errors.push(this.chargy.GetLocalizedMessage("Missing or invalid time unit within the charging costs!"));
+                            errors.push(chargyInterfaces.CreateError(this.chargy.GetMultilanguageText("Missing or invalid time unit within the charging costs!")));
 
                     }
 
@@ -1513,11 +1513,11 @@ export class ChargeIT {
                     {
 
                         if (!chargyLib.isMandatoryNumber(totalCosts_idle_cost))
-                            errors.push(this.chargy.GetLocalizedMessage("Missing or invalid idle cost within the charging costs!"));
+                            errors.push(chargyInterfaces.CreateError(this.chargy.GetMultilanguageText("Missing or invalid idle cost within the charging costs!")));
 
                         // ToDo: Check for valid idle unit
                         if (!chargyLib.isMandatoryString(totalCosts_idle_unit))
-                            errors.push(this.chargy.GetLocalizedMessage("Missing or invalid idle unit within the charging costs!"));
+                            errors.push(chargyInterfaces.CreateError(this.chargy.GetMultilanguageText("Missing or invalid idle unit within the charging costs!")));
 
                     }
 
@@ -1525,7 +1525,7 @@ export class ChargeIT {
                     {
 
                         if (!chargyLib.isMandatoryNumber(totalCosts_flat_cost))
-                            errors.push(this.chargy.GetLocalizedMessage("Missing or invalid flat cost within the charging costs!"));
+                            errors.push(chargyInterfaces.CreateError(this.chargy.GetMultilanguageText("Missing or invalid flat cost within the charging costs!")));
 
                     }
 
@@ -1534,7 +1534,7 @@ export class ChargeIT {
                 //#endregion
 
                 if (!chargyLib.isMandatoryJSONArray(signedMeterValues) || signedMeterValues.length < 2) {
-                    errors.push(this.chargy.GetLocalizedMessage("MissingOrInvalidSignedMeterValues"));
+                    errors.push(chargyInterfaces.CreateError(this.chargy.GetMultilanguageText("MissingOrInvalidSignedMeterValues")));
                     secondaryErrors += 2*39;
                 }
                 else
@@ -1555,7 +1555,7 @@ export class ChargeIT {
 
                         if (smvContext !== context) return {
                             status:     chargyInterfaces.SessionVerificationResult.InvalidSessionFormat,
-                            message:    "Inconsistent signed meter value format!",
+                            message:    this.chargy.GetMultilanguageText("Inconsistent signed meter value format!"),
                             certainty:  1
                         }
 
@@ -1730,7 +1730,7 @@ export class ChargeIT {
             {
                 return {
                     status:     chargyInterfaces.SessionVerificationResult.InvalidSessionFormat,
-                    message:    "Exception occured: " + (exception instanceof Error ? exception.message : String(exception)),
+                    message:    this.chargy.GetMultilanguageText("Exception occured: " + (exception instanceof Error ? exception.message : String(exception))),
                     errors:     errors,
                     warnings:   warnings,
                     certainty: (numberOfFormatChecks - errors.length - secondaryErrors)/numberOfFormatChecks
@@ -1743,7 +1743,7 @@ export class ChargeIT {
 
         return {
             status:     chargyInterfaces.SessionVerificationResult.InvalidSessionFormat,
-            message:    "No chargeIT charge transparency record",
+            message:    this.chargy.GetMultilanguageText("No chargeIT charge transparency record"),
             errors:     errors,
             warnings:   warnings,
             certainty:  0
