@@ -18,7 +18,7 @@
 import type { Chargy }                from './chargy'
 import { ACrypt }                     from './ACrypt'
 import * as chargyInterfaces          from './interfaces/chargyInterfaces'
-import * as chargeTransparencyRecord  from './interfaces/IChargeTransparencyRecord'
+import type * as chargeTransparencyRecord  from './interfaces/IChargeTransparencyRecord'
 import * as chargyLib                 from './chargyLib'
 import Decimal                        from 'decimal.js';
 
@@ -27,7 +27,7 @@ export const MENNEKES_EDL40_XMLNS = "http://www.mennekes.de/Mennekes.EdlVerifica
 export const MENNEKES_EDL40_OBIS  = "1-0:1.17.0*255";
 
 export interface IMennekesMeasurement {
-    timestampCustomerIdent?:  string;
+    timestampCustomerIdent?:  string | undefined;
     timestamp:                string;
     signature:                string;
     eventCounter:             number;
@@ -41,8 +41,8 @@ export interface IMennekesMeasurement {
 export interface IMennekesChargingProcess {
     serverId:                 string;
     publicKey:                string;
-    meteringPoint?:           string;
-    siteAddress?:             chargyInterfaces.IAddress;
+    meteringPoint?:           string | undefined;
+    siteAddress?:             chargyInterfaces.IAddress | undefined;
     customerIdent:            string;
     timestampCustomerIdent:   string;
     measurementStart:         IMennekesMeasurement;
@@ -57,7 +57,7 @@ export interface IMennekesMeasurementValue extends chargeTransparencyRecord.IMea
     eventCounter:             number;
     meterStatusNumber:        number;
     originalSignature:        string;
-    timestampCustomerIdent?:  string;
+    timestampCustomerIdent?:  string | undefined;
     measurement:              IMennekesChargyMeasurement;
 }
 
@@ -70,23 +70,23 @@ export interface IMennekesChargyMeasurement extends chargeTransparencyRecord.IMe
 }
 
 export interface IMennekesCrypt01Result extends chargyInterfaces.ICryptoResult {
-    hashValue?:               string;
-    signedData?:              string;
-    publicKey?:               string;
-    publicKeyFormat?:         string;
-    signature?:               chargyInterfaces.ISignatureRS;
-    serverId?:                string;
-    timestamp?:               string;
-    meterStatus?:             string;
-    secondsIndex?:            string;
-    pagination?:              string;
-    obis?:                    string;
-    unitEncoded?:             string;
-    scaler?:                  string;
-    value?:                   string;
-    logBytes?:                string;
-    customerIdent?:           string;
-    timestampCustomerIdent?:  string;
+    hashValue?:               string | undefined;
+    signedData?:              string | undefined;
+    publicKey?:               string | undefined;
+    publicKeyFormat?:         string | undefined;
+    signature?:               chargyInterfaces.ISignatureRS | undefined;
+    serverId?:                string | undefined;
+    timestamp?:               string | undefined;
+    meterStatus?:             string | undefined;
+    secondsIndex?:            string | undefined;
+    pagination?:              string | undefined;
+    obis?:                    string | undefined;
+    unitEncoded?:             string | undefined;
+    scaler?:                  string | undefined;
+    value?:                   string | undefined;
+    logBytes?:                string | undefined;
+    customerIdent?:           string | undefined;
+    timestampCustomerIdent?:  string | undefined;
 }
 
 export class Mennekes {
@@ -335,7 +335,7 @@ export class MennekesCrypt01 extends ACrypt {
     async VerifyMeasurement(measurementValue: IMennekesMeasurementValue): Promise<IMennekesCrypt01Result>
     {
 
-        function setResult(verificationResult: chargyInterfaces.VerificationResult)
+        function setResult(verificationResult: chargyInterfaces.VerificationResult): IMennekesCrypt01Result
         {
             cryptoResult.status     = verificationResult;
             measurementValue.result = cryptoResult;
@@ -410,7 +410,7 @@ export class MennekesCrypt01 extends ACrypt {
 
             cryptoResult.hashValue = (await chargyLib.sha256(new DataView(signedDataBuffer))).substring(0, 48);
 
-            const publicKey = cleanHex(meter.publicKeys[0]?.value ?? measurement.publicKey);
+            const publicKey = cleanHex(meter.publicKeys.at(0)?.value ?? measurement.publicKey);
 
             if (publicKey.length !== 96)
                 return setResult(chargyInterfaces.VerificationResult.InvalidPublicKey);
@@ -475,7 +475,10 @@ export class MennekesCrypt01 extends ACrypt {
         if (SignatureExpectedDiv.parentElement?.children[0])
             SignatureExpectedDiv.parentElement.children[0].innerHTML = this.chargy.GetLocalizedMessage("Expected signature") + " (rs, hex)";
 
-        SignatureExpectedDiv.innerHTML = result.signature?.r && result.signature.s
+        SignatureExpectedDiv.innerHTML = result.signature?.r != null &&
+                                         result.signature.r.length > 0 &&
+                                         result.signature.s != null &&
+                                         result.signature.s.length > 0
                                              ? "r: " + (result.signature.r.toLowerCase().match(/.{1,8}/g)?.join(" ") ?? "") + "<br />" +
                                                "s: " + (result.signature.s.toLowerCase().match(/.{1,8}/g)?.join(" ") ?? "")
                                              : "";
@@ -517,12 +520,7 @@ export function parseMennekesXMLDocument(XMLDocument: Document): IMennekesBillin
         if (chargingProcesses.length > 1)
         {
 
-            const chargingProcess = chargingProcesses[0];
-
-            if (chargingProcess != undefined)
-                return chargingProcess;
-
-            throw new Error("No Mennekes ChargingProcess found!");
+            return chargyLib.getFirstArrayElement(chargingProcesses, "No Mennekes ChargingProcess found!");
 
         }
     }
@@ -695,8 +693,8 @@ function validateMennekesLawConformity(measurementValues: IMennekesMeasurementVa
                                        chargy:            Chargy): chargyInterfaces.IError[] {
 
     const errors = new Array<chargyInterfaces.IError>();
-    const start  = measurementValues[0];
-    const end    = measurementValues[measurementValues.length - 1];
+    const start  = measurementValues.at(0);
+    const end    = measurementValues.at(-1);
 
     if (start == null || end == null)
         return [

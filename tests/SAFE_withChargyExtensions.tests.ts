@@ -1,21 +1,23 @@
 import { createRequire } from "node:module";
+import { DOMParser } from "@oozcitak/dom";
 import { describe, expect, test } from 'vitest';
 import { expectVerificationReport, expectVerificationReportInline } from './testHelper';
 import { Chargy } from '@open-charging-cloud/chargy-core';
 import { SAFEXML } from '@open-charging-cloud/chargy-core';
+import { loadChargyTestDependencies } from './chargyTestRuntime';
 
 const require = createRequire(import.meta.url);
-const { DOMParser } = require("@oozcitak/dom");
+const chargyDependencies = loadChargyTestDependencies(require);
 
 function createChargy(): Chargy {
 
     return new Chargy(
         {},
         [ "en" ],
-        require("elliptic"),
-        require("moment"),
-        require("asn1.js"),
-        require("base32-decode"),
+        chargyDependencies.elliptic,
+        chargyDependencies.moment,
+        chargyDependencies.asn1,
+        chargyDependencies.base32Decode,
         () => ""
     );
 

@@ -1,4 +1,6 @@
-export type PdfJsLib = typeof import("pdfjs-dist");
+import type * as PdfJsDist from "pdfjs-dist";
+
+export type PdfJsLib = typeof PdfJsDist;
 
 export async function importPdfJs(): Promise<PdfJsLib> {
 

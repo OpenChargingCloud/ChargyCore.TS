@@ -17,8 +17,8 @@
 
 import type { Chargy, EllipticCurve } from './chargy'
 import { secp224k1 }                  from './secp224k1'
-import * as chargyInterfaces          from './interfaces/chargyInterfaces'
-import * as chargeTransparencyRecord  from './interfaces/IChargeTransparencyRecord'
+import type * as chargyInterfaces          from './interfaces/chargyInterfaces'
+import type * as chargeTransparencyRecord  from './interfaces/IChargeTransparencyRecord'
 import * as chargyLib                 from './chargyLib'
 
 export abstract class ACrypt {
@@ -70,7 +70,7 @@ export abstract class ACrypt {
                                   value:      string|number,
                                   valueHEX:   string,
                                   infoDiv:    HTMLDivElement,
-                                  bufferDiv:  HTMLDivElement)
+                                  bufferDiv:  HTMLDivElement): void
     {
 
         const lineDiv = chargyLib.CreateDiv(infoDiv, "row");
@@ -85,7 +85,7 @@ export abstract class ACrypt {
                          value:      string|number,
                          valueHEX:   string,
                          infoDiv:    HTMLDivElement,
-                         bufferDiv:  HTMLDivElement)
+                         bufferDiv:  HTMLDivElement): void
     {
 
         const lineDiv = chargyLib.CreateDiv(infoDiv, "row");
@@ -98,26 +98,28 @@ export abstract class ACrypt {
 
     protected AddToVisualBuffer(valueHEX:   string,
                                 bufferDiv:  HTMLDivElement,
-                                lineDiv:    HTMLDivElement)
+                                lineDiv:    HTMLDivElement): void
     {
 
         const newText = chargyLib.CreateDiv(bufferDiv, "entry", valueHEX);
+        const lineId  = chargyLib.getArrayLikeElement(lineDiv.children, 0, "Missing visual buffer line id");
+        const lineHex = chargyLib.getArrayLikeElement(lineDiv.children, 1, "Missing visual buffer line hex");
 
-        newText.onmouseenter = function(this: GlobalEventHandlers) {
-            lineDiv.children[0]?.classList.add("overEntry");
-            lineDiv.children[1]?.classList.add("overEntry");
+        newText.onmouseenter = function(this: GlobalEventHandlers): void {
+            lineId. classList.add("overEntry");
+            lineHex.classList.add("overEntry");
         }
 
-        newText.onmouseleave = function(this: GlobalEventHandlers) {
-            lineDiv.children[0]?.classList.remove("overEntry");
-            lineDiv.children[1]?.classList.remove("overEntry");
+        newText.onmouseleave = function(this: GlobalEventHandlers): void {
+            lineId. classList.remove("overEntry");
+            lineHex.classList.remove("overEntry");
         }
 
-        lineDiv.onmouseenter = function(this: GlobalEventHandlers) {
+        lineDiv.onmouseenter = function(this: GlobalEventHandlers): void {
             newText.classList.add("overEntry");
         }
 
-        lineDiv.onmouseleave = function(this: GlobalEventHandlers) {
+        lineDiv.onmouseleave = function(this: GlobalEventHandlers): void {
             newText.classList.remove("overEntry");
         }
 

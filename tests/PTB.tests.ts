@@ -1,5 +1,5 @@
-import { describe, test } from 'vitest';
-import { expectVerificationReport } from './testHelper';
+import { describe, test }            from 'vitest';
+import { expectVerificationReport }  from './testHelper';
 
 
 describe('PTB Tests', () => {

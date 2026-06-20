@@ -45,8 +45,8 @@
     "test:watch": "vitest --config vitest.config.ts",
     "test:ui": "vitest --ui",
     "test:coverage": "vitest run --coverage",
-    "lint": "eslint .",
-    "lint:fix": "eslint . --fix",
+    "lint": "eslint . --max-warnings=0",
+    "lint:fix": "eslint . --fix --max-warnings=0",
     "typecheck": "tsc --noEmit",
     "verify": "npm run typecheck && npm run lint && npm test && npm run build",
     "prepare": "npm run build"

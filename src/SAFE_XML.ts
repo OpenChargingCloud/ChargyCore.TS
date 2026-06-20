@@ -15,36 +15,36 @@
  * limitations under the License.
  */
 
-import { Chargy }                     from './chargy'
+import type { Chargy }                     from './chargy'
 import { Alfen }                      from './Alfen'
 import { OCMF }                       from './OCMF'
 import * as chargyInterfaces          from './interfaces/chargyInterfaces'
-import * as chargeTransparencyRecord  from './interfaces/IChargeTransparencyRecord'
+import type * as chargeTransparencyRecord  from './interfaces/IChargeTransparencyRecord'
 import * as chargyLib                 from './chargyLib'
 
 
 export interface ISAFEXMLEVSEContext {
     "@id":         string;
-    description?: chargyInterfaces.IMultilanguageText;
+    description?: chargyInterfaces.IMultilanguageText | undefined;
     meters:       Array<chargyInterfaces.IMeter>;
-    connector?:   chargyInterfaces.IConnector & { "@id"?: string };
+    connector?:   chargyInterfaces.IConnector & { "@id"?: string | undefined } | undefined;
 }
 
 export interface ISAFEXMLChargingStationInfo {
     "@id":             string;
-    description?:      chargyInterfaces.IMultilanguageText;
-    firmwareVersion?:  string;
-    softwareVersion?:  string;
-    geoLocation?:      chargyInterfaces.IGeoLocation;
-    EVSE?:             ISAFEXMLEVSEContext;
+    description?:      chargyInterfaces.IMultilanguageText | undefined;
+    firmwareVersion?:  string | undefined;
+    softwareVersion?:  string | undefined;
+    geoLocation?:      chargyInterfaces.IGeoLocation | undefined;
+    EVSE?:             ISAFEXMLEVSEContext | undefined;
 }
 
 export interface ISAFEXMLChargingStationContext {
-    ChargingStationId?: string;
-    EVSEId?:            string;
-    chargingStation?:   ISAFEXMLChargingStationInfo;
-    EVSE?:              ISAFEXMLEVSEContext;
-    connector?:         chargyInterfaces.IConnector & { "@id"?: string };
+    ChargingStationId?: string | undefined;
+    EVSEId?:            string | undefined;
+    chargingStation?:   ISAFEXMLChargingStationInfo | undefined;
+    EVSE?:              ISAFEXMLEVSEContext | undefined;
+    connector?:         chargyInterfaces.IConnector & { "@id"?: string | undefined } | undefined;
 }
 
 // https://github.com/SAFE-eV/transparenzsoftware/blob/archive/XML_Format.md
@@ -59,13 +59,15 @@ export class SAFEXML {
 
     public static ParseChargingStationContext(XMLDocument: Document): ISAFEXMLChargingStationContext {
 
-        const chargingStationElement = chargyLib.getElementsByLocalName(XMLDocument, "chargingStation")[0];
+        const chargingStationElement = chargyLib.getElementsByLocalName(XMLDocument, "chargingStation").at(0);
 
-        if (!chargingStationElement)
+        if (chargingStationElement === undefined)
             return {};
 
-        const chargingStationId   = chargingStationElement.getAttribute("id")?.trim() ||
-                                    chargyLib.getTrimmedTextContent(chargyLib.getDirectChildByLocalName(chargingStationElement, "id"));
+        const chargingStationAttributeId = chargingStationElement.getAttribute("id")?.trim();
+        const chargingStationId          = chargingStationAttributeId != null && chargingStationAttributeId.length > 0
+                                               ? chargingStationAttributeId
+                                               : chargyLib.getTrimmedTextContent(chargyLib.getDirectChildByLocalName(chargingStationElement, "id"));
         const softwareVersion     = chargyLib.getTrimmedTextContent(chargyLib.getDirectChildByLocalName(chargingStationElement, "softwareVersion"));
         const geoLocationElement  = chargyLib.getDirectChildByLocalName(chargingStationElement, "geoLocation");
 
@@ -76,7 +78,7 @@ export class SAFEXML {
                                         ? { lat: latitude, lng: longitude }
                                         : undefined;
 
-        if (chargyLib.getDirectChildByLocalName(chargingStationElement, "EVSEs"))
+        if (chargyLib.getDirectChildByLocalName(chargingStationElement, "EVSEs") !== undefined)
             throw new Error("The SAFE chargingStation XML element must contain EVSE directly and no EVSEs container element!");
 
         const evseElements = chargyLib.getDirectChildrenByLocalName(chargingStationElement, "EVSE");
@@ -84,21 +86,27 @@ export class SAFEXML {
         if (evseElements.length > 1)
             throw new Error("The SAFE chargingStation XML element must not contain more than one EVSE element!");
 
-        const evseElement       = evseElements[0];
-        const evseId            = evseElement?.getAttribute("id")?.trim() ||
-                                  chargyLib.getTrimmedTextContent(chargyLib.getDirectChildByLocalName(evseElement ?? chargingStationElement, "id")) ||
-                                  "";
-        const connectorElements = evseElement ? chargyLib.getDirectChildrenByLocalName(evseElement, "connector") : [];
+        const evseElement       = evseElements.at(0);
+        const evseAttributeId   = evseElement?.getAttribute("id")?.trim();
+        const evseTextId        = chargyLib.getTrimmedTextContent(chargyLib.getDirectChildByLocalName(evseElement ?? chargingStationElement, "id"));
+        const evseId            = evseAttributeId != null && evseAttributeId.length > 0
+                                      ? evseAttributeId
+                                      : evseTextId ?? "";
+        const connectorElements = evseElement !== undefined
+                                      ? chargyLib.getDirectChildrenByLocalName(evseElement, "connector")
+                                      : [];
 
         if (connectorElements.length > 1)
             throw new Error("The SAFE EVSE XML element must not contain more than one connector element!");
 
-        const connectorElement = connectorElements[0];
+        const connectorElement = connectorElements.at(0);
         const connectorId      = connectorElement?.getAttribute("id")?.trim();
         const connectorType    = chargyLib.getTrimmedTextContent(chargyLib.getDirectChildByLocalName(connectorElement ?? evseElement ?? chargingStationElement, "type"));
-        const connector        = connectorType ? { "@id": connectorId, type: connectorType, looses: 0 } : undefined;
+        const connector        = connectorType != null && connectorType.length > 0
+                                     ? { "@id": connectorId, type: connectorType, looses: 0 }
+                                     : undefined;
 
-        const parsedEVSE: ISAFEXMLEVSEContext | undefined = evseElement
+        const parsedEVSE: ISAFEXMLEVSEContext | undefined = evseElement !== undefined
                                                                 ? {
                                                                       "@id":         evseId,
                                                                       "description": chargyLib.parseDescription(evseElement),

@@ -1,8 +1,10 @@
-import { describe, expect, test }                                    from 'vitest';
-import { expectBinaryVerificationReport, expectVerificationReport, expectVerificationReportWithValidationRules }  from './testHelper';
-import { readFileSync }                                              from "node:fs";
-import { readQRCodeTextFromImage }                                   from '@open-charging-cloud/chargy-core';
-import { normalizeXMLText }                                          from '@open-charging-cloud/chargy-core';
+import { describe, expect, test }                       from 'vitest';
+import { expectBinaryVerificationReport,
+         expectVerificationReport,
+         expectVerificationReportWithValidationRules }  from './testHelper';
+import { readFileSync }                                 from "node:fs";
+import { readQRCodeTextFromImage }                      from '@open-charging-cloud/chargy-core';
+import { normalizeXMLText }                             from '@open-charging-cloud/chargy-core';
 
 
 describe('ALFEN Tests', () => {

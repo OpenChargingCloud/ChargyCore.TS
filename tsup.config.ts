@@ -1,5 +1,26 @@
-import { defineConfig } from "tsup";
 import { resolve } from "node:path";
+
+type BuildOptions = {
+  alias?: Record<string, string>;
+};
+
+type TsupConfig = {
+  entry: string[];
+  format: string[];
+  target: string;
+  platform: "browser" | "node";
+  dts: boolean;
+  sourcemap: boolean;
+  clean: boolean;
+  splitting: boolean;
+  treeshake: boolean;
+  outDir: string;
+  noExternal: string[];
+  external: string[];
+  esbuildOptions(buildOptions: BuildOptions): void;
+};
+
+type TsupConfigExport = () => TsupConfig[];
 
 const external = [
   "asn1.js",
@@ -31,7 +52,7 @@ const browserNoExternal = [
   "buffer"
 ];
 
-export default defineConfig(() => [{
+const config: TsupConfigExport = () => [{
   entry: ["src/index.ts"],
   format: ["esm"],
   target: "es2022",
@@ -44,7 +65,7 @@ export default defineConfig(() => [{
   outDir: "dist/browser",
   noExternal: browserNoExternal,
   external: browserExternal,
-  esbuildOptions(buildOptions) {
+  esbuildOptions(buildOptions): void {
     buildOptions.alias = {
       ...buildOptions.alias,
       "#pdfjs-runtime": resolve("src/pdfjs/browser.ts")
@@ -63,10 +84,12 @@ export default defineConfig(() => [{
   outDir: "dist/node",
   noExternal,
   external: nodeExternal,
-  esbuildOptions(buildOptions) {
+  esbuildOptions(buildOptions): void {
     buildOptions.alias = {
       ...buildOptions.alias,
       "#pdfjs-runtime": resolve("src/pdfjs/node.ts")
     };
   }
-}]);
+}];
+
+export default config;

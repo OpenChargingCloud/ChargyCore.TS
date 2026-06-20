@@ -85,7 +85,7 @@ npm run verify
 `verify` runs the following checks:
 
 - `npm run typecheck`: validates the TypeScript sources and test/config TypeScript files.
-- `npm run lint`: runs the strict type-aware ESLint setup. Existing migration findings are warnings, new unused variables are errors.
+- `npm run lint`: runs the strict type-aware ESLint setup and fails on every warning or error.
 - `npm test`: runs all runtime checks:
   - `npm run test:node`: runs the Chargy fixture tests in Vitest's Node environment and uses the Node PDF.js adapter.
   - `npm run build`: creates both package builds.

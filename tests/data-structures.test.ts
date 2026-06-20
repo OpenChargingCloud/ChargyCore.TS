@@ -55,7 +55,7 @@ vi.stubGlobal("window", {
         language: "en"
     },
     chargyElectron: {
-        openExternal: () => Promise.resolve()
+        openExternal: async () => Promise.resolve()
     }
 });
 

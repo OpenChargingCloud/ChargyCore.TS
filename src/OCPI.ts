@@ -15,11 +15,11 @@
  * limitations under the License.
  */
 
-import { Chargy }                     from './chargy'
+import type { Chargy }                     from './chargy'
 import { Alfen }                      from './Alfen'
 import { BSMCrypt01 }                 from './BSMCrypt01'
 import * as chargyInterfaces          from './interfaces/chargyInterfaces'
-import * as chargeTransparencyRecord  from './interfaces/IChargeTransparencyRecord'
+import type * as chargeTransparencyRecord  from './interfaces/IChargeTransparencyRecord'
 import * as chargyLib                 from './chargyLib'
 import { OCMF }                       from './OCMF'
 
@@ -31,22 +31,6 @@ export class OCPI {
     constructor(chargy:  Chargy) {
         this.chargy  = chargy;
     }
-
-
-    private bufferToHex(buffer: ArrayBuffer, Reverse?: boolean) : string {
-        return (Reverse
-                    ? Array.from(new Uint8Array(buffer)).reverse()
-                    : Array.from(new Uint8Array(buffer))
-               ).map (b => b.toString(16).padStart(2, "0")).join("");
-    }
-
-    private bufferToNumber(buffer: ArrayBuffer) : number {
-        return parseInt(Array
-            .from(new Uint8Array(buffer))
-            .map (b => b.toString(16).padStart(2, "0"))
-            .join(""), 16);
-    }
-
 
     //#region tryToParseChargeITContainerFormat(SomeJSON)
 
@@ -103,7 +87,8 @@ export class OCPI {
 
                 const firstSignedData = chargyLib.asString(chargyLib.asJSONObject(signed_values[0])?.["signed_data"]);
 
-                if (firstSignedData)
+                if (firstSignedData != null &&
+                    firstSignedData.length > 0)
                 {
 
                     //#region Optional container infos (placeInfo, meterInfo, ...)
@@ -144,10 +129,10 @@ export class OCPI {
 
                     //#endregion
 
-                    return await new OCMF(this.chargy).TryToParseOCMFDocument(firstSignedData,
-                                                                              chargyLib.asString(public_key),
-                                                                              encoding_method,
-                                                                              containerInfos);
+                    return new OCMF(this.chargy).TryToParseOCMFDocument(firstSignedData,
+                                                                        chargyLib.asString(public_key),
+                                                                        encoding_method,
+                                                                        containerInfos);
 
                 }
 
@@ -648,10 +633,10 @@ export class OCPI {
 
                     //#endregion
 
-                    if      (smvContext?.startsWith("https://www.chargeit-mobility.com/contexts/bsm-ws36a-json"))
+                    if      (smvContext?.startsWith("https://www.chargeit-mobility.com/contexts/bsm-ws36a-json") === true)
                         return new BSMCrypt01(this.chargy).tryToParseBSM_WS36aMeasurements(CTR, evseIdStr, chargyLib.asString(chargingStation_controllerSoftwareVersion) ?? null, signedMeterValues);
 
-                    if (smvContext?.startsWith("ALFEN"))
+                    if (smvContext?.startsWith("ALFEN") === true)
                         return new Alfen(this.chargy).TryToParseALFENFormat(
                                    signedMeterValues.map(value => chargyLib.asString(chargyLib.asJSONObject(value)?.["payload"]) ?? ""),
                                    {

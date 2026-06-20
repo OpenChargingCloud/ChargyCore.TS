@@ -3,18 +3,20 @@ import { describe, expect, test } from 'vitest';
 import './testHelper';   // Mocks 'pdfjs-dist' and stubs 'window' before chargy.ts is imported!
 import { Chargy } from '@open-charging-cloud/chargy-core';
 import { OCPI } from '@open-charging-cloud/chargy-core';
+import { loadChargyTestDependencies } from './chargyTestRuntime';
 
 const require = createRequire(import.meta.url);
+const chargyDependencies = loadChargyTestDependencies(require);
 
 function createChargy(): Chargy {
 
     return new Chargy(
         {},
         [ "en" ],
-        require("elliptic"),
-        require("moment"),
-        require("asn1.js"),
-        require("base32-decode"),
+        chargyDependencies.elliptic,
+        chargyDependencies.moment,
+        chargyDependencies.asn1,
+        chargyDependencies.base32Decode,
         () => ""
     );
 

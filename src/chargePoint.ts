@@ -15,10 +15,10 @@
  * limitations under the License.
  */
 
-import { Chargy }                     from './chargy'
+import type { Chargy }                     from './chargy'
 import { ACrypt }                     from './ACrypt'
 import * as chargyInterfaces          from './interfaces/chargyInterfaces'
-import * as chargeTransparencyRecord  from './interfaces/IChargeTransparencyRecord'
+import type * as chargeTransparencyRecord  from './interfaces/IChargeTransparencyRecord'
 import * as chargyLib                 from './chargyLib'
 import Decimal                        from 'decimal.js'
 
@@ -208,11 +208,9 @@ export class ChargePoint {
                 }
 
                 // Sometimes there is "parking" but no "energy"...
-                if (chargingStart === undefined)
-                    chargingStart = parkingStart;
+                chargingStart ??= parkingStart;
 
-                if (chargingEnd   === undefined)
-                    chargingEnd   = parkingEnd;
+                chargingEnd   ??= parkingEnd;
 
 
                 let sessionStart = (parkingStart !== undefined && (chargingStart === undefined || parkingStart < chargingStart))
@@ -413,7 +411,7 @@ export class ChargePoint {
                 if (parking && parking.length > 0 && CTR.chargingSessions && CTR.chargingSessions.length > 0)
                 {
 
-                    const chargingSession = CTR.chargingSessions[0];
+                    const chargingSession = chargyLib.getFirstArrayElement(CTR.chargingSessions, "Missing ChargePoint charging session");
 
                     chargingSession.parking = [];
 
@@ -750,7 +748,7 @@ export class ChargePointCrypt01 extends ACrypt {
                     );
                 });
 
-                const ASN1Signature         = ASN1_SignatureSchema.decode<{ r: { toString(base: number): string }, s: { toString(base: number): string } }>(Buffer.from(chargingSession.signature, 'hex'), 'der');
+                const ASN1Signature         = ASN1_SignatureSchema.decode(Buffer.from(chargingSession.signature, 'hex'), 'der') as { r: { toString(base: number): string }, s: { toString(base: number): string } };
 
                 chargingSession.signature   = { r: ASN1Signature.r.toString(16),
                                                 s: ASN1Signature.s.toString(16) };
@@ -953,6 +951,9 @@ export class ChargePointCrypt01 extends ACrypt {
                                         currentResult.status = chargyInterfaces.VerificationResult.InvalidStartValue;
                                         break;
 
+                                    default:
+                                        break;
+
                                 }
                             }
 
@@ -977,6 +978,9 @@ export class ChargePointCrypt01 extends ACrypt {
                                         currentResult.status = chargyInterfaces.VerificationResult.InvalidStopValue;
                                         break;
 
+                                    default:
+                                        break;
+
                                 }
                             }
 
@@ -999,6 +1003,9 @@ export class ChargePointCrypt01 extends ACrypt {
 
                                     case chargyInterfaces.VerificationResult.InvalidSignature:
                                         currentResult.status = chargyInterfaces.VerificationResult.InvalidStopValue;
+                                        break;
+
+                                    default:
                                         break;
 
                                 }
@@ -1041,7 +1048,7 @@ export class ChargePointCrypt01 extends ACrypt {
 
         // Note: chargepoint does not sign individual measurements!
 
-        function setResult(verificationResult: chargyInterfaces.VerificationResult)
+        function setResult(verificationResult: chargyInterfaces.VerificationResult): IChargePointCrypt01Result
         {
             cryptoResult.status     = verificationResult;
             measurementValue.result = cryptoResult;
@@ -1054,14 +1061,14 @@ export class ChargePointCrypt01 extends ACrypt {
             status: chargyInterfaces.VerificationResult.NoOperation,
         };
 
-        return await Promise.resolve(setResult(chargyInterfaces.VerificationResult.NoOperation));
+        return Promise.resolve(setResult(chargyInterfaces.VerificationResult.NoOperation));
 
     }
 
     async ViewMeasurement(measurementValue:      IChargepointMeasurementValue,
-                          errorDiv:              HTMLDivElement,
+                          _errorDiv:             HTMLDivElement,
                           introDiv:              HTMLDivElement,
-                          infoDiv:               HTMLDivElement,
+                          _infoDiv:              HTMLDivElement,
                           PlainTextDiv:          HTMLDivElement,
                           HashedPlainTextDiv:    HTMLDivElement,
                           PublicKeyDiv:          HTMLDivElement,
@@ -1094,10 +1101,9 @@ export class ChargePointCrypt01 extends ACrypt {
 
         //#region Plain text
 
-        if (PlainTextDiv.parentElement             != undefined &&
-            PlainTextDiv.parentElement.children[0] != undefined)
+        if (PlainTextDiv.parentElement)
         {
-            PlainTextDiv.parentElement.children[0].innerHTML  = "Plain text (secrrct)";
+            chargyLib.getArrayLikeElement(PlainTextDiv.parentElement.children, 0, "Missing plain text header").innerHTML  = "Plain text (secrrct)";
         }
 
         PlainTextDiv.innerText                                = atob(chargingSession.original ?? "");
@@ -1134,10 +1140,9 @@ export class ChargePointCrypt01 extends ACrypt {
 
         }
 
-        if (HashedPlainTextDiv.parentElement             != undefined &&
-            HashedPlainTextDiv.parentElement.children[0] != undefined)
+        if (HashedPlainTextDiv.parentElement)
         {
-            HashedPlainTextDiv.parentElement.children[0].innerHTML   = "Hashed plain text " + hashInfo;
+            chargyLib.getArrayLikeElement(HashedPlainTextDiv.parentElement.children, 0, "Missing hashed plain text header").innerHTML   = "Hashed plain text " + hashInfo;
         }
 
         HashedPlainTextDiv.innerHTML  = chargingSession.hashValue?.match(/.{1,8}/g)?.join(" ")
@@ -1150,14 +1155,14 @@ export class ChargePointCrypt01 extends ACrypt {
         if (chargingSession.publicKey != null)
         {
 
-            if (PublicKeyDiv.parentElement             != undefined &&
-                PublicKeyDiv.parentElement.children[0] != undefined)
+            if (PublicKeyDiv.parentElement)
             {
-                PublicKeyDiv.parentElement.children[0].innerHTML  = "Public Key (" +
-                                                                         (algorithmType
-                                                                              ? algorithmType + ", "
-                                                                              : "") +
-                                                                         (algorithmName
+                chargyLib.getArrayLikeElement(PublicKeyDiv.parentElement.children, 0, "Missing public key header").innerHTML  = "Public Key (" +
+                                                                          (algorithmType != null &&
+                                                                           algorithmType.length > 0
+                                                                               ? algorithmType + ", "
+                                                                               : "") +
+                                                                         (algorithmName.length > 0
                                                                               ? algorithmName + ", "
                                                                               : "") +
                                                                           "hex)";
@@ -1171,10 +1176,11 @@ export class ChargePointCrypt01 extends ACrypt {
 
             //#region Public key signatures
 
-            if (PublicKeyDiv.parentElement             != undefined &&
-                PublicKeyDiv.parentElement.children[3] != undefined)
+            const publicKeySignatureContainer = PublicKeyDiv.parentElement?.children[3];
+
+            if (publicKeySignatureContainer !== undefined)
             {
-                PublicKeyDiv.parentElement.children[3].innerHTML = "";
+                publicKeySignatureContainer.innerHTML = "";
             }
 
             if (result.publicKeySignatures) {
@@ -1185,7 +1191,7 @@ export class ChargePointCrypt01 extends ACrypt {
                     try
                     {
 
-                        const signatureDiv = PublicKeyDiv.parentElement?.children[3]?.appendChild(document.createElement('div'));
+                        const signatureDiv = publicKeySignatureContainer?.appendChild(document.createElement('div'));
 
                         if (signatureDiv != null)
                             signatureDiv.innerHTML = await this.chargy.CheckMeterPublicKeySignature(measurementValue.measurement.chargingSession.chargingStation,
@@ -1215,10 +1221,9 @@ export class ChargePointCrypt01 extends ACrypt {
         if (chargingSession.signature != null)
         {
 
-            if (SignatureExpectedDiv.parentElement             != undefined &&
-                SignatureExpectedDiv.parentElement.children[0] != undefined)
+            if (SignatureExpectedDiv.parentElement)
             {
-                SignatureExpectedDiv.parentElement.children[0].innerHTML  = "Erwartete Signatur (secrrct.sign, rs, hex)";// " + (result.signature?.format ?? "") + ", hex)";
+                chargyLib.getArrayLikeElement(SignatureExpectedDiv.parentElement.children, 0, "Missing expected signature header").innerHTML  = "Erwartete Signatur (secrrct.sign, rs, hex)";// " + (result.signature?.format ?? "") + ", hex)";
             }
 
             if (typeof chargingSession.signature != 'string')
@@ -1273,6 +1278,8 @@ export class ChargePointCrypt01 extends ACrypt {
         }
 
         //#endregion
+
+        return undefined;
 
     }
 

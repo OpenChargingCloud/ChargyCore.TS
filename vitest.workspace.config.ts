@@ -1,6 +1,6 @@
 import { defineConfig } from "vitest/config";
 
-export default defineConfig({
+const config: ReturnType<typeof defineConfig> = defineConfig({
   test: {
     projects: [
       "./vitest.config.ts",
@@ -9,3 +9,5 @@ export default defineConfig({
     ]
   }
 });
+
+export default config;

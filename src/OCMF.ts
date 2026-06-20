@@ -23,9 +23,24 @@ import type { Chargy,
               EllipticKeyPair }       from './chargy'
 import { ACrypt }                     from './ACrypt'
 import * as chargyInterfaces          from './interfaces/chargyInterfaces'
-import * as chargeTransparencyRecord  from './interfaces/IChargeTransparencyRecord'
+import type * as chargeTransparencyRecord  from './interfaces/IChargeTransparencyRecord'
 import * as chargyLib                 from './chargyLib'
 import Decimal                        from 'decimal.js';
+
+type ASN1PublicKey = {
+    algorithm: {
+        id:     number[];
+        curve:  number[];
+    };
+    pubKey: {
+        data: Buffer;
+    };
+};
+
+type ASN1Signature = {
+    r: { toString(base: number): string };
+    s: { toString(base: number): string };
+};
 
 
 export interface IOCMFv1_0MeasurementValue extends IOCMFMeasurementValue
@@ -61,7 +76,7 @@ export interface IOCMFv1_0Result extends chargyInterfaces.ICryptoResult
 
 export class OCMFv1_x extends ACrypt {
 
-    readonly curve = new this.chargy.elliptic.ec('p256');
+    readonly curve: EllipticCurve = new this.chargy.elliptic.ec('p256');
 
     constructor(chargy:  Chargy) {
         super("OCMF",
@@ -149,6 +164,9 @@ export class OCMFv1_x extends ACrypt {
                                 // ValidStopValue
                                 // ValidationError
 
+                                default:
+                                    break;
+
                             }
                         }
 
@@ -181,9 +199,9 @@ export class OCMFv1_x extends ACrypt {
 
         // The measurement was already verified by the outer OCMF signature!
 
-        return {
+        return Promise.resolve({
             status: measurementValue.result?.status ?? chargyInterfaces.VerificationResult.Unvalidated
-        }
+        });
 
     }
 
@@ -303,7 +321,7 @@ export class OCMFv1_x extends ACrypt {
         }
     }
 
-    private SignatureDictionary(Path: string, Key: string): string
+    private SignatureDictionary(_Path: string, Key: string): string
     {
         switch (Key)
         {
@@ -328,9 +346,9 @@ export class OCMFv1_x extends ACrypt {
     }
 
     async ViewMeasurement(measurementValue:      IOCMFv1_0MeasurementValue,
-                          errorDiv:              HTMLDivElement,
+                          _errorDiv:             HTMLDivElement,
                           introDiv:              HTMLDivElement,
-                          infoDiv:               HTMLDivElement,
+                          _infoDiv:              HTMLDivElement,
                           PlainTextDiv:          HTMLDivElement,
                           HashedPlainTextDiv:    HTMLDivElement,
                           PublicKeyDiv:          HTMLDivElement,
@@ -350,9 +368,9 @@ export class OCMFv1_x extends ACrypt {
         {
             introDiv.innerHTML = this.chargy.GetLocalizedMessage("The following data of the charging session is relevant for metrological and legal metrological purposes and therefore part of the digital signature").
                                              replace("{methodName}",       "OCMFCrypt01").
-                                             replace("{cryptoAlgorithm}",   measurementValue.ocmfDocument.publicKey && typeof(measurementValue.ocmfDocument.publicKey) !== 'string'
-                                                                                ? "(" + measurementValue.ocmfDocument.publicKey.algorithm + ") "
-                                                                                : "");
+                                             replace("{cryptoAlgorithm}",   measurementValue.ocmfDocument.publicKey != null && typeof(measurementValue.ocmfDocument.publicKey) !== 'string'
+                                                                                 ? "(" + measurementValue.ocmfDocument.publicKey.algorithm + ") "
+                                                                                 : "");
         }
 
         //#endregion
@@ -361,10 +379,9 @@ export class OCMFv1_x extends ACrypt {
 
         {
 
-            if (PlainTextDiv.parentElement &&
-                PlainTextDiv.parentElement.children[0])
+            if (PlainTextDiv.parentElement)
             {
-                PlainTextDiv.parentElement.children[0].innerHTML  = this.chargy.GetLocalizedMessage("Plain text") + " (OCMF|&lt;" + this.chargy.GetLocalizedMessage("payload") + "&gt;|&lt;" + this.chargy.GetLocalizedMessage("signature") + "&gt;)";
+                chargyLib.getArrayLikeElement(PlainTextDiv.parentElement.children, 0, "Missing plain text header").innerHTML  = this.chargy.GetLocalizedMessage("Plain text") + " (OCMF|&lt;" + this.chargy.GetLocalizedMessage("payload") + "&gt;|&lt;" + this.chargy.GetLocalizedMessage("signature") + "&gt;)";
             }
 
             PlainTextDiv.innerText = '';
@@ -391,7 +408,7 @@ export class OCMFv1_x extends ACrypt {
             compactValueDiv.style.maxHeight   = "25vh";
             compactValueDiv.style.overflowY   = "scroll";
 
-            compactValueDiv.onclick = () => {
+            compactValueDiv.onclick = (): void => {
                 compactValueDiv.style.display = 'none';
                 prettyValueDiv.style.display  = 'block';
             };
@@ -408,7 +425,7 @@ export class OCMFv1_x extends ACrypt {
 
             prettyValueDiv.innerHTML = '<span class="ocmfHighlight">OCMF</span><span class="ocmfSeparator">|</span><br />' + chargyLib.jsonPrettyPrinter(measurementValue.ocmfDocument.payload,   (path, key) => this.PayloadDictionary  (path, key)) + '<span class="ocmfSeparator">|</span><br />' + chargyLib.jsonPrettyPrinter(measurementValue.ocmfDocument.signature, (path, key) => this.SignatureDictionary(path, key));
 
-            prettyValueDiv.onclick = () => {
+            prettyValueDiv.onclick = (): void => {
                 compactValueDiv.style.display = 'block';
                 prettyValueDiv.style.display  = 'none';
             };
@@ -423,10 +440,9 @@ export class OCMFv1_x extends ACrypt {
 
         {
 
-            if (HashedPlainTextDiv.parentElement &&
-                HashedPlainTextDiv.parentElement.children[0])
+            if (HashedPlainTextDiv.parentElement)
             {
-                HashedPlainTextDiv.parentElement.children[0].innerHTML = this.chargy.GetLocalizedMessage("Hashed payload") + " (" + measurementValue.ocmfDocument.hashAlgorithm + ")";
+                chargyLib.getArrayLikeElement(HashedPlainTextDiv.parentElement.children, 0, "Missing hashed payload header").innerHTML = this.chargy.GetLocalizedMessage("Hashed payload") + " (" + measurementValue.ocmfDocument.hashAlgorithm + ")";
             }
 
             HashedPlainTextDiv.innerHTML  = measurementValue.ocmfDocument.hashValue.match(/.{1,8}/g)?.join(" ")
@@ -438,14 +454,13 @@ export class OCMFv1_x extends ACrypt {
 
         //#region Public key
 
-        if (measurementValue.ocmfDocument.publicKey)
+        if (measurementValue.ocmfDocument.publicKey != null)
         {
 
-            if (PublicKeyDiv.parentElement &&
-                PublicKeyDiv.parentElement.children[0])
+            if (PublicKeyDiv.parentElement)
             {
 
-                PublicKeyDiv.parentElement.children[0].innerHTML = typeof measurementValue.ocmfDocument.publicKey === 'string'
+                chargyLib.getArrayLikeElement(PublicKeyDiv.parentElement.children, 0, "Missing public key header").innerHTML = typeof measurementValue.ocmfDocument.publicKey === 'string'
                                                                        ? this.chargy.GetLocalizedMessage("Public Key")
                                                                        : this.chargy.GetLocalizedMessage("Public Key") + " (" + measurementValue.ocmfDocument.publicKey.algorithm + ", " +
                                                                                                                                 measurementValue.ocmfDocument.publicKey.encoding + ")";
@@ -464,11 +479,12 @@ export class OCMFv1_x extends ACrypt {
 
         //#region Public key signatures (optional)
 
-        if (PublicKeyDiv.parentElement &&
-            PublicKeyDiv.parentElement.children[3])
+        const publicKeySignatureContainer = PublicKeyDiv.parentElement?.children[3];
+
+        if (publicKeySignatureContainer !== undefined)
         {
 
-            PublicKeyDiv.parentElement.children[3].innerHTML = "";
+            publicKeySignatureContainer.innerHTML = "";
 
             const result = measurementValue.result as IOCMFv1_0Result;
 
@@ -480,13 +496,13 @@ export class OCMFv1_x extends ACrypt {
                     try
                     {
 
-                        const signatureDiv = PublicKeyDiv.parentElement.children[3].appendChild(document.createElement('div'));
+                        const signatureDiv = publicKeySignatureContainer.appendChild(document.createElement('div'));
 
                         signatureDiv.innerHTML = await this.chargy.CheckMeterPublicKeySignature(
                                                            measurementValue.measurement.chargingSession.chargingStation,
                                                            measurementValue.measurement.chargingSession.EVSE,
-                                                           measurementValue.measurement.chargingSession.EVSE?.meters[0],
-                                                           measurementValue.measurement.chargingSession.EVSE?.meters[0]?.publicKeys?.[0],
+                                                           measurementValue.measurement.chargingSession.EVSE?.meters.at(0),
+                                                           measurementValue.measurement.chargingSession.EVSE?.meters.at(0)?.publicKeys?.at(0),
                                                            signature
                                                        );
 
@@ -509,10 +525,9 @@ export class OCMFv1_x extends ACrypt {
         if (measurementValue.ocmfDocument.signature.SD)
         {
 
-            if (SignatureExpectedDiv.parentElement &&
-                SignatureExpectedDiv.parentElement.children[0])
+            if (SignatureExpectedDiv.parentElement)
             {
-                SignatureExpectedDiv.parentElement.children[0].innerHTML  = this.chargy.GetLocalizedMessage("Expected signature") + " (rs, hex)";
+                chargyLib.getArrayLikeElement(SignatureExpectedDiv.parentElement.children, 0, "Missing expected signature header").innerHTML  = this.chargy.GetLocalizedMessage("Expected signature") + " (rs, hex)";
             }
 
             SignatureExpectedDiv.innerHTML = "der: "           + (measurementValue.ocmfDocument.signature.SD.                                   match(/.{1,8}/g)?.join(" ") ?? "-") + "<br /><br />" +
@@ -555,6 +570,8 @@ export class OCMFv1_x extends ACrypt {
         }
 
         //#endregion
+
+        return undefined;
 
     }
 
@@ -947,8 +964,8 @@ export interface IOCMFJSONDocument {
 
     "@context":          string|string[],
 
-    raw?:                string,        // The raw OCMF document is used for visualization only.
-    rawPayload?:         string,        // The raw OCMF payload can be used for calculating the signature, as OCMF does
+    raw?:                string | undefined,        // The raw OCMF document is used for visualization only.
+    rawPayload?:         string | undefined,        // The raw OCMF payload can be used for calculating the signature, as OCMF does
                                         // not define a canonical format for calculating the signature which prevents a
                                         // meaningful interoperability of the signature verification process!
                                         // When the payload JSON was canonicalized, the rawPayload field is not needed.
@@ -957,11 +974,11 @@ export interface IOCMFJSONDocument {
 
     payload:             IOCMFPayload,
     signature:           IOCMFSignature,
-    signatureRS?:        chargyInterfaces.ISignatureRS,
-    publicKey?:          string|chargyInterfaces.IPublicKeyXY,
-    publicKeyEncoding?:  string,
+    signatureRS?:        chargyInterfaces.ISignatureRS | undefined,
+    publicKey?:          string|chargyInterfaces.IPublicKeyXY | undefined,
+    publicKeyEncoding?:  string | undefined,
 
-    validationStatus?:   chargyInterfaces.VerificationResult
+    validationStatus?:   chargyInterfaces.VerificationResult | undefined
 
 }
 
@@ -971,49 +988,49 @@ export interface IOCMFJSONDocument {
 
 export interface IOCMFMeasurementValue extends chargeTransparencyRecord.IMeasurementValue
 {
-    measurement?:               IOCMFMeasurement;
+    measurement?:               IOCMFMeasurement | undefined;
     timeSync:                   string;
-    transaction?:               string;
+    transaction?:               string | undefined;
     transactionType:            OCMFTransactionTypes;
     pagination:                 number;
-    errorFlags?:                string;
-    cumulatedLoss?:             Decimal;
+    errorFlags?:                string | undefined;
+    cumulatedLoss?:             Decimal | undefined;
     status:                     string;
-    ocmfDocument?:              IOCMFJSONDocument;
+    ocmfDocument?:              IOCMFJSONDocument | undefined;
 }
 
 export interface IOCMFMeasurement extends chargeTransparencyRecord.IMeasurement
 {
-    currentType?:               string;
+    currentType?:               string | undefined;
     values:                     Array<IOCMFMeasurementValue>;
 }
 
 export interface IOCMFAuthorization extends chargyInterfaces.IAuthorization
 {
-    identificationStatus?:      boolean|string;
-    identificationLevel?:       string;
-    identificationFlags?:       Array<string>;
+    identificationStatus?:      boolean|string | undefined;
+    identificationLevel?:       string | undefined;
+    identificationFlags?:       Array<string> | undefined;
 }
 
 export interface IOCMFChargingSession extends chargeTransparencyRecord.IChargingSession
 {
-    internalSessionId?:         string;
+    internalSessionId?:         string | undefined;
     authorizationStart:         IOCMFAuthorization;
-    meter?:                     chargyInterfaces.IMeter;
+    meter?:                     chargyInterfaces.IMeter | undefined;
     measurements:               Array<IOCMFMeasurement>;
 }
 
 export interface IOCMFCTRExtensions {
-    formatVersion?:             string,
-    gatewayInformation?:        string,
-    gatewaySerial?:             string,
-    gatewayVersion?:            string
+    formatVersion?:             string | undefined,
+    gatewayInformation?:        string | undefined,
+    gatewaySerial?:             string | undefined,
+    gatewayVersion?:            string | undefined
 }
 
 export interface IOCMFChargeTransparencyRecord extends chargeTransparencyRecord.IChargeTransparencyRecord
 {
-    ocmf?:                      IOCMFCTRExtensions;
-    chargingSessions?:          Array<IOCMFChargingSession>;
+    ocmf?:                      IOCMFCTRExtensions | undefined;
+    chargingSessions?:          Array<IOCMFChargingSession> | undefined;
 }
 
 //#endregion
@@ -1064,10 +1081,10 @@ export class OCMF {
 
             //#endregion
 
-            const firstOCMDJSONDocument = OCMFJSONDocuments[0];
+            const firstOCMDJSONDocument = chargyLib.getFirstArrayElement(OCMFJSONDocuments, "Missing first OCMF JSON document");
 
-            if (firstOCMDJSONDocument != undefined)
-            {
+            // if (firstOCMDJSONDocument != undefined)
+            // {
 
                 //#region General Information
 
@@ -1160,7 +1177,7 @@ export class OCMF {
                     //#region Validate pagination and transaction type
 
                     const paginationPrefix              = paging.length > 0
-                                                              ? paging[0]?.toLowerCase()
+                                                              ? paging.charAt(0).toLowerCase()
                                                               : null;
                     const transactionType               = paginationPrefix === 't'
                                                               ? OCMFTransactionTypes.transaction
@@ -1331,7 +1348,7 @@ export class OCMF {
                                 chargyLib.isOptionalString   (readingIdentification) &&
                                 chargyLib.isMandatoryString  (readingUnit)           &&
                                 chargyLib.isOptionalString   (readingCurrentType)    &&
-                                chargyLib.isOptionalDecimal  (cumulatedLoss)         &&
+                             //   chargyLib.isOptionalDecimal  (cumulatedLoss)         &&
                                 chargyLib.isOptionalString   (errorFlags)            &&
                                 chargyLib.isMandatoryString  (status))
                             {
@@ -1392,7 +1409,7 @@ export class OCMF {
 
                                 }
 
-                                if (transaction && !["B", "C", "X", "E", "L", "R", "A", "P", "S", "T"].includes(transaction)) return {
+                                if (transaction != null && transaction.length > 0 && !["B", "C", "X", "E", "L", "R", "A", "P", "S", "T"].includes(transaction)) return {
                                     status:    chargyInterfaces.SessionVerificationResult.InvalidSessionFormat,
                                     message:   this.chargy.GetMultilanguageText("The given OCMF meter value does not have a valid transaction type!"),
                                     certainty: 0
@@ -1404,7 +1421,7 @@ export class OCMF {
                                     certainty: 0
                                 }
 
-                                if (readingCurrentType && !["AC", "DC"].includes(readingCurrentType)) return {
+                                if (readingCurrentType != null && readingCurrentType.length > 0 && !["AC", "DC"].includes(readingCurrentType)) return {
                                     status:    chargyInterfaces.SessionVerificationResult.InvalidSessionFormat,
                                     message:   this.chargy.GetMultilanguageText("The given OCMF meter value does not have a valid current type!"),
                                     certainty: 0
@@ -1415,7 +1432,8 @@ export class OCMF {
                                 if (CTR.chargingSessions?.[0]?.begin === "?")
                                     CTR.chargingSessions[0].begin = timeStampISO8601;
 
-                                CTR.chargingSessions![0]!.end = timeStampISO8601;
+                                if (CTR.chargingSessions?.[0] !== undefined)
+                                    CTR.chargingSessions[0].end = timeStampISO8601;
 
                                 const measurementKey = [
                                     readingIdentification ?? "?",
@@ -1440,7 +1458,10 @@ export class OCMF {
                                     };
 
                                     measurementsByKey.set(measurementKey, measurement);
-                                    CTR.chargingSessions![0]!.measurements.push(measurement);
+
+                                    const firstChargingSession = CTR.chargingSessions?.[0];
+                                    if (firstChargingSession !== undefined)
+                                        firstChargingSession.measurements.push(measurement);
 
                                 }
 
@@ -1452,7 +1473,7 @@ export class OCMF {
                                     "transactionType":     transactionType,             // "T"     ToDo: Serialize this to a string!
                                     "pagination":          pagination,                  // "9289"
                                     "errorFlags":          errorFlags,                  // ""
-                                    "cumulatedLoss":       cumulatedLoss                // 0.0
+                                    "cumulatedLoss":       cumulatedLoss != null && cumulatedLoss !== 0                // 0.0
                                                                ? new Decimal(cumulatedLoss)
                                                                : undefined,
                                     "status":              status,                      // "G"
@@ -1478,7 +1499,7 @@ export class OCMF {
 
                     if (CTR.chargingSessions        != null &&
                         CTR.chargingSessions.length  > 0    &&
-                        CTR.chargingSessions[0]     != null)
+                        CTR.chargingSessions[0])
                     {
 
                         CTR.begin = CTR.chargingSessions[0].begin;
@@ -1490,7 +1511,7 @@ export class OCMF {
 
                 }
 
-            }
+            //}
 
         }
         catch (exception)
@@ -1511,167 +1532,165 @@ export class OCMF {
 
     //#endregion
 
-
     //#region (private) mergeOCMFSessions(CTRs)
 
-    private mergeOCMFSessions(CTRs: Array<IOCMFChargeTransparencyRecord>): IOCMFChargeTransparencyRecord
-    {
+    // private mergeOCMFSessions(CTRs: Array<IOCMFChargeTransparencyRecord>): IOCMFChargeTransparencyRecord
+    // {
 
-        const mergedCTR:IOCMFChargeTransparencyRecord = {
-            "@id":       "",
-            "@context":  "",
-            certainty:    1
-        };
+    //     const mergedCTR:IOCMFChargeTransparencyRecord = {
+    //         "@id":       "",
+    //         "@context":  "",
+    //         certainty:    1
+    //     };
 
-        for (const ctr of CTRs)
-        {
+    //     for (const ctr of CTRs)
+    //     {
 
-            if (mergedCTR["@id"] === "")
-                mergedCTR["@id"] = ctr["@id"];
+    //         if (mergedCTR["@id"] === "")
+    //             mergedCTR["@id"] = ctr["@id"];
 
-            if (mergedCTR["@context"] === "")
-                mergedCTR["@context"] = ctr["@context"];
+    //         if (mergedCTR["@context"] === "")
+    //             mergedCTR["@context"] = ctr["@context"];
 
-            if (!mergedCTR.begin || (mergedCTR.begin && ctr.begin && mergedCTR.begin > ctr.begin))
-                mergedCTR.begin = ctr.begin;
+    //         if (!mergedCTR.begin || (mergedCTR.begin && ctr.begin && mergedCTR.begin > ctr.begin))
+    //             mergedCTR.begin = ctr.begin;
 
-            if (!mergedCTR.end || (mergedCTR.end && ctr.end && mergedCTR.end < ctr.end))
-                mergedCTR.end = ctr.end;
+    //         if (!mergedCTR.end || (mergedCTR.end && ctr.end && mergedCTR.end < ctr.end))
+    //             mergedCTR.end = ctr.end;
 
-            if (!mergedCTR.description)
-                mergedCTR.description = ctr.description;
+    //         if (!mergedCTR.description)
+    //             mergedCTR.description = ctr.description;
 
-            //ToDo: Is this a really good idea? Or should we fail, whenever this information is different?
-            if (!mergedCTR.contract)
-                mergedCTR.contract = ctr.contract;
+    //         //ToDo: Is this a really good idea? Or should we fail, whenever this information is different?
+    //         if (!mergedCTR.contract)
+    //             mergedCTR.contract = ctr.contract;
 
 
-            if (!mergedCTR.chargingStationOperators)
-                mergedCTR.chargingStationOperators = ctr.chargingStationOperators;
-            else if (ctr.chargingStationOperators)
-                for (const chargingStationOperator of ctr.chargingStationOperators)
-                    mergedCTR.chargingStationOperators.push(chargingStationOperator);
+    //         if (!mergedCTR.chargingStationOperators)
+    //             mergedCTR.chargingStationOperators = ctr.chargingStationOperators;
+    //         else if (ctr.chargingStationOperators)
+    //             for (const chargingStationOperator of ctr.chargingStationOperators)
+    //                 mergedCTR.chargingStationOperators.push(chargingStationOperator);
 
-            if (!mergedCTR.chargingPools)
-                mergedCTR.chargingPools = ctr.chargingPools;
-            else if (ctr.chargingPools)
-                for (const chargingPool of ctr.chargingPools)
-                    mergedCTR.chargingPools.push(chargingPool);
+    //         if (!mergedCTR.chargingPools)
+    //             mergedCTR.chargingPools = ctr.chargingPools;
+    //         else if (ctr.chargingPools)
+    //             for (const chargingPool of ctr.chargingPools)
+    //                 mergedCTR.chargingPools.push(chargingPool);
 
-            if (!mergedCTR.chargingStations)
-                mergedCTR.chargingStations = ctr.chargingStations;
-            else if (ctr.chargingStations)
-                for (const chargingStation of ctr.chargingStations)
-                    mergedCTR.chargingStations.push(chargingStation);
+    //         if (!mergedCTR.chargingStations)
+    //             mergedCTR.chargingStations = ctr.chargingStations;
+    //         else if (ctr.chargingStations)
+    //             for (const chargingStation of ctr.chargingStations)
+    //                 mergedCTR.chargingStations.push(chargingStation);
 
-            // publicKeys
+    //         // publicKeys
 
-            if (!mergedCTR.chargingSessions)
-                mergedCTR.chargingSessions = ctr.chargingSessions;
-            else if (ctr.chargingSessions)
-                for (const chargingSession of ctr.chargingSessions)
-                    mergedCTR.chargingSessions.push(chargingSession);
+    //         if (!mergedCTR.chargingSessions)
+    //             mergedCTR.chargingSessions = ctr.chargingSessions;
+    //         else if (ctr.chargingSessions)
+    //             for (const chargingSession of ctr.chargingSessions)
+    //                 mergedCTR.chargingSessions.push(chargingSession);
 
-            if (!mergedCTR.eMobilityProviders)
-                mergedCTR.eMobilityProviders = ctr.eMobilityProviders;
-            else if (ctr.eMobilityProviders)
-                for (const eMobilityProvider of ctr.eMobilityProviders)
-                    mergedCTR.eMobilityProviders.push(eMobilityProvider);
+    //         if (!mergedCTR.eMobilityProviders)
+    //             mergedCTR.eMobilityProviders = ctr.eMobilityProviders;
+    //         else if (ctr.eMobilityProviders)
+    //             for (const eMobilityProvider of ctr.eMobilityProviders)
+    //                 mergedCTR.eMobilityProviders.push(eMobilityProvider);
 
-            if (!mergedCTR.mediationServices)
-                mergedCTR.mediationServices = ctr.mediationServices;
-            else if (ctr.mediationServices)
-                for (const mediationService of ctr.mediationServices)
-                    mergedCTR.mediationServices.push(mediationService);
+    //         if (!mergedCTR.mediationServices)
+    //             mergedCTR.mediationServices = ctr.mediationServices;
+    //         else if (ctr.mediationServices)
+    //             for (const mediationService of ctr.mediationServices)
+    //                 mergedCTR.mediationServices.push(mediationService);
 
-        }
+    //     }
 
-        return mergedCTR;
+    //     return mergedCTR;
 
-    }
+    // }
 
     //#endregion
 
     //#region (private) mergeChargeTransparencyRecords(CTRs)
 
-    private mergeChargeTransparencyRecords(CTRs: Array<IOCMFChargeTransparencyRecord>): IOCMFChargeTransparencyRecord
-    {
+    // private mergeChargeTransparencyRecords(CTRs: Array<IOCMFChargeTransparencyRecord>): IOCMFChargeTransparencyRecord
+    // {
 
-        const mergedCTR:IOCMFChargeTransparencyRecord = {
-            "@id":       "",
-            "@context":  "",
-            certainty:    1
-        };
+    //     const mergedCTR:IOCMFChargeTransparencyRecord = {
+    //         "@id":       "",
+    //         "@context":  "",
+    //         certainty:    1
+    //     };
 
-        for (const ctr of CTRs)
-        {
+    //     for (const ctr of CTRs)
+    //     {
 
-            if (mergedCTR["@id"] === "")
-                mergedCTR["@id"] = ctr["@id"];
+    //         if (mergedCTR["@id"] === "")
+    //             mergedCTR["@id"] = ctr["@id"];
 
-            if (mergedCTR["@context"] === "")
-                mergedCTR["@context"] = ctr["@context"];
+    //         if (mergedCTR["@context"] === "")
+    //             mergedCTR["@context"] = ctr["@context"];
 
-            if (!mergedCTR.begin || (mergedCTR.begin && ctr.begin && mergedCTR.begin > ctr.begin))
-                mergedCTR.begin = ctr.begin;
+    //         if (!mergedCTR.begin || (mergedCTR.begin && ctr.begin && mergedCTR.begin > ctr.begin))
+    //             mergedCTR.begin = ctr.begin;
 
-            if (!mergedCTR.end || (mergedCTR.end && ctr.end && mergedCTR.end < ctr.end))
-                mergedCTR.end = ctr.end;
+    //         if (!mergedCTR.end || (mergedCTR.end && ctr.end && mergedCTR.end < ctr.end))
+    //             mergedCTR.end = ctr.end;
 
-            if (!mergedCTR.description)
-                mergedCTR.description = ctr.description;
+    //         if (!mergedCTR.description)
+    //             mergedCTR.description = ctr.description;
 
-            //ToDo: Is this a really good idea? Or should we fail, whenever this information is different?
-            if (!mergedCTR.contract)
-                mergedCTR.contract = ctr.contract;
+    //         //ToDo: Is this a really good idea? Or should we fail, whenever this information is different?
+    //         if (!mergedCTR.contract)
+    //             mergedCTR.contract = ctr.contract;
 
 
-            if (!mergedCTR.chargingStationOperators)
-                mergedCTR.chargingStationOperators = ctr.chargingStationOperators;
-            else if (ctr.chargingStationOperators)
-                for (const chargingStationOperator of ctr.chargingStationOperators)
-                    mergedCTR.chargingStationOperators.push(chargingStationOperator);
+    //         if (!mergedCTR.chargingStationOperators)
+    //             mergedCTR.chargingStationOperators = ctr.chargingStationOperators;
+    //         else if (ctr.chargingStationOperators)
+    //             for (const chargingStationOperator of ctr.chargingStationOperators)
+    //                 mergedCTR.chargingStationOperators.push(chargingStationOperator);
 
-            if (!mergedCTR.chargingPools)
-                mergedCTR.chargingPools = ctr.chargingPools;
-            else if (ctr.chargingPools)
-                for (const chargingPool of ctr.chargingPools)
-                    mergedCTR.chargingPools.push(chargingPool);
+    //         if (!mergedCTR.chargingPools)
+    //             mergedCTR.chargingPools = ctr.chargingPools;
+    //         else if (ctr.chargingPools)
+    //             for (const chargingPool of ctr.chargingPools)
+    //                 mergedCTR.chargingPools.push(chargingPool);
 
-            if (!mergedCTR.chargingStations)
-                mergedCTR.chargingStations = ctr.chargingStations;
-            else if (ctr.chargingStations)
-                for (const chargingStation of ctr.chargingStations)
-                    mergedCTR.chargingStations.push(chargingStation);
+    //         if (!mergedCTR.chargingStations)
+    //             mergedCTR.chargingStations = ctr.chargingStations;
+    //         else if (ctr.chargingStations)
+    //             for (const chargingStation of ctr.chargingStations)
+    //                 mergedCTR.chargingStations.push(chargingStation);
 
-            // publicKeys
+    //         // publicKeys
 
-            if (!mergedCTR.chargingSessions)
-                mergedCTR.chargingSessions = ctr.chargingSessions;
-            else if (ctr.chargingSessions)
-                for (const chargingSession of ctr.chargingSessions)
-                    mergedCTR.chargingSessions.push(chargingSession);
+    //         if (!mergedCTR.chargingSessions)
+    //             mergedCTR.chargingSessions = ctr.chargingSessions;
+    //         else if (ctr.chargingSessions)
+    //             for (const chargingSession of ctr.chargingSessions)
+    //                 mergedCTR.chargingSessions.push(chargingSession);
 
-            if (!mergedCTR.eMobilityProviders)
-                mergedCTR.eMobilityProviders = ctr.eMobilityProviders;
-            else if (ctr.eMobilityProviders)
-                for (const eMobilityProvider of ctr.eMobilityProviders)
-                    mergedCTR.eMobilityProviders.push(eMobilityProvider);
+    //         if (!mergedCTR.eMobilityProviders)
+    //             mergedCTR.eMobilityProviders = ctr.eMobilityProviders;
+    //         else if (ctr.eMobilityProviders)
+    //             for (const eMobilityProvider of ctr.eMobilityProviders)
+    //                 mergedCTR.eMobilityProviders.push(eMobilityProvider);
 
-            if (!mergedCTR.mediationServices)
-                mergedCTR.mediationServices = ctr.mediationServices;
-            else if (ctr.mediationServices)
-                for (const mediationService of ctr.mediationServices)
-                    mergedCTR.mediationServices.push(mediationService);
+    //         if (!mergedCTR.mediationServices)
+    //             mergedCTR.mediationServices = ctr.mediationServices;
+    //         else if (ctr.mediationServices)
+    //             for (const mediationService of ctr.mediationServices)
+    //                 mergedCTR.mediationServices.push(mediationService);
 
-        }
+    //     }
 
-        return mergedCTR;
+    //     return mergedCTR;
 
-    }
+    // }
 
-    //#endregion
-
+    // //#endregion
 
     //#region (private) validateOCMFSignature(OCMFJSONDocument, PublicKey, PublicKeyEncoding?)
 
@@ -1783,7 +1802,8 @@ export class OCMF {
 
                     //#region Try to determine the public key encoding format
 
-                    if (PublicKeyEncoding)
+                    if (PublicKeyEncoding != null &&
+                        PublicKeyEncoding.length > 0)
                     {
                         switch (PublicKeyEncoding.toLowerCase())
                         {
@@ -1832,7 +1852,7 @@ export class OCMF {
                     }
 
                     // Or fail...
-                    if (!publicKeyBytes)
+                    if (publicKeyBytes == null)
                     {
                         OCMFJSONDocument.validationStatus = chargyInterfaces.VerificationResult.UnknownPublicKeyFormat;
                         return OCMFJSONDocument.validationStatus;
@@ -1842,7 +1862,8 @@ export class OCMF {
 
                     //#region Parse the DER-encoded public key
 
-                    const publicKeyASN1  = ECPoint.decode<{ algorithm: { id: number[], curve: number[] }, pubKey: { data: Buffer } }>(publicKeyBytes, 'der');
+                    const decodedPublicKeyASN1: unknown = ECPoint.decode(publicKeyBytes, 'der');
+                    const publicKeyASN1                 = decodedPublicKeyASN1 as ASN1PublicKey;
 
                     // publicKeyASN1.algorithm.id:     e.g. "1.2.840.10045.2.1"   => ECDSA and ECDH Public Key, https://www.alvestrand.no/objectid/1.2.840.10045.2.1.html
                     // publicKeyASN1.algorithm.curve:  e.g. "1.2.840.10045.3.1.7" => ECC (NIST) P-256 / secp256r1, https://www.alvestrand.no/objectid/1.2.840.10045.3.1.7.html
@@ -1861,10 +1882,11 @@ export class OCMF {
                     //#endregion
 
                     OCMFJSONDocument.publicKey = {
-                                                     algorithm:   OCMFJSONDocument.signature.SA
-                                                                      ? OCMFJSONDocument.signature.SA.substring(
-                                                                            OCMFJSONDocument.signature.SA.indexOf('-') + 1,
-                                                                            OCMFJSONDocument.signature.SA.lastIndexOf('-')
+                                                      algorithm:   OCMFJSONDocument.signature.SA != null &&
+                                                                   OCMFJSONDocument.signature.SA.length > 0
+                                                                       ? OCMFJSONDocument.signature.SA.substring(
+                                                                             OCMFJSONDocument.signature.SA.indexOf('-') + 1,
+                                                                             OCMFJSONDocument.signature.SA.lastIndexOf('-')
                                                                         )
                                                                       : 'secp256r1',
                                                      encoding:    PublicKeyEncoding ?? 'hex',
@@ -2151,11 +2173,9 @@ export class OCMF {
                                         hashValue:          hashValue,
                                         publicKey:          PublicKey,
                                         publicKeyEncoding:  PublicKeyEncoding,
-                                        validationStatus:   validationStatus
-                                                                ? validationStatus
-                                                                : PublicKey
-                                                                      ? chargyInterfaces.VerificationResult.Unvalidated
-                                                                      : chargyInterfaces.VerificationResult.PublicKeyNotFound
+                                        validationStatus:   validationStatus ?? (PublicKey != null
+                                                                                     ? chargyInterfaces.VerificationResult.Unvalidated
+                                                                                     : chargyInterfaces.VerificationResult.PublicKeyNotFound)
                                     }
 
                                     //#region Parse the signature
@@ -2193,7 +2213,8 @@ export class OCMF {
                                         }
 
                                         // Parse the DER-encoded signature
-                                        const signatureObj = ECDSASignature.decode<{ r: { toString(base: number): string }, s: { toString(base: number): string } }>(Buffer.from(ocmfJSONDocument.signature.SD, bufferEncoding), 'der');
+                                        const decodedSignatureObj: unknown = ECDSASignature.decode(Buffer.from(ocmfJSONDocument.signature.SD, bufferEncoding), 'der');
+                                        const signatureObj                 = decodedSignatureObj as ASN1Signature;
 
                                         // Extract the r and s components of the signature
                                         ocmfJSONDocument.signatureRS =  {
@@ -2210,7 +2231,7 @@ export class OCMF {
 
                                     //#endregion
 
-                                    if (PublicKey && ocmfJSONDocument.validationStatus === chargyInterfaces.VerificationResult.Unvalidated)
+                                    if (PublicKey != null && ocmfJSONDocument.validationStatus === chargyInterfaces.VerificationResult.Unvalidated)
                                         await this.validateOCMFSignature(ocmfJSONDocument,
                                                                          PublicKey,
                                                                          PublicKeyEncoding);
@@ -2269,7 +2290,7 @@ export class OCMF {
                                         PublicKeyEncoding?:  string,
                                         ContainerInfos?:     unknown) : Promise<chargeTransparencyRecord.IChargeTransparencyRecord|chargyInterfaces.ISessionCryptoResult>
     {
-        return await this.TryToParseOCMFDocuments([ OCMFDocument ], PublicKey, PublicKeyEncoding, ContainerInfos);
+        return this.TryToParseOCMFDocuments([ OCMFDocument ], PublicKey, PublicKeyEncoding, ContainerInfos);
     }
 
     //#endregion
@@ -2321,9 +2342,9 @@ export class OCMF {
                                            (ocmfJSONDocument.payload.MS ?? "") + "|" +
                                            (ocmfJSONDocument.payload.MF ?? "") + "|" +
 
-                                           (ocmfJSONDocument.payload.IS ? "1|" : "0|") +
+                                           (ocmfJSONDocument.payload.IS === true ? "1|" : "0|") +
                                            (ocmfJSONDocument.payload.IL ?? "") + "|" +
-                                           (ocmfJSONDocument.payload.IF ?? "") + "|" +
+                                           //(ocmfJSONDocument.payload.IF ?? "") + "|" +
                                            (ocmfJSONDocument.payload.IT ?? "") + "|" +
                                            (ocmfJSONDocument.payload.ID ?? "") + "|" +
                                            (ocmfJSONDocument.payload.TT ?? "") + "|" +
@@ -2355,7 +2376,7 @@ export class OCMF {
             for (const ocmfJSONDocumentGroup of ocmfJSONDocumentGroups.values())
             {
 
-                if (PublicKey)
+                if (PublicKey != null)
                     for (const ocmfJSONDocument of ocmfJSONDocumentGroup)
                         if (ocmfJSONDocument.validationStatus === chargyInterfaces.VerificationResult.Unvalidated)
                             await this.validateOCMFSignature(ocmfJSONDocument, PublicKey);

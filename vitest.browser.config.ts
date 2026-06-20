@@ -1,7 +1,7 @@
 import { defineConfig } from "vitest/config";
 import { playwright } from "@vitest/browser-playwright";
 
-export default defineConfig({
+const config: ReturnType<typeof defineConfig> = defineConfig({
   test: {
     name: "browser",
     globals: false,
@@ -20,3 +20,5 @@ export default defineConfig({
     }
   }
 });
+
+export default config;

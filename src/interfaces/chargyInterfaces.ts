@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-import Decimal         from 'decimal.js';
+import type Decimal         from 'decimal.js';
 import * as chargyLib  from '../chargyLib'
 
 
@@ -39,40 +39,32 @@ export function isGeoLocation(data: unknown): data is IGeoLocation {
            (longitude === undefined || typeof longitude === "number");
 }
 
-export interface GetChargingPoolFunc {
-    (Id: string): IChargingPool|null;
-}
+export type GetChargingPoolFunc = (Id: string) => IChargingPool|null;
 
-export interface GetChargingStationFunc {
-    (Id: string): IChargingStation|null;
-}
+export type GetChargingStationFunc = (Id: string) => IChargingStation|null;
 
-export interface GetEVSEFunc {
-    (Id: string): IEVSE|null;
-}
+export type GetEVSEFunc = (Id: string) => IEVSE|null;
 
-export interface GetMeterFunc {
-    (Id: string): IMeter|null;
-}
+export type GetMeterFunc = (Id: string) => IMeter|null;
 
-export interface CheckMeterPublicKeySignatureFunc {
-    (chargingStation:  IChargingStation | null | undefined,
-     evse:             IEVSE            | null | undefined,
-     meter:            IMeter           | null | undefined,
-     publicKey:        IPublicKey       | null | undefined,
-     signature:        unknown): Promise<string>;
-}
+export type CheckMeterPublicKeySignatureFunc = (
+    chargingStation:  IChargingStation | null | undefined,
+    evse:             IEVSE            | null | undefined,
+    meter:            IMeter           | null | undefined,
+    publicKey:        IPublicKey       | null | undefined,
+    signature:        unknown
+) => Promise<string>;
 
 
 
 export interface IContract
 {
     "@id":                      string;
-    "@context"?:                string;
-    description?:               IMultilanguageText;
-    type?:                      string;
-    username?:                  string;
-    email?:                     string;
+    "@context"?:                string | undefined;
+    description?:               IMultilanguageText | undefined;
+    type?:                      string | undefined;
+    username?:                  string | undefined;
+    email?:                     string | undefined;
 }
 
 export function isString(value: unknown): value is string {
@@ -123,44 +115,44 @@ export interface IKeyInfo
 export interface IChargingStationOperator
 {
     "@id":                      string;
-    "@context"?:                string;
-    subCSOIds?:                 Array<string>;
-    description?:               IMultilanguageText;
+    "@context"?:                string | undefined;
+    subCSOIds?:                 Array<string> | undefined;
+    description?:               IMultilanguageText | undefined;
     contact:                    IContact;
     support:                    ISupport;
     privacy:                    IPrivacy;
-    geoLocation?:               IGeoLocation;
-    chargingPools?:             Array<IChargingPool>;
-    chargingStations?:          Array<IChargingStation>;
-    EVSEs?:                     Array<IEVSE>;
-    publicKeys?:                Array<IPublicKey>;
+    geoLocation?:               IGeoLocation | undefined;
+    chargingPools?:             Array<IChargingPool> | undefined;
+    chargingStations?:          Array<IChargingStation> | undefined;
+    EVSEs?:                     Array<IEVSE> | undefined;
+    publicKeys?:                Array<IPublicKey> | undefined;
 
-    chargingTariffs?:           Array<IChargingTariff>;
-    parkingTariffs?:            Array<IParkingTariff>;
+    chargingTariffs?:           Array<IChargingTariff> | undefined;
+    parkingTariffs?:            Array<IParkingTariff> | undefined;
 
 }
 
 export interface IContact {
     email:                      string;
     web:                        string;
-    logoUrl?:                   string;
-    address?:                   IAddress;
-    publicKeys?:                Array<IPublicKey>
+    logoUrl?:                   string | undefined;
+    address?:                   IAddress | undefined;
+    publicKeys?:                Array<IPublicKey> | undefined
 }
 
 export interface ISupport {
     hotline:                    string;
     email:                      string;
-    web?:                       string;
-    mediationServices?:         Array<string>;
-    publicKeys?:                Array<IPublicKey>
+    web?:                       string | undefined;
+    mediationServices?:         Array<string> | undefined;
+    publicKeys?:                Array<IPublicKey> | undefined
 }
 
 export interface IPrivacy {
     contact:                    string;
     email:                      string;
     web:                        string;
-    publicKeys?:                Array<IPublicKey>
+    publicKeys?:                Array<IPublicKey> | undefined
 }
 
 export interface IPublicKey
@@ -168,9 +160,9 @@ export interface IPublicKey
     algorithm:                  string;
     format:                     string;            // e.g. "DER" | "rs"
     encoding:                   IEncoding|string;  // e.g. "hex" | "base64"
-    value?:                     string;
-    previousValue?:             string;
-    signatures?:                Array<unknown>;
+    value?:                     string | undefined;
+    previousValue?:             string | undefined;
+    signatures?:                Array<unknown> | undefined;
 }
 
 export function isIPublicKeyXY(obj: unknown): obj is IPublicKeyXY {
@@ -187,10 +179,10 @@ export interface IPublicKeyXY extends IPublicKey
 
 export interface ISignature
 {
-    algorithm?:                 CryptoAlgorithms|string;
-    format?:                    SignatureFormats|string;
-    previousValue?:             string;
-    value?:                     string;
+    algorithm?:                 CryptoAlgorithms|string | undefined;
+    format?:                    SignatureFormats|string | undefined;
+    previousValue?:             string | undefined;
+    value?:                     string | undefined;
 }
 
 // export interface IECCSignature extends ISignature
@@ -206,82 +198,82 @@ export interface ISignature
 
 export interface ISignatureRS extends ISignature
 {
-    r?:                         string;
-    s?:                         string;
+    r?:                         string | undefined;
+    s?:                         string | undefined;
 }
 
 export interface IChargingPool
 {
     "@id":                      string;
-    "@context"?:                string;
-    description?:               IMultilanguageText;
-    address?:                   IAddress;
-    geoLocation?:               IGeoLocation;
-    chargingStationOperator?:   IChargingStationOperator;
-    chargingStations?:          Array<IChargingStation>;
-    chargingTariffs?:           Array<IChargingTariff>;
-    publicKeys?:                Array<IPublicKey>;
+    "@context"?:                string | undefined;
+    description?:               IMultilanguageText | undefined;
+    address?:                   IAddress | undefined;
+    geoLocation?:               IGeoLocation | undefined;
+    chargingStationOperator?:   IChargingStationOperator | undefined;
+    chargingStations?:          Array<IChargingStation> | undefined;
+    chargingTariffs?:           Array<IChargingTariff> | undefined;
+    publicKeys?:                Array<IPublicKey> | undefined;
 }
 
 export interface IChargingStation
 {
     "@id":                      string;
-    "@context"?:                string;
-    description?:               IMultilanguageText;
-    manufacturer?:              string;
-    manufacturerURL?:           string;
-    model?:                     string;
-    modelURL?:                  string;
-    firmwareVersion?:           string;
-    firmwareChecksum?:          string;
-    hardwareVersion?:           string;
-    serialNumber?:              string;
-    legalCompliance?:           ILegalCompliance;
-    address?:                   IAddress;
-    geoLocation?:               IGeoLocation;
-    chargingStationOperator?:   IChargingStationOperator;
-    chargingPoolId?:            string;
-    chargingPool?:              IChargingPool;
+    "@context"?:                string | undefined;
+    description?:               IMultilanguageText | undefined;
+    manufacturer?:              string | undefined;
+    manufacturerURL?:           string | undefined;
+    model?:                     string | undefined;
+    modelURL?:                  string | undefined;
+    firmwareVersion?:           string | undefined;
+    firmwareChecksum?:          string | undefined;
+    hardwareVersion?:           string | undefined;
+    serialNumber?:              string | undefined;
+    legalCompliance?:           ILegalCompliance | undefined;
+    address?:                   IAddress | undefined;
+    geoLocation?:               IGeoLocation | undefined;
+    chargingStationOperator?:   IChargingStationOperator | undefined;
+    chargingPoolId?:            string | undefined;
+    chargingPool?:              IChargingPool | undefined;
     EVSEs:                      Array<IEVSE>;
-    EVSEIds?:                   Array<string>;
-    meters?:                    Array<IMeter>;
-    chargingTariffs?:           Array<IChargingTariff>;
-    publicKeys?:                Array<IPublicKey>;
+    EVSEIds?:                   Array<string> | undefined;
+    meters?:                    Array<IMeter> | undefined;
+    chargingTariffs?:           Array<IChargingTariff> | undefined;
+    publicKeys?:                Array<IPublicKey> | undefined;
 }
 
 export interface IEVSE
 {
     "@id":                      string;
-    "@context"?:                string;
-    description?:               IMultilanguageText;
-    chargingStation?:           IChargingStation;
-    chargingStationId?:         string;
+    "@context"?:                string | undefined;
+    description?:               IMultilanguageText | undefined;
+    chargingStation?:           IChargingStation | undefined;
+    chargingStationId?:         string | undefined;
     meters:                     Array<IMeter>;
-    chargingTariffs?:           Array<IChargingTariff>;
-    publicKeys?:                Array<IPublicKey>;
-    connectors?:                Array<IConnector>;
+    chargingTariffs?:           Array<IChargingTariff> | undefined;
+    publicKeys?:                Array<IPublicKey> | undefined;
+    connectors?:                Array<IConnector> | undefined;
 }
 
 export interface IMeter
 {
     "@id":                      string;
-    "@context"?:                string;
-    description?:               IMultilanguageText;
-    manufacturer?:              string;
-    manufacturerURL?:           string;
-    model?:                     string;
-    modelURL?:                  string;
-    firmwareVersion?:           string;
-    firmwareChecksum?:          string;
-    hardwareVersion?:           string;
-    legalCompliance?:           ILegalCompliance;
-    chargingStation?:           IChargingStation;
-    chargingStationId?:         string;
-    EVSE?:                      IEVSE;
-    EVSEId?:                    string;
-    signatureInfos?:            ISignatureInfos;
-    signatureFormat?:           string;
-    publicKeys?:                Array<IPublicKey>;
+    "@context"?:                string | undefined;
+    description?:               IMultilanguageText | undefined;
+    manufacturer?:              string | undefined;
+    manufacturerURL?:           string | undefined;
+    model?:                     string | undefined;
+    modelURL?:                  string | undefined;
+    firmwareVersion?:           string | undefined;
+    firmwareChecksum?:          string | undefined;
+    hardwareVersion?:           string | undefined;
+    legalCompliance?:           ILegalCompliance | undefined;
+    chargingStation?:           IChargingStation | undefined;
+    chargingStationId?:         string | undefined;
+    EVSE?:                      IEVSE | undefined;
+    EVSEId?:                    string | undefined;
+    signatureInfos?:            ISignatureInfos | undefined;
+    signatureFormat?:           string | undefined;
+    publicKeys?:                Array<IPublicKey> | undefined;
 }
 
 export interface IConnector {
@@ -503,14 +495,14 @@ export interface ISessionCryptoResult extends chargyLib.JSONObject
 }
 
 export function isISessionCryptoResult1(obj: unknown): obj is ISessionCryptoResult {
-    return typeof obj === 'object' && obj !== null &&
-           (obj as ISessionCryptoResult).status !== undefined
+    return isObject(obj) &&
+           obj["status"] !== undefined
 }
 
 export function isISessionCryptoResult2(obj: unknown): obj is ISessionCryptoResult {
-    return typeof obj === 'object' && obj !== null &&
-           (obj as ISessionCryptoResult).status !== undefined &&
-           (obj as ISessionCryptoResult).status !== SessionVerificationResult.InvalidSessionFormat
+    return isObject(obj) &&
+           obj["status"] !== undefined &&
+           obj["status"] !== SessionVerificationResult.InvalidSessionFormat
 }
 
 export interface ICryptoResult
@@ -521,16 +513,16 @@ export interface ICryptoResult
 }
 
 export function isICryptoResult(obj: unknown): obj is ICryptoResult {
-    return typeof obj === 'object' && obj !== null &&
-           (obj as ICryptoResult).status !== undefined
+    return isObject(obj) &&
+           obj["status"] !== undefined
 }
 
 export interface IAddress {
     "@context"?:                string;
     city:                       string;
-    street?:                    string;
-    houseNumber?:               string;
-    floorLevel?:                string;
+    street?:                    string | undefined;
+    houseNumber?:               string | undefined;
+    floorLevel?:                string | undefined;
     postalCode:                 string;
     country:                    string;
     comment?:                   string | IMultilanguageText;
@@ -717,11 +709,11 @@ export function isIFileInfo(obj: unknown): obj is IFileInfo {
 
 export interface IFileInfo {
     name:           string,
-    path?:          string,
-    type?:          string,
-    data?:          ArrayBuffer|Uint8Array,
-    info?:          string,
-    error?:         string,
+    path?:          string | undefined,
+    type?:          string | undefined,
+    data?:          ArrayBuffer|Uint8Array | undefined,
+    info?:          string | undefined,
+    error?:         string | undefined,
     exception?:     unknown
 }
 

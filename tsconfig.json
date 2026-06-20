@@ -12,7 +12,28 @@
     "declarationMap": true,
     "sourceMap": true,
     "strict": true,
-    "skipLibCheck": true,
+    "alwaysStrict": true,
+    "strictBindCallApply": true,
+    "strictFunctionTypes": true,
+    "strictPropertyInitialization": true,
+    "noImplicitThis": true,
+    "noFallthroughCasesInSwitch": true,
+    "noImplicitReturns": true,
+    "noPropertyAccessFromIndexSignature": true,
+    "noImplicitOverride": true,
+    "noUncheckedSideEffectImports": true,
+    "exactOptionalPropertyTypes": true,
+    "verbatimModuleSyntax": true,
+    "isolatedDeclarations": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "moduleDetection": "force",
+    "allowUnreachableCode": false,
+    "allowUnusedLabels": false,
+    "noUncheckedIndexedAccess": true,
+    "noEmitOnError": true,
+    "useUnknownInCatchVariables": true,
+    "skipLibCheck": false,
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
     "forceConsistentCasingInFileNames": true,
@@ -24,6 +45,9 @@
       ],
       "@open-charging-cloud/chargy-core/i18n.json": [
         "./i18n.json"
+      ],
+      "@oozcitak/dom": [
+        "./tests/types/oozcitak-dom.d.ts"
       ],
       "#pdfjs-runtime": [
         "./src/pdfjs/runtime.ts"

@@ -19,8 +19,14 @@ import {
 import type {
     IFileInfo
 } from '@open-charging-cloud/chargy-core';
+import {
+    loadChargyTestDependencies
+} from "./chargyTestRuntime";
 
 const require = createRequire(import.meta.url);
+const chargyDependencies = loadChargyTestDependencies(require);
+
+type DetectionResult = ReturnType<Chargy["DetectAndConvertContentFormat"]>;
 
 vi.mock('pdfjs-dist', async () => {
     const pdfjs = await import('pdfjs-dist/legacy/build/pdf.mjs');
@@ -41,10 +47,10 @@ function createChargy(): Chargy {
     return new Chargy(
         {},
         [ "en" ],
-        require("elliptic"),
-        require("moment"),
-        require("asn1.js"),
-        require("base32-decode"),
+        chargyDependencies.elliptic,
+        chargyDependencies.moment,
+        chargyDependencies.asn1,
+        chargyDependencies.base32Decode,
         () => ""
     );
 
@@ -55,10 +61,10 @@ function readFixture(fileName: string): string {
 }
 
 function parseXML(xml: string): Document {
-    return new DOMParser().parseFromString(xml, "text/xml") as unknown as Document;
+    return new DOMParser().parseFromString(xml, "text/xml");
 }
 
-async function verifyMennekesXML(fileName: string, xml: string) {
+async function verifyMennekesXML(fileName: string, xml: string): DetectionResult {
 
     const fileInfo: IFileInfo = {
         name:  fileName,
@@ -66,7 +72,7 @@ async function verifyMennekesXML(fileName: string, xml: string) {
         data:  new TextEncoder().encode(xml)
     };
 
-    return await createChargy().DetectAndConvertContentFormat([ fileInfo ]);
+    return createChargy().DetectAndConvertContentFormat([ fileInfo ]);
 
 }
 
@@ -121,7 +127,11 @@ describe('Mennekes EDL40 Tests', () => {
 
     test("builds the 320 byte extended SML signature data at documented offsets", () => {
 
-        const chargingProcess = extractMennekesChargingProcesses(parseXML(readFixture("test1.xml")))[0];
+        const chargingProcess = extractMennekesChargingProcesses(parseXML(readFixture("test1.xml"))).at(0);
+
+        if (chargingProcess === undefined)
+            throw new Error("Missing Mennekes charging process");
+
         const signedData      = buildMennekesSignatureData(chargingProcess, chargingProcess.measurementStart);
 
         expect(signedData).toHaveLength(320);

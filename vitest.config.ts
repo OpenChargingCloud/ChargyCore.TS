@@ -1,6 +1,6 @@
 import { defineConfig } from "vitest/config";
 
-export default defineConfig({
+const config: ReturnType<typeof defineConfig> = defineConfig({
   resolve: {
     alias: {
       "@open-charging-cloud/chargy-core": new URL("./src/index.ts", import.meta.url).pathname,
@@ -29,3 +29,5 @@ export default defineConfig({
     }
   }
 });
+
+export default config;

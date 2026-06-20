@@ -15,10 +15,11 @@
  * limitations under the License.
  */
 
-import { Chargy }                     from './chargy'
+import type { Chargy,
+              EllipticCurve }         from './chargy'
 import { ACrypt }                     from './ACrypt'
 import * as chargyInterfaces          from './interfaces/chargyInterfaces'
-import * as chargeTransparencyRecord  from './interfaces/IChargeTransparencyRecord'
+import type * as chargeTransparencyRecord  from './interfaces/IChargeTransparencyRecord'
 import * as chargyLib                 from './chargyLib'
 
 
@@ -39,15 +40,15 @@ export interface IGDFCrypt01Result extends chargyInterfaces.ICryptoResult
     value?:                        string,
     authorizationStart?:           string,
     authorizationStartTimestamp?:  string,
-    publicKey?:                    string,
-    publicKeyFormat?:              string,
-    publicKeySignatures?:          Array<unknown>,
-    signature?:                    chargyInterfaces.ISignatureRS
+    publicKey?:                    string | undefined,
+    publicKeyFormat?:              string | undefined,
+    publicKeySignatures?:          Array<unknown> | undefined,
+    signature?:                    chargyInterfaces.ISignatureRS | undefined
 }
 
 export class GDFCrypt01 extends ACrypt {
 
-    readonly curve = new this.chargy.elliptic.ec('p256');
+    readonly curve: EllipticCurve = new this.chargy.elliptic.ec('p256');
 
     constructor(chargy:  Chargy) {
         super("ECC secp256r1",
@@ -107,15 +108,14 @@ export class GDFCrypt01 extends ACrypt {
     async VerifyMeasurement(measurementValue: IGDFMeasurementValue): Promise<IGDFCrypt01Result>
     {
 
-        function setResult(vr: chargyInterfaces.VerificationResult)
+        function setResult(vr: chargyInterfaces.VerificationResult): IGDFCrypt01Result
         {
             cryptoResult.status     = vr;
             measurementValue.result = cryptoResult;
             return cryptoResult;
         }
 
-        if (measurementValue.measurement                 === undefined ||
-            measurementValue.measurement.chargingSession === undefined)
+        if (measurementValue.measurement?.chargingSession === undefined)
         {
             return {
                 status: chargyInterfaces.VerificationResult.InvalidMeasurement
@@ -170,9 +170,10 @@ export class GDFCrypt01 extends ACrypt {
                         try
                         {
 
-                            cryptoResult.publicKey            = meter.publicKeys[0]?.value?.toLowerCase();
-                            cryptoResult.publicKeyFormat      = meter.publicKeys[0]?.format;
-                            cryptoResult.publicKeySignatures  = meter.publicKeys[0]?.signatures;
+                            const publicKey                   = meter.publicKeys.at(0);
+                            cryptoResult.publicKey            = publicKey?.value?.toLowerCase();
+                            cryptoResult.publicKeyFormat      = publicKey?.format;
+                            cryptoResult.publicKeySignatures  = publicKey?.signatures;
 
                             try
                             {
@@ -221,7 +222,7 @@ export class GDFCrypt01 extends ACrypt {
     }
 
     async ViewMeasurement(measurementValue:      IGDFMeasurementValue,
-                          errorDiv:              HTMLDivElement,
+                          _errorDiv:             HTMLDivElement,
                           introDiv:              HTMLDivElement,
                           infoDiv:               HTMLDivElement,
                           PlainTextDiv:          HTMLDivElement,
@@ -231,9 +232,7 @@ export class GDFCrypt01 extends ACrypt {
                           SignatureCheckDiv:     HTMLDivElement) : Promise<Error | undefined>
     {
 
-        if (measurementValue.measurement                              === undefined ||
-            measurementValue.measurement.chargingSession              === undefined ||
-            measurementValue.measurement.chargingSession.authorizationStart.timestamp === undefined)
+        if (measurementValue.measurement?.chargingSession?.authorizationStart.timestamp === undefined)
         {
             return new Error("Invalid measurement!");
         }
@@ -253,10 +252,9 @@ export class GDFCrypt01 extends ACrypt {
 
         {
 
-            if (PlainTextDiv.parentElement             != undefined &&
-                PlainTextDiv.parentElement.children[0] != undefined)
+            if (PlainTextDiv.parentElement)
             {
-                PlainTextDiv.parentElement.children[0].innerHTML = "Plain text (320 Bytes, hex)";
+                chargyLib.getArrayLikeElement(PlainTextDiv.parentElement.children, 0, "Missing plain text header").innerHTML = "Plain text (320 Bytes, hex)";
             }
 
             PlainTextDiv.style.fontFamily  = "";
@@ -264,19 +262,19 @@ export class GDFCrypt01 extends ACrypt {
             PlainTextDiv.style.maxHeight   = "";
             PlainTextDiv.style.overflowY   = "";
 
-            this.CreateLine("Zählernummer",             measurementValue.measurement.energyMeterId,                                                     result.meterId                                         || "",  infoDiv, PlainTextDiv);
-            this.CreateLine("Zeitstempel",              chargyLib.UTC2human(measurementValue.timestamp),                                                result.timestamp                                       || "",  infoDiv, PlainTextDiv);
+            this.CreateLine("Zählernummer",             measurementValue.measurement.energyMeterId,                                                     result.meterId                                         ?? "",  infoDiv, PlainTextDiv);
+            this.CreateLine("Zeitstempel",              chargyLib.UTC2human(measurementValue.timestamp),                                                result.timestamp                                       ?? "",  infoDiv, PlainTextDiv);
             //this.CreateLine("Status",                   chargyLib.hex2bin(measurementValue.infoStatus) + " (" + measurementValue.infoStatus + " hex)<br /><span class=\"statusInfos\">" +
-            //                                            this.DecodeStatus(measurementValue.infoStatus).join("<br />") + "</span>",                      result.infoStatus                                      || "",  infoDiv, PlainTextDiv);
-            //this.CreateLine("Sekundenindex",            measurementValue.secondsIndex,                                                                  result.secondsIndex                                    || "",  infoDiv, PlainTextDiv);
-            //this.CreateLine("Paginierungszähler",       parseInt(measurementValue.paginationId, 16),                                                    result.paginationId                                    || "",  infoDiv, PlainTextDiv);
-            this.CreateLine("OBIS-Kennzahl",            measurementValue.measurement.obis,                                                              result.obis                                            || "",  infoDiv, PlainTextDiv);
-            this.CreateLine("Einheit (codiert)",        measurementValue.measurement.unitEncoded ?? 0,                                                  result.unitEncoded                                     || "",  infoDiv, PlainTextDiv);
-            this.CreateLine("Skalierung",               measurementValue.measurement.scale,                                                             result.scale                                           || "",  infoDiv, PlainTextDiv);
-            this.CreateLine("Messwert",                 measurementValue.value.toString() + " Wh",                                                                 result.value                                           || "",  infoDiv, PlainTextDiv);
-            //this.CreateLine("Logbuchindex",             measurementValue.logBookIndex + " hex",                                                         result.logBookIndex                                    || "",  infoDiv, PlainTextDiv);
-            this.CreateLine("Autorisierung",            measurementValue.measurement.chargingSession.authorizationStart["@id"] + " hex",                chargyLib.pad(result.authorizationStart,          128) || "",  infoDiv, PlainTextDiv);
-            this.CreateLine("Autorisierungszeitpunkt",  chargyLib.UTC2human(measurementValue.measurement.chargingSession.authorizationStart.timestamp), chargyLib.pad(result.authorizationStartTimestamp, 151) || "",  infoDiv, PlainTextDiv);
+            //                                            this.DecodeStatus(measurementValue.infoStatus).join("<br />") + "</span>",                      result.infoStatus                                      ?? "",  infoDiv, PlainTextDiv);
+            //this.CreateLine("Sekundenindex",            measurementValue.secondsIndex,                                                                  result.secondsIndex                                    ?? "",  infoDiv, PlainTextDiv);
+            //this.CreateLine("Paginierungszähler",       parseInt(measurementValue.paginationId, 16),                                                    result.paginationId                                    ?? "",  infoDiv, PlainTextDiv);
+            this.CreateLine("OBIS-Kennzahl",            measurementValue.measurement.obis,                                                              result.obis                                            ?? "",  infoDiv, PlainTextDiv);
+            this.CreateLine("Einheit (codiert)",        measurementValue.measurement.unitEncoded ?? 0,                                                  result.unitEncoded                                     ?? "",  infoDiv, PlainTextDiv);
+            this.CreateLine("Skalierung",               measurementValue.measurement.scale,                                                             result.scale                                           ?? "",  infoDiv, PlainTextDiv);
+            this.CreateLine("Messwert",                 measurementValue.value.toString() + " Wh",                                                                 result.value                                           ?? "",  infoDiv, PlainTextDiv);
+            //this.CreateLine("Logbuchindex",             measurementValue.logBookIndex + " hex",                                                         result.logBookIndex                                    ?? "",  infoDiv, PlainTextDiv);
+            this.CreateLine("Autorisierung",            measurementValue.measurement.chargingSession.authorizationStart["@id"] + " hex",                chargyLib.pad(result.authorizationStart,          128),       infoDiv, PlainTextDiv);
+            this.CreateLine("Autorisierungszeitpunkt",  chargyLib.UTC2human(measurementValue.measurement.chargingSession.authorizationStart.timestamp), chargyLib.pad(result.authorizationStartTimestamp, 151),       infoDiv, PlainTextDiv);
 
         }
 
@@ -286,10 +284,9 @@ export class GDFCrypt01 extends ACrypt {
 
         {
 
-            if (HashedPlainTextDiv.parentElement             != undefined &&
-                HashedPlainTextDiv.parentElement.children[0] != undefined)
+            if (HashedPlainTextDiv.parentElement)
             {
-                HashedPlainTextDiv.parentElement.children[0].innerHTML   = "Hashed plain text (SHA256, 24 bytes, hex)";
+                chargyLib.getArrayLikeElement(HashedPlainTextDiv.parentElement.children, 0, "Missing hashed plain text header").innerHTML   = "Hashed plain text (SHA256, 24 bytes, hex)";
             }
 
             HashedPlainTextDiv.innerHTML                                 = result.sha256value?.match(/.{1,8}/g)?.join(" ") ?? "";
@@ -304,11 +301,11 @@ export class GDFCrypt01 extends ACrypt {
             result.publicKey != "")
         {
 
-            if (PublicKeyDiv.parentElement             != undefined &&
-                PublicKeyDiv.parentElement.children[0] != undefined)
+            if (PublicKeyDiv.parentElement)
             {
-                PublicKeyDiv.parentElement.children[0].innerHTML       = "Public Key (" +
-                                                                         (result.publicKeyFormat
+                chargyLib.getArrayLikeElement(PublicKeyDiv.parentElement.children, 0, "Missing public key header").innerHTML       = "Public Key (" +
+                                                                         (result.publicKeyFormat != null &&
+                                                                          result.publicKeyFormat.length > 0
                                                                              ? result.publicKeyFormat + ", "
                                                                              : "") +
                                                                          "hex)";
@@ -323,10 +320,11 @@ export class GDFCrypt01 extends ACrypt {
 
             //#region Public key signatures
 
-            if (PublicKeyDiv.parentElement             != undefined &&
-                PublicKeyDiv.parentElement.children[3] != undefined)
+            const publicKeySignatureContainer = PublicKeyDiv.parentElement?.children[3];
+
+            if (publicKeySignatureContainer !== undefined)
             {
-                PublicKeyDiv.parentElement.children[3].innerHTML = "";
+                publicKeySignatureContainer.innerHTML = "";
             }
 
             if (result.publicKeySignatures) {
@@ -337,13 +335,13 @@ export class GDFCrypt01 extends ACrypt {
                     try
                     {
 
-                        const signatureDiv = PublicKeyDiv.parentElement?.children[3]?.appendChild(document.createElement('div'));
+                        const signatureDiv = publicKeySignatureContainer?.appendChild(document.createElement('div'));
 
                         if (signatureDiv != null)
                             signatureDiv.innerHTML = await this.chargy.CheckMeterPublicKeySignature(measurementValue.measurement.chargingSession.chargingStation,
                                                                                                     measurementValue.measurement.chargingSession.EVSE,
-                                                                                                    measurementValue.measurement.chargingSession.EVSE?.meters[0],
-                                                                                                    measurementValue.measurement.chargingSession.EVSE?.meters[0]?.publicKeys?.[0],
+                                                                                                    measurementValue.measurement.chargingSession.EVSE?.meters.at(0),
+                                                                                                    measurementValue.measurement.chargingSession.EVSE?.meters.at(0)?.publicKeys?.at(0),
                                                                                                     signature);
 
                     }
@@ -367,17 +365,20 @@ export class GDFCrypt01 extends ACrypt {
         if (result.signature != null)
         {
 
-            if (SignatureExpectedDiv.parentElement             != undefined &&
-                SignatureExpectedDiv.parentElement.children[0] != undefined)
+            if (SignatureExpectedDiv.parentElement)
             {
-                SignatureExpectedDiv.parentElement.children[0].innerHTML  = "Erwartete Signatur (" + (result.signature.format || "") + ", hex)";
+                chargyLib.getArrayLikeElement(SignatureExpectedDiv.parentElement.children, 0, "Missing expected signature header").innerHTML  = "Erwartete Signatur (" + (result.signature.format ?? "") + ", hex)";
             }
 
-            if (result.signature.r && result.signature.s)
+            if (result.signature.r != null &&
+                result.signature.r.length > 0 &&
+                result.signature.s != null &&
+                result.signature.s.length > 0)
                 SignatureExpectedDiv.innerHTML                            = "r: " + (result.signature.r.toLowerCase().match(/.{1,8}/g)?.join(" ") ?? "") + "<br />" +
                                                                             "s: " + (result.signature.s.toLowerCase().match(/.{1,8}/g)?.join(" ") ?? "");
 
-            else if (result.signature.value)
+            else if (result.signature.value != null &&
+                     result.signature.value.length > 0)
                 SignatureExpectedDiv.innerHTML                            = result.signature.value.toLowerCase().match(/.{1,8}/g)?.join(" ") ?? "-";
 
         }
@@ -424,6 +425,8 @@ export class GDFCrypt01 extends ACrypt {
         }
 
         //#endregion
+
+        return undefined;
 
     }
 

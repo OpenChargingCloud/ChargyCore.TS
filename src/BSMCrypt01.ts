@@ -15,10 +15,11 @@
  * limitations under the License.
  */
 
-import { Chargy }                     from './chargy'
+import type { Chargy,
+              EllipticCurve }         from './chargy'
 import { ACrypt }                     from './ACrypt'
 import * as chargyInterfaces          from './interfaces/chargyInterfaces'
-import * as chargeTransparencyRecord  from './interfaces/IChargeTransparencyRecord'
+import type * as chargeTransparencyRecord  from './interfaces/IChargeTransparencyRecord'
 import * as chargyLib                 from './chargyLib'
 import Decimal                        from 'decimal.js'
 
@@ -153,16 +154,16 @@ export interface IBSMCrypt01Result extends chargyInterfaces.ICryptoResult
     //authorizationStop?:            string,
     //authorizationStartTimestamp?:  string,
 
-    publicKey?:                    string,
-    publicKeyFormat?:              string,
-    publicKeySignatures?:          Array<unknown>,
-    signature?:                    chargyInterfaces.ISignatureRS
+    publicKey?:                    string | undefined,
+    publicKeyFormat?:              string | undefined,
+    publicKeySignatures?:          Array<unknown> | undefined,
+    signature?:                    chargyInterfaces.ISignatureRS | undefined
 }
 
 
 export class BSMCrypt01 extends ACrypt {
 
-    readonly curve = new this.chargy.elliptic.ec('p256');
+    readonly curve: EllipticCurve = new this.chargy.elliptic.ec('p256');
 
     constructor(chargy: Chargy) {
         super("ECC secp256r1",
@@ -451,15 +452,20 @@ export class BSMCrypt01 extends ACrypt {
                     const previousParts = previousId.split("-");
                     const currentParts  = currentId. split("-");
 
+                    const previousPrefix  = previousParts.at(0);
+                    const previousCounter = previousParts.at(1);
+                    const currentPrefix   = currentParts. at(0);
+                    const currentCounter  = currentParts. at(1);
+
                     if (previousParts.length !== 2               ||
                         currentParts. length !== 2               ||
-                        previousParts[0]     !== currentParts[0] ||
-                        previousParts[1]     === undefined       ||
-                        currentParts[1]      === undefined       ||
+                        previousPrefix        !== currentPrefix   ||
+                        previousCounter       === undefined       ||
+                        currentCounter        === undefined       ||
                         // parseInt returns NaN in case parsing fails which in turn does not match
                         // anything (not even NaN). This way we are checking that both counter values
                         // are numeric too.
-                        parseInt(previousParts[1], 10) >= parseInt(currentParts[1], 10))
+                        parseInt(previousCounter, 10) >= parseInt(currentCounter, 10))
                     {
                         currentErrors.push(chargyInterfaces.CreateError(this.chargy.GetMultilanguageTextWithParameter("Inconsistent_SignedMeterValue_MeasurementIdP", measurementCounter)));
                     }
@@ -514,7 +520,7 @@ export class BSMCrypt01 extends ACrypt {
 
                 //#endregion
 
-                if (currentMeasurement["meterInfo"])
+                if (currentMeasurement["meterInfo"] != null)
                 {
 
                     const meterInfoObj = chargyLib.asJSONObject(currentMeasurement["meterInfo"]);
@@ -528,7 +534,7 @@ export class BSMCrypt01 extends ACrypt {
                     if (meterInfoObj?.["meterId"]            !== common.meterInfo_meterId)
                         currentErrors.push(chargyInterfaces.CreateError(this.chargy.GetMultilanguageTextWithParameter("Inconsistent_SignedMeterValue_MeterInfo_MeterIdP",         measurementCounter)));
 
-                    if (meterInfoObj?.["meterId"]            !== additionalValues.filter(element => element.measurandName === "MA1")[0]?.value)
+                    if (meterInfoObj?.["meterId"]            !== additionalValues.find(element => element.measurandName === "MA1")?.value)
                         currentErrors.push(chargyInterfaces.CreateError(this.chargy.GetMultilanguageTextWithParameter("Inconsistent_SignedMeterValue_MeterInfo_MeterIdP",         measurementCounter)));
 
                     if (meterInfoObj?.["manufacturer"]       !== common.meterInfo_manufacturer)
@@ -549,12 +555,12 @@ export class BSMCrypt01 extends ACrypt {
                 //         };
                 // }
 
-                if (currentMeasurement["contract"])
+                if (currentMeasurement["contract"] != null)
                 {
 
                     const contractObj = chargyLib.asJSONObject(currentMeasurement["contract"]);
 
-                    if (additionalValues.filter(element => element.measurandName?.startsWith('Meta') && chargyLib.asString(element.value)?.startsWith('contract-id:')).length == 0)
+                    if (additionalValues.filter(element => element.measurandName?.startsWith('Meta') === true && chargyLib.asString(element.value)?.startsWith('contract-id:') === true).length == 0)
                         currentErrors.push(chargyInterfaces.CreateError(this.chargy.GetMultilanguageTextWithParameter("Inconsistent_SignedMeterValue_Contract_IdP",      measurementCounter)));
 
                     if (contractObj?.["id"]   !== common.contract_id)
@@ -563,14 +569,14 @@ export class BSMCrypt01 extends ACrypt {
                     if (contractObj?.["type"] !== common.contract_type)
                         currentErrors.push(chargyInterfaces.CreateError(this.chargy.GetMultilanguageTextWithParameter("Inconsistent_SignedMeterValue_Contract_TypeP",    measurementCounter)));
 
-                    const contractInfo = additionalValues.filter(element => element.measurandName?.startsWith('Meta') && chargyLib.asString(element.value)?.startsWith('contract-id:'))[0]?.value;
+                    const contractInfo = additionalValues.find(element => element.measurandName?.startsWith('Meta') === true && chargyLib.asString(element.value)?.startsWith('contract-id:') === true)?.value;
                     if (contractInfo != null)
                     {
 
-                        if ( contractObj?.["type"] && contractInfo !== "contract-id: " + (common.contract_type ?? "-") + ":" + common.contract_id)
+                        if ( contractObj?.["type"] != null && contractInfo !== "contract-id: " + (common.contract_type ?? "-") + ":" + common.contract_id)
                             currentErrors.push(chargyInterfaces.CreateError(this.chargy.GetMultilanguageTextWithParameter("Inconsistent_SignedMeterValue_Contract_IdP",  measurementCounter)));
 
-                        if (!contractObj?.["type"] && contractInfo !== "contract-id: " + common.contract_id)
+                        if (contractObj?.["type"] == null && contractInfo !== "contract-id: " + common.contract_id)
                             currentErrors.push(chargyInterfaces.CreateError(this.chargy.GetMultilanguageTextWithParameter("Inconsistent_SignedMeterValue_Contract_IdP",  measurementCounter)));
 
                     }
@@ -587,10 +593,10 @@ export class BSMCrypt01 extends ACrypt {
                 if (currentMeasurement["value"] == null)
                     throw new Error(`Missing value within signed meter value #${String(measurementCounter)}!`);
 
-                if ((valueObj?.["measurand"] || valueObj?.["measuredValue"]) && rcrInAdditional === undefined)
+                if ((valueObj?.["measurand"] != null || valueObj?.["measuredValue"] != null) && rcrInAdditional === undefined)
                     throw new Error(`Missing 'RCR' within the additional values of signed meter value #${String(measurementCounter)}!`);
 
-                if (valueObj?.["measurand"])
+                if (valueObj?.["measurand"] != null)
                 {
 
                     const measurandObj = chargyLib.asJSONObject(valueObj["measurand"]);
@@ -603,7 +609,7 @@ export class BSMCrypt01 extends ACrypt {
 
                 }
 
-                if (valueObj?.["measuredValue"])
+                if (valueObj?.["measuredValue"] != null)
                 {
 
                     if (measuredValueObj?.["value"]       !== rcrInAdditional?.value)
@@ -623,12 +629,12 @@ export class BSMCrypt01 extends ACrypt {
 
                 }
 
-                if (currentMeasurement["chargePoint"] && chargyLib.asJSONObject(currentMeasurement["chargePoint"])?.["softwareVersion"] !== common.chargePoint_softwareVersion)
+                if (currentMeasurement["chargePoint"] != null && chargyLib.asJSONObject(currentMeasurement["chargePoint"])?.["softwareVersion"] !== common.chargePoint_softwareVersion)
                     currentErrors.push(chargyInterfaces.CreateError(this.chargy.GetMultilanguageText("Inconsistent_ChargingStation_FirmwareVersion")));
 
                 //#region Find "evse-id:"        within the "Meta" data blocks
 
-                const signedEVSEId = additionalValues.filter(element => element.measurandName?.startsWith('Meta') && chargyLib.asString(element.value)?.startsWith('evse-id:'));
+                const signedEVSEId = additionalValues.filter(element => element.measurandName?.startsWith('Meta') === true && chargyLib.asString(element.value)?.startsWith('evse-id:') === true);
                 if (signedEVSEId.length == 1)
                 {
 
@@ -643,7 +649,7 @@ export class BSMCrypt01 extends ACrypt {
 
                 //#region Find "csc-sw-version:" within the "Meta" data blocks
 
-                const signedCSCSWVersion = additionalValues.filter(element => element.measurandName?.startsWith('Meta') && chargyLib.asString(element.value)?.startsWith('csc-sw-version:'));
+                const signedCSCSWVersion = additionalValues.filter(element => element.measurandName?.startsWith('Meta') === true && chargyLib.asString(element.value)?.startsWith('csc-sw-version:') === true);
                 if (signedCSCSWVersion.length == 1)
                 {
 
@@ -697,6 +703,7 @@ export class BSMCrypt01 extends ACrypt {
                         case "Meta2":        Meta2        = chargyLib.asString(additionalValue.value) ?? "";     break;
                         case "Meta3":        Meta3        = chargyLib.asString(additionalValue.value) ?? "";     break;
                         case "Evt":          Evt          = chargyLib.asNumber(additionalValue.value) ?? NaN;    break;
+                        default:             break;
                     }
                 }
 
@@ -783,10 +790,10 @@ export class BSMCrypt01 extends ACrypt {
             const n             = common.dataSets.length-1;
 
             // At least two signed meter values are validated above!
-            const firstDataSet  = common.dataSets[0];
-            const lastDataSet   = common.dataSets[n];
+            const firstDataSet  = chargyLib.getFirstArrayElement(common.dataSets,    "Missing first BSM data set");
+            const lastDataSet   = chargyLib.getArrayElement     (common.dataSets, n, "Missing last BSM data set");
 
-            if (firstDataSet === undefined || (firstDataSet.TypParsed !== "START" && firstDataSet.TypParsed !== "TURN ON"))
+            if (firstDataSet.TypParsed !== "START" && firstDataSet.TypParsed !== "TURN ON")
                 throw new Error(this.chargy.GetLocalizedMessageWithParameter("Inconsistent_EnergyMeterValueP", 1));
 
             for (let i=1; i<common.dataSets.length-1; i++) {
@@ -794,15 +801,14 @@ export class BSMCrypt01 extends ACrypt {
                     errors.push(chargyInterfaces.CreateError(this.chargy.GetMultilanguageTextWithParameter("Inconsistent_EnergyMeterValueP", measurementCounter + 1)));
             }
 
-            if (lastDataSet === undefined || (lastDataSet.TypParsed !== "END"   && lastDataSet.TypParsed !== "TURN OFF"))
+            if (lastDataSet.TypParsed !== "END"   && lastDataSet.TypParsed !== "TURN OFF")
                 throw new Error(this.chargy.GetLocalizedMessageWithParameter("Inconsistent_EnergyMeterValueP", n+1));
 
             //#endregion
 
             //#region Set charging session information
 
-            if (CTR.chargingSessions == null)
-                CTR.chargingSessions = [];
+            CTR.chargingSessions ??= [];
 
             const ASN1_SignatureSchema = this.chargy.asn1.define('Signature', function() {
                 this.seq().obj(
@@ -877,7 +883,7 @@ export class BSMCrypt01 extends ACrypt {
                 try
                 {
 
-                    ASN1Signature = ASN1_SignatureSchema.decode<IASN1Signature>(Buffer.from(dataSet.signature, 'hex'), 'der');
+                    ASN1Signature = ASN1_SignatureSchema.decode(Buffer.from(dataSet.signature, 'hex'), 'der') as IASN1Signature;
 
                 }
                 catch (exception)
@@ -957,16 +963,15 @@ export class BSMCrypt01 extends ACrypt {
 
             {
 
-                const firstChargingSession = CTR.chargingSessions[0];
-                const lastChargingSession  = CTR.chargingSessions[CTR.chargingSessions.length - 1];
+                const firstChargingSession = chargyLib.getFirstArrayElement(CTR.chargingSessions, "Missing first BSM charging session");
+                const lastChargingSession  = chargyLib.getLastArrayElement (CTR.chargingSessions, "Missing last BSM charging session");
 
-                if (firstChargingSession !== undefined &&
-                    (CTR.begin == undefined || CTR.begin === "" || CTR.begin > firstChargingSession.begin))
+                if (CTR.begin == undefined || CTR.begin === "" || CTR.begin > firstChargingSession.begin)
                 {
                     CTR.begin = firstChargingSession.begin;
                 }
 
-                if (lastChargingSession?.end !== undefined)
+                if (lastChargingSession.end !== undefined)
                 {
                     if (CTR.end == undefined || CTR.end === "" || CTR.end < lastChargingSession.end)
                         CTR.end = lastChargingSession.end;
@@ -1089,7 +1094,7 @@ export class BSMCrypt01 extends ACrypt {
     async VerifyMeasurement(measurementValue: IBSMMeasurementValue): Promise<IBSMCrypt01Result>
     {
 
-        function setResult(verificationResult: chargyInterfaces.VerificationResult)
+        function setResult(verificationResult: chargyInterfaces.VerificationResult): IBSMCrypt01Result
         {
             cryptoResult.status        = verificationResult;
             measurementValue.result    = cryptoResult;
@@ -1258,7 +1263,7 @@ export class BSMCrypt01 extends ACrypt {
                                     );
                                 });
 
-                                const publicKeyDER = ASN1_PublicKey.decode<{ publicKey: { data: ArrayBuffer | Uint8Array } }>(Buffer.from(meter.publicKeys[0]?.value ?? "", 'hex'), 'der');
+                                const publicKeyDER = ASN1_PublicKey.decode(Buffer.from(meter.publicKeys[0]?.value ?? "", 'hex'), 'der') as { publicKey: { data: ArrayBuffer | Uint8Array } };
                                 publicKey = chargyLib.buf2hex(publicKeyDER.publicKey.data).toLowerCase();
 
                             }
@@ -1318,7 +1323,7 @@ export class BSMCrypt01 extends ACrypt {
     }
 
     async ViewMeasurement(measurementValue:      IBSMMeasurementValue,
-                          errorDiv:              HTMLDivElement,
+                          _errorDiv:             HTMLDivElement,
                           introDiv:              HTMLDivElement,
                           infoDiv:               HTMLDivElement,
                           PlainTextDiv:          HTMLDivElement,
@@ -1344,10 +1349,9 @@ export class BSMCrypt01 extends ACrypt {
 
         //#region Plain text
 
-        if (PlainTextDiv.parentElement     != undefined &&
-            PlainTextDiv.parentElement.children[0] != undefined)
+        if (PlainTextDiv.parentElement)
         {
-            PlainTextDiv.parentElement.children[0].innerHTML = "Plain text (" + (measurementValue.result as IBSMCrypt01Result).ArraySize.toString() + " Bytes, hex)";
+            chargyLib.getArrayLikeElement(PlainTextDiv.parentElement.children, 0, "Missing plain text header").innerHTML = "Plain text (" + (measurementValue.result as IBSMCrypt01Result).ArraySize.toString() + " Bytes, hex)";
         }
 
         PlainTextDiv.style.fontFamily  = "";
@@ -1357,35 +1361,34 @@ export class BSMCrypt01 extends ACrypt {
 
         // https://github.com/chargeITmobility/bsm-python-private/blob/30abc7ba958c936fdb952ed1f121e45d0818419c/doc/examples/snapshots.md#verifying-a-snapshot-with-the-bsm-tool
 
-        this.CreateLine("Snapshot-Typ", this.ParseTyp(measurementValue.Typ),                                                                                             result.Typ         || "", infoDiv, PlainTextDiv);
-        //this.CreateLine("RCR",         (measurementValue.RCR      * 10).toFixed(measurementValue.RCR_Precision)      + " " + measurementValue.RCR_Prefix      + "Wh",    result.RCR         || "", infoDiv, PlainTextDiv);
-        //this.CreateLine("TotWhImp",    (measurementValue.TotWhImp * 10).toFixed(measurementValue.TotWhImp_Precision) + " " + measurementValue.TotWhImp_Prefix + "Wh",    result.TotWhImp    || "", infoDiv, PlainTextDiv);
-        //this.CreateLine("W",            measurementValue.W.             toFixed(measurementValue.W_Precision)        + " " + measurementValue.W_Prefix        + "Watt",  result.W           || "", infoDiv, PlainTextDiv);
-        this.CreateLine("RCR",         (measurementValue.RCR      * (10 ** measurementValue.RCR_SF     )).toString() + " " + measurementValue.RCR_Unit,                  result.RCR         || "", infoDiv, PlainTextDiv);
-        this.CreateLine("TotWhImp",    (measurementValue.TotWhImp * (10 ** measurementValue.TotWhImp_SF)).toString() + " " + measurementValue.TotWhImp_Unit,             result.TotWhImp    || "", infoDiv, PlainTextDiv);
-        this.CreateLine("W",           (measurementValue.W        * (10 ** measurementValue.W_SF       )).toString() + " " + measurementValue.W_Unit,                    result.W           || "", infoDiv, PlainTextDiv);
-        this.CreateLine("MA1",          measurementValue.MA1,                                                                                                            result.MA1         || "", infoDiv, PlainTextDiv);
-        this.CreateLine("RCnt",         measurementValue.RCnt,                                                                                                           result.RCnt        || "", infoDiv, PlainTextDiv);
-        this.CreateLine("OS",           measurementValue.OS,                                                                                                             result.OS          || "", infoDiv, PlainTextDiv);
-        this.CreateLine("Zeitstempel",  chargyLib.UTC2human(measurementValue.Epoch),                                                                                     result.Epoch       || "", infoDiv, PlainTextDiv);
-        this.CreateLine("TZO",          measurementValue.TZO.toString() + " Minuten",                                                                                    result.TZO         || "", infoDiv, PlainTextDiv);
-        this.CreateLine("EpochSetCnt",  measurementValue.EpochSetCnt,                                                                                                    result.EpochSetCnt || "", infoDiv, PlainTextDiv);
-        this.CreateLine("EpochSetOS",   measurementValue.EpochSetOS,                                                                                                     result.EpochSetOS  || "", infoDiv, PlainTextDiv);
-        this.CreateLine("DI",           measurementValue.DI,                                                                                                             result.DI          || "", infoDiv, PlainTextDiv);
-        this.CreateLine("DO",           measurementValue.DO,                                                                                                             result.DO          || "", infoDiv, PlainTextDiv);
-        this.CreateLine("Meta1",        measurementValue.Meta1,                                                                                                          result.Meta1       || "", infoDiv, PlainTextDiv);
-        this.CreateLine("Meta2",        measurementValue.Meta2,                                                                                                          result.Meta2       || "", infoDiv, PlainTextDiv);
-        this.CreateLine("Meta3",        measurementValue.Meta3,                                                                                                          result.Meta3       || "", infoDiv, PlainTextDiv);
-        this.CreateLine("Evt",          this.ParseEvents(measurementValue.Evt).join("<br>"),                                                                             result.Evt         || "", infoDiv, PlainTextDiv);
+        this.CreateLine("Snapshot-Typ", this.ParseTyp(measurementValue.Typ),                                                                                             result.Typ,               infoDiv, PlainTextDiv);
+        //this.CreateLine("RCR",         (measurementValue.RCR      * 10).toFixed(measurementValue.RCR_Precision)      + " " + measurementValue.RCR_Prefix      + "Wh",    result.RCR         ?? "", infoDiv, PlainTextDiv);
+        //this.CreateLine("TotWhImp",    (measurementValue.TotWhImp * 10).toFixed(measurementValue.TotWhImp_Precision) + " " + measurementValue.TotWhImp_Prefix + "Wh",    result.TotWhImp    ?? "", infoDiv, PlainTextDiv);
+        //this.CreateLine("W",            measurementValue.W.             toFixed(measurementValue.W_Precision)        + " " + measurementValue.W_Prefix        + "Watt",  result.W           ?? "", infoDiv, PlainTextDiv);
+        this.CreateLine("RCR",         (measurementValue.RCR      * (10 ** measurementValue.RCR_SF     )).toString() + " " + measurementValue.RCR_Unit,                  result.RCR,               infoDiv, PlainTextDiv);
+        this.CreateLine("TotWhImp",    (measurementValue.TotWhImp * (10 ** measurementValue.TotWhImp_SF)).toString() + " " + measurementValue.TotWhImp_Unit,             result.TotWhImp,          infoDiv, PlainTextDiv);
+        this.CreateLine("W",           (measurementValue.W        * (10 ** measurementValue.W_SF       )).toString() + " " + measurementValue.W_Unit,                    result.W,                 infoDiv, PlainTextDiv);
+        this.CreateLine("MA1",          measurementValue.MA1,                                                                                                            result.MA1,               infoDiv, PlainTextDiv);
+        this.CreateLine("RCnt",         measurementValue.RCnt,                                                                                                           result.RCnt,              infoDiv, PlainTextDiv);
+        this.CreateLine("OS",           measurementValue.OS,                                                                                                             result.OS,                infoDiv, PlainTextDiv);
+        this.CreateLine("Zeitstempel",  chargyLib.UTC2human(measurementValue.Epoch),                                                                                     result.Epoch,             infoDiv, PlainTextDiv);
+        this.CreateLine("TZO",          measurementValue.TZO.toString() + " Minuten",                                                                                    result.TZO,               infoDiv, PlainTextDiv);
+        this.CreateLine("EpochSetCnt",  measurementValue.EpochSetCnt,                                                                                                    result.EpochSetCnt,       infoDiv, PlainTextDiv);
+        this.CreateLine("EpochSetOS",   measurementValue.EpochSetOS,                                                                                                     result.EpochSetOS,        infoDiv, PlainTextDiv);
+        this.CreateLine("DI",           measurementValue.DI,                                                                                                             result.DI,                infoDiv, PlainTextDiv);
+        this.CreateLine("DO",           measurementValue.DO,                                                                                                             result.DO,                infoDiv, PlainTextDiv);
+        this.CreateLine("Meta1",        measurementValue.Meta1,                                                                                                          result.Meta1,             infoDiv, PlainTextDiv);
+        this.CreateLine("Meta2",        measurementValue.Meta2,                                                                                                          result.Meta2,             infoDiv, PlainTextDiv);
+        this.CreateLine("Meta3",        measurementValue.Meta3,                                                                                                          result.Meta3,             infoDiv, PlainTextDiv);
+        this.CreateLine("Evt",          this.ParseEvents(measurementValue.Evt).join("<br>"),                                                                             result.Evt,               infoDiv, PlainTextDiv);
 
         //#endregion
 
         //#region Hashed plain text
 
-        if (HashedPlainTextDiv.parentElement != undefined &&
-            HashedPlainTextDiv.parentElement.children[0] != undefined)
+        if (HashedPlainTextDiv.parentElement)
         {
-            HashedPlainTextDiv.parentElement.children[0].innerHTML  = "Hashed plain text (SHA256, hex)";
+            chargyLib.getArrayLikeElement(HashedPlainTextDiv.parentElement.children, 0, "Missing hashed plain text header").innerHTML  = "Hashed plain text (SHA256, hex)";
         }
 
         HashedPlainTextDiv.innerHTML                                = result.sha256value?.match(/.{1,8}/g)?.join(" ") ?? "";
@@ -1398,11 +1401,11 @@ export class BSMCrypt01 extends ACrypt {
             result.publicKey != "")
         {
 
-            if (PublicKeyDiv.parentElement             != undefined &&
-                PublicKeyDiv.parentElement.children[0] != undefined)
+            if (PublicKeyDiv.parentElement)
             {
-                PublicKeyDiv.parentElement.children[0].innerHTML  = "Public Key (" +
-                                                                    (result.publicKeyFormat
+                chargyLib.getArrayLikeElement(PublicKeyDiv.parentElement.children, 0, "Missing public key header").innerHTML  = "Public Key (" +
+                                                                    (result.publicKeyFormat != null &&
+                                                                     result.publicKeyFormat.length > 0
                                                                         ? result.publicKeyFormat + ", "
                                                                         : "") +
                                                                     "hex)";
@@ -1417,10 +1420,11 @@ export class BSMCrypt01 extends ACrypt {
 
             //#region Public key signatures
 
-            if (PublicKeyDiv.parentElement             != undefined &&
-                PublicKeyDiv.parentElement.children[3] != undefined)
+            const publicKeySignatureContainer = PublicKeyDiv.parentElement?.children[3];
+
+            if (publicKeySignatureContainer !== undefined)
             {
-                PublicKeyDiv.parentElement.children[3].innerHTML = "";
+                publicKeySignatureContainer.innerHTML = "";
             }
 
             if (result.publicKeySignatures) {
@@ -1431,22 +1435,24 @@ export class BSMCrypt01 extends ACrypt {
                     try
                     {
 
-                        const signatureDiv = PublicKeyDiv.parentElement?.children[3]?.appendChild(document.createElement('div'));
+                        const signatureDiv    = publicKeySignatureContainer?.appendChild(document.createElement('div'));
+                        const chargingSession = measurementValue.measurement.chargingSession;
+                        const evse            = chargingSession?.EVSE;
+                        const meter           = evse?.meters.at(0);
+                        const publicKey    = meter?.publicKeys?.at(0);
 
                         if (signatureDiv                                                                  != null &&
-                            measurementValue.measurement.chargingSession                                  != null &&
-                            measurementValue.measurement.chargingSession.EVSE                             != null &&
-                            measurementValue.measurement.chargingSession.EVSE.meters.length                > 0    &&
-                            measurementValue.measurement.chargingSession.EVSE.meters[0]                   != null &&
-                            measurementValue.measurement.chargingSession.EVSE.meters[0].publicKeys        != null &&
-                            measurementValue.measurement.chargingSession.EVSE.meters[0].publicKeys.length  > 0)
+                            chargingSession                                                               != null &&
+                            evse                                                                          != null &&
+                            meter                                                                         != null &&
+                            publicKey                                                                     != null)
                         {
 
                             signatureDiv.innerHTML = await this.chargy.CheckMeterPublicKeySignature(
-                                                               measurementValue.measurement.chargingSession.chargingStation,
-                                                               measurementValue.measurement.chargingSession.EVSE,
-                                                               measurementValue.measurement.chargingSession.EVSE.meters[0],
-                                                               measurementValue.measurement.chargingSession.EVSE.meters[0].publicKeys[0],
+                                                               chargingSession.chargingStation,
+                                                               evse,
+                                                               meter,
+                                                               publicKey,
                                                                signature
                                                            );
 
@@ -1473,17 +1479,20 @@ export class BSMCrypt01 extends ACrypt {
         if (result.signature != null)
         {
 
-            if (SignatureExpectedDiv.parentElement != undefined &&
-                SignatureExpectedDiv.parentElement.children[0] != undefined)
+            if (SignatureExpectedDiv.parentElement)
             {
-                SignatureExpectedDiv.parentElement.children[0].innerHTML  = "Erwartete Signatur (" + (result.signature.format || "") + ", hex)";
+                chargyLib.getArrayLikeElement(SignatureExpectedDiv.parentElement.children, 0, "Missing expected signature header").innerHTML  = "Erwartete Signatur (" + (result.signature.format ?? "") + ", hex)";
             }
 
-            if (result.signature.r && result.signature.s)
+            if (result.signature.r != null &&
+                result.signature.r.length > 0 &&
+                result.signature.s != null &&
+                result.signature.s.length > 0)
                 SignatureExpectedDiv.innerHTML  = "r: " + (result.signature.r.toLowerCase().match(/.{1,8}/g)?.join(" ") ?? "-") + "<br />" +
                                                   "s: " + (result.signature.s.toLowerCase().match(/.{1,8}/g)?.join(" ") ?? "-");
 
-            else if (result.signature.value)
+            else if (result.signature.value != null &&
+                     result.signature.value.length > 0)
                 SignatureExpectedDiv.innerHTML  = result.signature.value.toLowerCase().match(/.{1,8}/g)?.join(" ") ?? "-";
 
         }
@@ -1528,6 +1537,8 @@ export class BSMCrypt01 extends ACrypt {
         }
 
         //#endregion
+
+        return undefined;
 
     }
 
@@ -1606,48 +1617,48 @@ export class BSMCrypt01 extends ACrypt {
 
     }
 
-    private DecodeStatus(statusValue: string) : Array<string>
-    {
+    // private DecodeStatus(statusValue: string) : Array<string>
+    // {
 
-        const statusArray:string[] = [];
+    //     const statusArray:string[] = [];
 
-        try
-        {
+    //     try
+    //     {
 
-            const status = parseInt(statusValue);
+    //         const status = parseInt(statusValue);
 
-            if ((status &  1) ==  1)
-                statusArray.push("Fehler erkannt");
+    //         if ((status &  1) ==  1)
+    //             statusArray.push("Fehler erkannt");
 
-            if ((status &  2) ==  2)
-                statusArray.push("Synchrone Messwertübermittlung");
+    //         if ((status &  2) ==  2)
+    //             statusArray.push("Synchrone Messwertübermittlung");
 
-            // Bit 3 is reserved!
+    //         // Bit 3 is reserved!
 
-            if ((status &  8) ==  8)
-                statusArray.push("System-Uhr ist synchron");
-            else
-                statusArray.push("System-Uhr ist nicht synchron");
+    //         if ((status &  8) ==  8)
+    //             statusArray.push("System-Uhr ist synchron");
+    //         else
+    //             statusArray.push("System-Uhr ist nicht synchron");
 
-            if ((status & 16) == 16)
-                statusArray.push("Rücklaufsperre aktiv");
+    //         if ((status & 16) == 16)
+    //             statusArray.push("Rücklaufsperre aktiv");
 
-            if ((status & 32) == 32)
-                statusArray.push("Energierichtung -A");
+    //         if ((status & 32) == 32)
+    //             statusArray.push("Energierichtung -A");
 
-            if ((status & 64) == 64)
-                statusArray.push("Magnetfeld erkannt");
+    //         if ((status & 64) == 64)
+    //             statusArray.push("Magnetfeld erkannt");
 
-        }
-        catch
-        {
-            statusArray.push("Invalid status!");
-        }
+    //     }
+    //     catch
+    //     {
+    //         statusArray.push("Invalid status!");
+    //     }
 
-        return statusArray;
+    //     return statusArray;
 
-    }
+    // }
 
-    //#endregion
+    // //#endregion
 
 }

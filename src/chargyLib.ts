@@ -54,6 +54,49 @@ export function toUint8Array(data: ArrayBuffer | Uint8Array): Uint8Array {
 
 }
 
+export function getArrayElement<T>(values:  ArrayLike<T>,
+                                   index:   number,
+                                   message: string = "Missing array element"): T {
+
+    const value = values[index];
+
+    if (value === undefined)
+        throw new Error(message + " at index " + index.toString());
+
+    return value;
+
+}
+
+export function getFirstArrayElement<T>(values:  readonly T[],
+                                        message: string = "Missing first array element"): T {
+
+    return getArrayElement(values, 0, message);
+
+}
+
+export function getLastArrayElement<T>(values:  readonly T[],
+                                       message: string = "Missing last array element"): T {
+
+    return getArrayElement(values, values.length - 1, message);
+
+}
+
+export function getArrayLikeElement<T>(values:  ArrayLike<T>,
+                                       index:   number,
+                                       message: string = "Missing array-like element"): T {
+
+    if (index < 0 || index >= values.length)
+        throw new Error(message + " at index " + index.toString());
+
+    const value = values[index];
+
+    if (value === undefined)
+        throw new Error(message + " at index " + index.toString());
+
+    return value;
+
+}
+
 export function normalizeXMLText(xmlText: string | undefined): string {
 
     return (xmlText ?? "").
@@ -76,7 +119,7 @@ export function getDirectChildByLocalName(parent: Document | Element, localName:
 
 export function getTrimmedTextContent(element?: Element): string | undefined {
     const text = element?.textContent.trim();
-    return text && text.length > 0 ? text : undefined;
+    return text != null && text.length > 0 ? text : undefined;
 }
 
 export function parseDescription(parent: Element): chargyInterfaces.IMultilanguageText | undefined {
@@ -87,10 +130,13 @@ export function parseDescription(parent: Element): chargyInterfaces.IMultilangua
 
     for (const description of descriptions)
     {
-        const language = description.getAttribute("language")?.trim() || "und";
+        const languageAttribute = description.getAttribute("language")?.trim();
+        const language          = languageAttribute != null && languageAttribute.length > 0
+                                      ? languageAttribute
+                                      : "und";
         const text     = description.textContent.trim();
 
-        if (text)
+        if (text.length > 0)
             textMap[language] = text;
     }
 
@@ -160,6 +206,8 @@ export function ParseJSON_LD(Text:      string,
 export function firstKey<T extends Record<string, unknown>>(obj: T): keyof T | undefined {
     for (const a in obj)
         return a;
+
+    return undefined;
 }
 
 export function firstValue<T>(obj: Record<string, T> | undefined): T | undefined {
@@ -168,6 +216,8 @@ export function firstValue<T>(obj: Record<string, T> | undefined): T | undefined
 
     for (const a in obj)
         return obj[a];
+
+    return undefined;
 }
 
 let uiLocale = typeof window !== "undefined"
@@ -248,7 +298,11 @@ export function parseOBIS(OBIS: string): string
 
 }
 
-export const OBIS_RegExpr = new RegExp("((\\d+)\\-)?((\\d+):)?((\\d+)\\.)(\\d+)(\\.(\\d+))?(\\*(\\d+))?");
+export const OBIS_RegExpr: RegExp = new RegExp("((\\d+)\\-)?((\\d+):)?((\\d+)\\.)(\\d+)(\\.(\\d+))?(\\*(\\d+))?");
+
+function optionalOBISMatchValue(value: string | undefined): string {
+    return value ?? "0";
+}
 
 export function OBIS2Hex(OBIS: string): string
 {
@@ -259,12 +313,12 @@ export function OBIS2Hex(OBIS: string): string
 
     return OBISElements == null
                ? "000000000000"
-               : parseInt(OBISElements[ 2]).toString(16).padStart(2, "0") +   // optional  A
-                 parseInt(OBISElements[ 4]).toString(16).padStart(2, "0") +   // optional  B
-                 parseInt(OBISElements[ 6]).toString(16).padStart(2, "0") +   // mandatory C
-                 parseInt(OBISElements[ 7]).toString(16).padStart(2, "0") +   // mandatory D
-                 parseInt(OBISElements[ 9]).toString(16).padStart(2, "0") +   // optional  E
-                 parseInt(OBISElements[11]).toString(16).padStart(2, "0");    // optional  F
+               : parseInt(optionalOBISMatchValue(OBISElements[ 2])).toString(16).padStart(2, "0") +   // optional  A
+                 parseInt(optionalOBISMatchValue(OBISElements[ 4])).toString(16).padStart(2, "0") +   // optional  B
+                 parseInt(optionalOBISMatchValue(OBISElements[ 6])).toString(16).padStart(2, "0") +   // mandatory C
+                 parseInt(optionalOBISMatchValue(OBISElements[ 7])).toString(16).padStart(2, "0") +   // mandatory D
+                 parseInt(optionalOBISMatchValue(OBISElements[ 9])).toString(16).padStart(2, "0") +   // optional  E
+                 parseInt(optionalOBISMatchValue(OBISElements[11])).toString(16).padStart(2, "0");    // optional  F
 
 }
 
@@ -326,12 +380,12 @@ export function measurementName2human(In: string) : string
 }
 
 export function IsNullOrEmpty(value: string|undefined): boolean {
-    return !value;
+    return value == null || value.length === 0;
 }
 
 export function WhenNullOrEmpty(value: string|undefined, replacement: string): string {
 
-    if (!value)
+    if (value == null || value.length === 0)
         return replacement;
 
     return value;
@@ -340,7 +394,7 @@ export function WhenNullOrEmpty(value: string|undefined, replacement: string): s
 
 export function hex2bin(hex: string, Reverse?: boolean) : string {
 
-    if (Reverse)
+    if (Reverse === true)
     {
 
         const reversed: string[] = [];
@@ -356,7 +410,7 @@ export function hex2bin(hex: string, Reverse?: boolean) : string {
 
 }
 
-export function hex32(val: number) {
+export function hex32(val: number): string {
     val &= 0xFFFFFFFF;
     const hex = val.toString(16).toUpperCase();
     return ("00000000" + hex).slice(-8);
@@ -375,7 +429,7 @@ export function parseHexString(str: string): number[] {
 
 }
 
-export function createHexString(arr: Iterable<number>) {
+export function createHexString(arr: Iterable<number>): string {
 
     let result = "";
 
@@ -392,7 +446,7 @@ export function createHexString(arr: Iterable<number>) {
 
 }
 
-export function buf2hex(buffer: ArrayBuffer|Uint8Array) {
+export function buf2hex(buffer: ArrayBuffer|Uint8Array): string {
     return Array.prototype.map.call(new Uint8Array(buffer), (x:number) => ('00' + x.toString(16)).slice(-2)).join('');
 }
 
@@ -445,7 +499,7 @@ export function ConcatenateBuffers(buffers: ArrayBuffer[]): ArrayBuffer {
 
 }
 
-export function intFromBytes(x: number[]){
+export function intFromBytes(x: number[]): number {
 
     let val = 0;
 
@@ -523,7 +577,7 @@ export function SetHex(dv: DataView, hex: string, offset: number, reverse?: bool
     const buffer  = new ArrayBuffer(bytes.length);
     const tv      = new DataView(buffer);
 
-    if (reverse)
+    if (reverse === true)
         bytes.reverse();
 
     for (let i = 0; i < bytes.length; i++) {
@@ -601,7 +655,7 @@ export function SetUInt32(dv: DataView, value: number, offset: number, reverse?:
     const buffer  = new ArrayBuffer(bytes.length);
     const tv      = new DataView(buffer);
 
-    if (reverse)
+    if (reverse === true)
         bytes.reverse();
 
     for (let i = 0; i < bytes.length; i++) {
@@ -620,7 +674,7 @@ export function SetUInt64(dv: DataView, value: number, offset: number, reverse?:
     const buffer  = new ArrayBuffer(bytes.length);
     const tv      = new DataView(buffer);
 
-    if (reverse)
+    if (reverse === true)
         bytes.reverse();
 
     for (let i = 0; i < bytes.length; i++) {
@@ -667,7 +721,7 @@ export function SetUInt32_withCode(dv: DataView, value: number, scale: number, o
     const buffer      = new ArrayBuffer(valueBytes.length + 2);
     const tv          = new DataView(buffer);
 
-    if (reverse)
+    if (reverse === true)
         valueBytes.reverse();
 
     for (let i = 0; i < valueBytes.length; i++) {
@@ -727,14 +781,14 @@ export function Clone<T>(obj: T): T {
 }
 
 
-export function openFullscreen() {
+export function openFullscreen(): void {
 
     if (document.fullscreenEnabled && !document.fullscreenElement)
         void document.documentElement.requestFullscreen();
 
 }
 
-export function closeFullscreen() {
+export function closeFullscreen(): void {
 
     if (document.fullscreenElement)
         void document.exitFullscreen();
@@ -798,10 +852,9 @@ export interface String {
 //     return typeof this === "string" && this.length > 0;
 // }
 
-export function pad(text: string|undefined, paddingValue: number) {
+export function pad(text: string|undefined, paddingValue: number): string {
 
-    if (text == undefined)
-        text = "";
+    text ??= "";
 
     return (text + Array(2*paddingValue).join('0')).substring(0, 2*paddingValue);
 
@@ -1003,7 +1056,7 @@ export function isOptionalArrayOfStrings(value: unknown): value is string[] | un
  * @param jsonArray a json object
  * @returns true, when the given json array does not exist or when it exists, that it is a valid json array
  */
-export function isOptionalJSONArrayError(jsonArray: unknown) {
+export function isOptionalJSONArrayError(jsonArray: unknown): boolean {
 
     if (jsonArray !== undefined && jsonArray !== null)
         return typeof jsonArray !== "object" || !Array.isArray(jsonArray);
@@ -1017,7 +1070,7 @@ export function isOptionalJSONArrayError(jsonArray: unknown) {
  * @param jsonArray a json object
  * @returns true, when the given json array does not exist or when it exists, that it is a valid json array
  */
- export function isOptionalJSONArrayOk(jsonArray: unknown) {
+ export function isOptionalJSONArrayOk(jsonArray: unknown): boolean {
 
     if (jsonArray !== undefined && jsonArray !== null)
         return typeof jsonArray === "object" && Array.isArray(jsonArray);
@@ -1199,7 +1252,7 @@ export function jsonPrettyPrinter(value:       unknown,
                value,
                0,
                "",
-               KeyLookup ?? ((path: string, key: string) => key)
+               KeyLookup ?? ((_path: string, key: string): string => key)
            );
 
 }

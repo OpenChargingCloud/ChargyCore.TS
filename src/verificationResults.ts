@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-import { ChargyInterfaces } from '.';
+import type { ChargyInterfaces } from '.';
 import {
     isISessionCryptoResult1,
     SessionVerificationResult

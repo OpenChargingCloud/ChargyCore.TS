@@ -184,10 +184,10 @@ async function imageDataFromBrowserImageElement(data:       ArrayBuffer | Uint8A
         const image = new Image();
 
         await new Promise<void>((resolve, reject) => {
-            image.onload  = () => {
+            image.onload  = (): void => {
                 resolve();
             };
-            image.onerror = () => {
+            image.onerror = (): void => {
                 reject(new Error("Could not decode image."));
             };
             image.src     = imageUrl;
@@ -232,9 +232,11 @@ async function imageDataFromNodeCanvas(data: ArrayBuffer | Uint8Array): Promise<
         if (!isCanvasModule(canvasLib))
             return undefined;
 
-        const image  = await canvasLib.loadImage(Buffer.from(chargyLib.toUint8Array(data)));
-        const width  = image.naturalWidth  || image.width;
-        const height = image.naturalHeight || image.height;
+        const image         = await canvasLib.loadImage(Buffer.from(chargyLib.toUint8Array(data)));
+        const naturalWidth  = image.naturalWidth  ?? 0;
+        const naturalHeight = image.naturalHeight ?? 0;
+        const width         = naturalWidth  > 0 ? naturalWidth  : image.width;
+        const height        = naturalHeight > 0 ? naturalHeight : image.height;
 
         if (width <= 0 || height <= 0)
             return undefined;
@@ -323,6 +325,7 @@ async function importOptionalNodeModule(moduleName: string): Promise<unknown>
 
     try
     {
+        // eslint-disable-next-line @typescript-eslint/no-implied-eval
         const createNodeRequire = new Function(`
             const directRequire = typeof require !== 'undefined' ? require : undefined;
             if (directRequire) return directRequire;
@@ -339,6 +342,7 @@ async function importOptionalNodeModule(moduleName: string): Promise<unknown>
         if (nodeRequire != null)
             return nodeRequire(moduleName);
 
+        // eslint-disable-next-line @typescript-eslint/no-implied-eval
         const nodeImport = new Function("moduleName", "return import(moduleName)") as (moduleName: string) => Promise<unknown>;
         return await nodeImport(moduleName);
     }
@@ -355,16 +359,16 @@ export async function readQRCodeTextFromImage(data:       ArrayBuffer | Uint8Arr
 
     const imageDataSources = typeof document === "undefined"
                                  ? [
-                                       () => imageDataFromNodeCanvas        (data),
-                                       () => imageDataFromPNGOrJPEG         (data, mimeType),
-                                       () => imageDataFromBrowserCanvas     (data, mimeType),
-                                       () => imageDataFromBrowserImageElement(data, mimeType)
+                                        async (): Promise<QRImageData | undefined> => imageDataFromNodeCanvas        (data),
+                                        async (): Promise<QRImageData | undefined> => imageDataFromPNGOrJPEG         (data, mimeType),
+                                        async (): Promise<QRImageData | undefined> => imageDataFromBrowserCanvas     (data, mimeType),
+                                        async (): Promise<QRImageData | undefined> => imageDataFromBrowserImageElement(data, mimeType)
                                    ]
                                  : [
-                                       () => imageDataFromBrowserCanvas     (data, mimeType),
-                                       () => imageDataFromBrowserImageElement(data, mimeType),
-                                       () => imageDataFromNodeCanvas        (data),
-                                       () => imageDataFromPNGOrJPEG         (data, mimeType)
+                                        async (): Promise<QRImageData | undefined> => imageDataFromBrowserCanvas     (data, mimeType),
+                                        async (): Promise<QRImageData | undefined> => imageDataFromBrowserImageElement(data, mimeType),
+                                        async (): Promise<QRImageData | undefined> => imageDataFromNodeCanvas        (data),
+                                        async (): Promise<QRImageData | undefined> => imageDataFromPNGOrJPEG         (data, mimeType)
                                    ];
 
     for (const imageDataSource of imageDataSources)
@@ -376,7 +380,8 @@ export async function readQRCodeTextFromImage(data:       ArrayBuffer | Uint8Arr
 
         const qrText = readQRCodeTextFromImageData(imageData);
 
-        if (qrText && qrText.length > 0)
+        if (qrText != null &&
+            qrText.length > 0)
             return qrText;
     }
 
@@ -396,7 +401,7 @@ export function readQRCodeTextFromImageData(imageData: QRImageData): string | un
 
     const qrText = qrCode?.data.trim();
 
-    return qrText && qrText.length > 0
+    return qrText != null && qrText.length > 0
                ? qrText
                : undefined;
 

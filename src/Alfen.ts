@@ -18,7 +18,7 @@
 import type { Chargy }                from './chargy'
 import { ACrypt }                     from './ACrypt'
 import * as chargyInterfaces          from './interfaces/chargyInterfaces'
-import * as chargeTransparencyRecord  from './interfaces/IChargeTransparencyRecord'
+import type * as chargeTransparencyRecord  from './interfaces/IChargeTransparencyRecord'
 import * as chargyLib                 from './chargyLib'
 import Decimal                        from 'decimal.js';
 
@@ -44,7 +44,7 @@ export class Alfen  {
     }
 
     private bufferToHex(buffer: ArrayBuffer, Reverse?: boolean) : string {
-        return (Reverse
+        return (Reverse === true
                     ? Array.from(new Uint8Array(buffer)).reverse()
                     : Array.from(new Uint8Array(buffer))
                ).map (b => b.toString(16).padStart(2, "0")).join("");
@@ -118,26 +118,27 @@ export class Alfen  {
             for (let i=0; i<signedValues.length; i++)
             {
 
-                const elements = signedValues[i]?.split(';');
+                const elements = chargyLib.getArrayElement(signedValues, i, "Missing Alfen signed value").split(';');
 
-                if (elements?.length != 6 && elements?.length != 7)
+                if (elements.length != 6 && elements.length != 7)
                     return {
                         status:    chargyInterfaces.SessionVerificationResult.InvalidSessionFormat,
                         message:   this.chargy.GetMultilanguageText("Invalid number of signed meter values!"),
                         certainty: 0
                     };
 
-                const FormatId               = elements[0];                                             //  2 bytes
-                const Type                   = elements[1];                                             //  1 byte; "0": start meter value | "1": stop meter value | "2": intermediate value
-                const BlobVersion            = elements[2];                                             //  1 byte; "3" (current version)
-                const PublicKey:ArrayBuffer  = this.chargy.base32Decode(elements[3] ?? "", 'RFC4648');  // 25 bytes; base32 encoded; secp192r1
-                const DataSet:  ArrayBuffer  = this.chargy.base32Decode(elements[4] ?? "", 'RFC4648');  // 82 bytes; base32 encoded
-                const Signature:ArrayBuffer  = this.chargy.base32Decode(elements[5] ?? "", 'RFC4648');  // 48 bytes; base32 encoded; secp192r1
+                const FormatId               = chargyLib.getArrayElement(elements, 0, "Missing Alfen format id");       //  2 bytes
+                const Type                   = chargyLib.getArrayElement(elements, 1, "Missing Alfen type");            //  1 byte; "0": start meter value | "1": stop meter value | "2": intermediate value
+                const BlobVersion            = chargyLib.getArrayElement(elements, 2, "Missing Alfen blob version");    //  1 byte; "3" (current version)
+                const publicKeyValue         = chargyLib.getArrayElement(elements, 3, "Missing Alfen public key");
+                const PublicKey:ArrayBuffer  = this.chargy.base32Decode(publicKeyValue, 'RFC4648');                     // 25 bytes; base32 encoded; secp192r1
+                const DataSet:  ArrayBuffer  = this.chargy.base32Decode(chargyLib.getArrayElement(elements, 4, "Missing Alfen data set"), 'RFC4648');    // 82 bytes; base32 encoded
+                const Signature:ArrayBuffer  = this.chargy.base32Decode(chargyLib.getArrayElement(elements, 5, "Missing Alfen signature"), 'RFC4648');  // 48 bytes; base32 encoded; secp192r1
 
                 // Verify common public key
                 if (common.PublicKey === "")
-                    common.PublicKey = elements[3] ?? "";
-                else if (elements[3] !== common.PublicKey)
+                    common.PublicKey = publicKeyValue;
+                else if (publicKeyValue !== common.PublicKey)
                     return {
                         status:    chargyInterfaces.SessionVerificationResult.InvalidSessionFormat,
                         message:   this.chargy.GetMultilanguageText("Inconsistent public keys!"),
@@ -145,8 +146,8 @@ export class Alfen  {
                     };
 
                 if (FormatId              !== "AP" ||
-                    Type?.length          !==  1   ||
-                    BlobVersion?.length   !==  1   ||
+                    Type.length           !==  1   ||
+                    BlobVersion.length    !==  1   ||
                     BlobVersion           !== "3"  ||
                     PublicKey.byteLength  !== 25   ||
                     DataSet.byteLength    !== 82   ||
@@ -287,15 +288,8 @@ export class Alfen  {
             const chargingStationId  = chargyLib.asString(containerInfos["ChargingStationId"]) ?? "DE*GEF*STATION*CHARGY*1";
             const chargingSessionId  = chargyLib.asString(chargingSession?.["@id"]);
 
-            const firstDataSet       = common.dataSets[0];
-            const lastDataSet        = common.dataSets[common.dataSets.length-1];
-
-            if (firstDataSet === undefined || lastDataSet === undefined)
-                return {
-                    status:    chargyInterfaces.SessionVerificationResult.InvalidSessionFormat,
-                    message:   this.chargy.GetMultilanguageText("Invalid number of signed meter values!"),
-                    certainty: 0
-                };
+            const firstDataSet       = chargyLib.getFirstArrayElement(common.dataSets, "Missing first Alfen data set");
+            const lastDataSet        = chargyLib.getLastArrayElement (common.dataSets, "Missing last Alfen data set");
 
             const _CTR: IAlfenChargeTransparencyRecord = {
 
@@ -505,10 +499,10 @@ export interface IAlfenCrypt01Result extends chargyInterfaces.ICryptoResult
     paging?:                       string,
 
     hashValue?:                    string | bigint,
-    publicKey?:                    string,
-    publicKeyFormat?:              string,
-    publicKeySignatures?:          Array<unknown>,
-    signature?:                    chargyInterfaces.ISignatureRS
+    publicKey?:                    string | undefined,
+    publicKeyFormat?:              string | undefined,
+    publicKeySignatures?:          Array<unknown> | undefined,
+    signature?:                    chargyInterfaces.ISignatureRS | undefined
 }
 
 
@@ -588,7 +582,7 @@ export class AlfenCrypt01 extends ACrypt {
     async VerifyMeasurement(measurementValue: IAlfenMeasurementValue): Promise<IAlfenCrypt01Result>
     {
 
-        function setResult(verificationResult: chargyInterfaces.VerificationResult)
+        function setResult(verificationResult: chargyInterfaces.VerificationResult): IAlfenCrypt01Result
         {
             cryptoResult.status     = verificationResult;
             measurementValue.result = cryptoResult;
@@ -747,7 +741,7 @@ export class AlfenCrypt01 extends ACrypt {
     }
 
     async ViewMeasurement(measurementValue:      IAlfenMeasurementValue,
-                          errorDiv:              HTMLDivElement,
+                          _errorDiv:             HTMLDivElement,
                           introDiv:              HTMLDivElement,
                           infoDiv:               HTMLDivElement,
                           PlainTextDiv:          HTMLDivElement,
@@ -774,10 +768,9 @@ export class AlfenCrypt01 extends ACrypt {
 
         {
 
-            if (PlainTextDiv.parentElement &&
-                PlainTextDiv.parentElement.children[0])
+            if (PlainTextDiv.parentElement)
             {
-                PlainTextDiv.parentElement.children[0].innerHTML = this.chargy.GetLocalizedMessage("Plain text") + " (320 Bytes, hex)";
+                chargyLib.getArrayLikeElement(PlainTextDiv.parentElement.children, 0, "Missing plain text header").innerHTML = this.chargy.GetLocalizedMessage("Plain text") + " (320 Bytes, hex)";
             }
 
             PlainTextDiv.style.fontFamily  = "";
@@ -785,25 +778,25 @@ export class AlfenCrypt01 extends ACrypt {
             PlainTextDiv.style.maxHeight   = "";
             PlainTextDiv.style.overflowY   = "";
 
-            this.CreateLocalizedLine("Adapter Id",                 measurementValue.measurement.adapterId,                                                    result.adapterId              || "",  infoDiv, PlainTextDiv);
-            this.CreateLocalizedLine("Adapter Firmware Version",   measurementValue.measurement.adapterFWVersion,                                             result.adapterFWVersion       || "",  infoDiv, PlainTextDiv);
-            this.CreateLocalizedLine("Adapter Firmware Checksum",  measurementValue.measurement.adapterFWChecksum,                                            result.adapterFWChecksum      || "",  infoDiv, PlainTextDiv);
-            this.CreateLocalizedLine("Meter number",               measurementValue.measurement.energyMeterId,                                                result.meterId                || "",  infoDiv, PlainTextDiv);
+            this.CreateLocalizedLine("Adapter Id",                 measurementValue.measurement.adapterId,                                                    result.adapterId              ?? "",  infoDiv, PlainTextDiv);
+            this.CreateLocalizedLine("Adapter Firmware Version",   measurementValue.measurement.adapterFWVersion,                                             result.adapterFWVersion       ?? "",  infoDiv, PlainTextDiv);
+            this.CreateLocalizedLine("Adapter Firmware Checksum",  measurementValue.measurement.adapterFWChecksum,                                            result.adapterFWChecksum      ?? "",  infoDiv, PlainTextDiv);
+            this.CreateLocalizedLine("Meter number",               measurementValue.measurement.energyMeterId,                                                result.meterId                ?? "",  infoDiv, PlainTextDiv);
             this.CreateLocalizedLine("Meter status",               chargyLib.hex2bin(measurementValue.statusMeter, true) + " (" + measurementValue.statusMeter + " hex)<br /><span class=\"statusInfos\">" +
                                                                    this.DecodeMeterStatus(measurementValue.statusMeter).join("<br />") + "</span>",
-                                                                                                                                                              result.statusMeter            || "",  infoDiv, PlainTextDiv);
+                                                                                                                                                              result.statusMeter            ?? "",  infoDiv, PlainTextDiv);
             this.CreateLocalizedLine("Adapter status",             chargyLib.hex2bin(measurementValue.statusAdapter, true) + " (" + measurementValue.statusAdapter + " hex)<br /><span class=\"statusInfos\">" +
                                                                    this.DecodeAdapterStatus(measurementValue.statusAdapter).join("<br />") + "</span>",    
-                                                                                                                                                              result.statusAdapter          || "",  infoDiv, PlainTextDiv);
-            this.CreateLocalizedLine("Seconds index",               measurementValue.secondsIndex,                                                            result.secondsIndex           || "",  infoDiv, PlainTextDiv);
-            this.CreateLocalizedLine("Timestamp",                   chargyLib.UTC2human(measurementValue.timestamp),                                          result.timestamp              || "",  infoDiv, PlainTextDiv);
-            this.CreateLocalizedLine("OBIS code",                   measurementValue.measurement.obis,                                                        result.obisId                 || "",  infoDiv, PlainTextDiv);
-            this.CreateLocalizedLine("Unit (encoded)",              measurementValue.measurement.unitEncoded ?? 0,                                            result.unitEncoded            || "",  infoDiv, PlainTextDiv);
-            this.CreateLocalizedLine("Scaling",                     measurementValue.measurement.scale,                                                       result.scalar                 || "",  infoDiv, PlainTextDiv);
-            this.CreateLocalizedLine("Measurement Value",           measurementValue.value.toString() + " Wh",                                                result.value                  || "",  infoDiv, PlainTextDiv);
-            this.CreateLocalizedLine("Authorization",              (measurementValue.measurement.chargingSession?.authorizationStart["@id"] ?? "") + " hex",  chargyLib.pad(result.uid, 20) || "",  infoDiv, PlainTextDiv);
-            this.CreateLocalizedLine("SessionId",                  (measurementValue.measurement.chargingSession?.["@id"] ?? ""),                             result.sessionId              || "",  infoDiv, PlainTextDiv);
-            this.CreateLocalizedLine("Pagination counter",          measurementValue.paginationId,                                                            result.paging                 || "",  infoDiv, PlainTextDiv);
+                                                                                                                                                              result.statusAdapter          ?? "",  infoDiv, PlainTextDiv);
+            this.CreateLocalizedLine("Seconds index",               measurementValue.secondsIndex,                                                            result.secondsIndex           ?? "",  infoDiv, PlainTextDiv);
+            this.CreateLocalizedLine("Timestamp",                   chargyLib.UTC2human(measurementValue.timestamp),                                          result.timestamp              ?? "",  infoDiv, PlainTextDiv);
+            this.CreateLocalizedLine("OBIS code",                   measurementValue.measurement.obis,                                                        result.obisId                 ?? "",  infoDiv, PlainTextDiv);
+            this.CreateLocalizedLine("Unit (encoded)",              measurementValue.measurement.unitEncoded ?? 0,                                            result.unitEncoded            ?? "",  infoDiv, PlainTextDiv);
+            this.CreateLocalizedLine("Scaling",                     measurementValue.measurement.scale,                                                       result.scalar                 ?? "",  infoDiv, PlainTextDiv);
+            this.CreateLocalizedLine("Measurement Value",           measurementValue.value.toString() + " Wh",                                                result.value                  ?? "",  infoDiv, PlainTextDiv);
+            this.CreateLocalizedLine("Authorization",              (measurementValue.measurement.chargingSession?.authorizationStart["@id"] ?? "") + " hex",  chargyLib.pad(result.uid, 20),       infoDiv, PlainTextDiv);
+            this.CreateLocalizedLine("SessionId",                  (measurementValue.measurement.chargingSession?.["@id"] ?? ""),                             result.sessionId              ?? "",  infoDiv, PlainTextDiv);
+            this.CreateLocalizedLine("Pagination counter",          measurementValue.paginationId,                                                            result.paging                 ?? "",  infoDiv, PlainTextDiv);
 
         }
 
@@ -813,10 +806,9 @@ export class AlfenCrypt01 extends ACrypt {
 
         {
 
-            if (HashedPlainTextDiv.parentElement &&
-                HashedPlainTextDiv.parentElement.children[0])
+            if (HashedPlainTextDiv.parentElement)
             {
-                HashedPlainTextDiv.parentElement.children[0].innerHTML = this.chargy.GetLocalizedMessage("Hashed plain text") + " (SHA256, hex)";
+                chargyLib.getArrayLikeElement(HashedPlainTextDiv.parentElement.children, 0, "Missing hashed plain text header").innerHTML = this.chargy.GetLocalizedMessage("Hashed plain text") + " (SHA256, hex)";
             }
 
             const hashValueText          = typeof result.hashValue === 'string' ? result.hashValue : result.hashValue?.toString(16) ?? "";
@@ -828,15 +820,15 @@ export class AlfenCrypt01 extends ACrypt {
 
         //#region Public key
 
-        if (result.publicKey &&
-            result.publicKey != "")
+        if (result.publicKey != null &&
+            result.publicKey.length > 0)
         {
 
-            if (PublicKeyDiv.parentElement &&
-                PublicKeyDiv.parentElement.children[0])
+            if (PublicKeyDiv.parentElement)
             {
-                PublicKeyDiv.parentElement.children[0].innerHTML = this.chargy.GetLocalizedMessage("Public Key") + " (" +
-                                                                   (result.publicKeyFormat
+                chargyLib.getArrayLikeElement(PublicKeyDiv.parentElement.children, 0, "Missing public key header").innerHTML = this.chargy.GetLocalizedMessage("Public Key") + " (" +
+                                                                   (result.publicKeyFormat != null &&
+                                                                    result.publicKeyFormat.length > 0
                                                                        ? result.publicKeyFormat + ", "
                                                                        : "") +
                                                                    "base32)";
@@ -851,8 +843,7 @@ export class AlfenCrypt01 extends ACrypt {
 
         //#region Public key signatures (optional)
 
-        if (PublicKeyDiv.parentElement &&
-            PublicKeyDiv.parentElement.children[3])
+        if (PublicKeyDiv.parentElement?.children[3])
         {
 
             PublicKeyDiv.parentElement.children[3].innerHTML = "";
@@ -894,13 +885,15 @@ export class AlfenCrypt01 extends ACrypt {
         if (result.signature != null)
         {
 
-            if (SignatureExpectedDiv.parentElement &&
-                SignatureExpectedDiv.parentElement.children[0])
+            if (SignatureExpectedDiv.parentElement)
             {
-                SignatureExpectedDiv.parentElement.children[0].innerHTML = this.chargy.GetLocalizedMessage("Expected signature") + " (" + (result.signature.format ?? "") + ", hex)";
+                chargyLib.getArrayLikeElement(SignatureExpectedDiv.parentElement.children, 0, "Missing expected signature header").innerHTML = this.chargy.GetLocalizedMessage("Expected signature") + " (" + (result.signature.format ?? "") + ", hex)";
             }
 
-            if (result.signature.r && result.signature.s)
+            if (result.signature.r != null &&
+                result.signature.r.length > 0 &&
+                result.signature.s != null &&
+                result.signature.s.length > 0)
             {
                 const signatureR = result.signature.r.toLowerCase().match(/.{1,8}/g)?.join(" ") ?? "-";
                 const signatureS = result.signature.s.toLowerCase().match(/.{1,8}/g)?.join(" ") ?? "-";
@@ -909,7 +902,8 @@ export class AlfenCrypt01 extends ACrypt {
                                                  "s: " + signatureS;
             }
 
-            else if (result.signature.value)
+            else if (result.signature.value != null &&
+                     result.signature.value.length > 0)
                 SignatureExpectedDiv.innerHTML = result.signature.value.toLowerCase().match(/.{1,8}/g)?.join(" ") ?? "-";
 
         }

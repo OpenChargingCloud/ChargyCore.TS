@@ -18,7 +18,7 @@
 import type { Chargy }                from './chargy'
 import { ACrypt }                     from './ACrypt'
 import * as chargyInterfaces          from './interfaces/chargyInterfaces'
-import * as chargeTransparencyRecord  from './interfaces/IChargeTransparencyRecord'
+import type * as chargeTransparencyRecord  from './interfaces/IChargeTransparencyRecord'
 import * as chargyLib                 from './chargyLib'
 import Decimal                        from 'decimal.js';
 
@@ -131,7 +131,7 @@ export class PCDFParseError extends Error {
 
     constructor(readonly code: string,
                 message:       string,
-                readonly field?: PCDFFieldKey) {
+                readonly field?: PCDFFieldKey | undefined) {
         super(message);
         this.name = "PCDFParseError";
     }
@@ -240,10 +240,10 @@ export function parsePCDFDocument(input: string): {
 
     for (let i = 0; i < PCDF_FIELD_ORDER.length; i++)
     {
-        const value = match[i + 1];
-        const field = PCDF_FIELD_ORDER[i];
+        const value = chargyLib.getArrayElement(match, i + 1, "Missing PCDF field value");
+        const field = chargyLib.getArrayElement(PCDF_FIELD_ORDER, i, "Missing PCDF field name");
 
-        if (field == null || value == null)
+        if (value.length === 0)
             throw new PCDFParseError("MISSING_FIELDS", "Missing fields in the data tuple", field);
 
         fields[field] = value;
@@ -816,8 +816,11 @@ function parsePCDFReadingValue(value:   string,
         return undefined;
     }
 
+    const integralPart   = chargyLib.getArrayElement(match, 1, "Missing PCDF reading integral part");
+    const fractionalPart = chargyLib.getArrayElement(match, 2, "Missing PCDF reading fractional part");
+
     return {
-        value: new Decimal(String(match[1]) + "." + String(match[2])),
+        value: new Decimal(integralPart + "." + fractionalPart),
         unit:  "kWh"
     };
 
@@ -885,10 +888,11 @@ function readDERLength(bytes: Uint8Array,
                        setOffset: (offset: number) => void): number {
 
     let offset = getOffset();
-    const b    = bytes[offset++];
 
-    if (b == null)
+    if (offset >= bytes.length)
         throw new Error("Invalid signature");
+
+    const b = chargyLib.getArrayElement(bytes, offset++, "Invalid signature");
 
     if ((b & 0x80) === 0)
     {
@@ -905,11 +909,14 @@ function readDERLength(bytes: Uint8Array,
 
     for (let i = 0; i < octets; i++)
     {
-        const value = bytes[offset++];
-        if (value == null)
+
+        if (offset >= bytes.length)
             throw new Error("Invalid signature");
 
+        const value = chargyLib.getArrayElement(bytes, offset++, "Invalid signature");
+
         length = (length << 8) + value;
+
     }
 
     setOffset(offset);

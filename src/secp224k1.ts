@@ -32,17 +32,16 @@ export class secp224k1 {
 
     // Pcurve = 2**224 - 2**32 - 2**12 - 2**11 - 2**9 - 2**7 - 2**4 - 2**1 - 1 or
     //          FFFFFFFF FFFFFFFF FFFFFFFF FFFFFFFF FFFFFFFF FFFFFFFE FFFFE56D
-    private Zero   = BigInt("0");
-    private One    = BigInt("1");
-    private Two    = BigInt("2");
-    private Three  = BigInt("3");
-    private Pcurve = BigInt("26959946667150639794667015087019630673637144422540572481099315275117"); // The proven prime
-    private N      = BigInt("0x010000000000000000000000000001DCE8D2EC6184CAF0A971769FB1F7"); // Number of points in the field
-    private Acurve = BigInt(0); // These two are defined on the elliptic curve. y^2 = x^3 + Acurve * x + Bcurve
-    private Bcurve = BigInt(5); // These two are defined on the elliptic curve. y^2 = x^3 + Acurve * x + Bcurve
-    private Gx     = BigInt("0xA1455B334DF099DF30FC28A169A467E9E47075A90F7E650EB6B7A45C");
-    private Gy     = BigInt("0x7E089FED7FBA344282CAFBD6F7E319F7C0B0BD59E2CA4BDB556D61A5");
-    private GPoint = [this.Gx, this.Gy]; // This is our generator point. Trillions of dif ones possible
+    private readonly Zero   = BigInt("0");
+    private readonly One    = BigInt("1");
+    private readonly Two    = BigInt("2");
+    private readonly Three  = BigInt("3");
+    private readonly Pcurve = BigInt("26959946667150639794667015087019630673637144422540572481099315275117"); // The proven prime
+    private readonly N      = BigInt("0x010000000000000000000000000001DCE8D2EC6184CAF0A971769FB1F7"); // Number of points in the field
+    private readonly Acurve = BigInt(0); // Defined on the elliptic curve. y^2 = x^3 + Acurve * x + 5
+    private readonly Gx     = BigInt("0xA1455B334DF099DF30FC28A169A467E9E47075A90F7E650EB6B7A45C");
+    private readonly Gy     = BigInt("0x7E089FED7FBA344282CAFBD6F7E319F7C0B0BD59E2CA4BDB556D61A5");
+    private readonly GPoint = [this.Gx, this.Gy]; // This is our generator point. Trillions of dif ones possible
 
     public Sign(hash:          bigint,
                 RandomNumber:  bigint,
@@ -87,7 +86,7 @@ export class secp224k1 {
     }
 
 
-    public modulo(n: bigint, m: bigint) {
+    public modulo(n: bigint, m: bigint): bigint {
         return (((n % m) + m) % m);
     }
 
@@ -101,7 +100,7 @@ export class secp224k1 {
 
     }
 
-    public modInv(a: bigint, n: bigint = this.Pcurve) {
+    public modInv(a: bigint, n: bigint = this.Pcurve): bigint {
 
       let lm    = BigInt(1),
           hm    = BigInt(0),
@@ -230,6 +229,8 @@ export class secp224k1 {
             };
 
         }
+
+        return undefined;
 
     }
 

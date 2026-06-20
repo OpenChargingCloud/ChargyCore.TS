@@ -20,7 +20,7 @@ import { Alfen }                      from './Alfen'
 import { BSMCrypt01 }                 from './BSMCrypt01'
 import type { IEMHMeasurementValue }  from './EMHCrypt01'
 import * as chargyInterfaces          from './interfaces/chargyInterfaces'
-import * as chargeTransparencyRecord  from './interfaces/IChargeTransparencyRecord'
+import type * as chargeTransparencyRecord  from './interfaces/IChargeTransparencyRecord'
 import * as chargyLib                 from './chargyLib'
 import Decimal                        from 'decimal.js'
 
@@ -84,22 +84,6 @@ export class ChargeIT {
     constructor(chargy:  Chargy) {
         this.chargy  = chargy;
     }
-
-
-    private bufferToHex(buffer: ArrayBuffer, Reverse?: boolean) : string {
-        return (Reverse
-                    ? Array.from(new Uint8Array(buffer)).reverse()
-                    : Array.from(new Uint8Array(buffer))
-               ).map (b => b.toString(16).padStart(2, "0")).join("");
-    }
-
-    private bufferToNumber(buffer: ArrayBuffer) : number {
-        return parseInt(Array
-            .from(new Uint8Array(buffer))
-            .map (b => b.toString(16).padStart(2, "0"))
-            .join(""), 16);
-    }
-
 
     //#region TryToParseOldChargeITMeterValuesFormat(CTR, evseId, address, geoLocation, signedMeterValues)
 
@@ -288,15 +272,8 @@ export class ChargeIT {
 
         //#endregion
 
-        const firstMeterValue  = CTRArray[0];
-        const lastMeterValue   = CTRArray[CTRArray.length - 1];
-
-        if (firstMeterValue === undefined || lastMeterValue === undefined)
-            return {
-                status:    chargyInterfaces.SessionVerificationResult.InvalidSessionFormat,
-                message:   this.chargy.GetMultilanguageText("UnknownOrInvalidChargingSessionFormat"),
-                certainty: 0
-            };
+        const firstMeterValue  = chargyLib.getFirstArrayElement(CTRArray, "Missing first chargeIT meter value");
+        const lastMeterValue   = chargyLib.getLastArrayElement (CTRArray, "Missing last chargeIT meter value");
 
         CTR["@id"]  = lastMeterValue["transactionId"];
         CTR.begin   = this.chargy.moment.unix(firstMeterValue["measuredValue"]["timestampLocal"]["timestamp"]).utc().format();
@@ -647,17 +624,17 @@ export class ChargeIT {
                             //     return await new Alfen01(this.chargy).tryToParseALFENFormat(signedMeterValues.map(value => value.payload));
                             }
 
-                            else if (containerFormat === oldChargeITContainerFormat) {
+                            // else if (containerFormat === oldChargeITContainerFormat) {
 
-                            //     let preCTR = null;
+                            // //     let preCTR = null;
 
-                            //     if (signedMeterValues[0].format == "ALFEN")
-                            //         preCTR = await new Alfen01(this.chargy).tryToParseALFENFormat(signedMeterValues.map(value => value.payload));
+                            // //     if (signedMeterValues[0].format == "ALFEN")
+                            // //         preCTR = await new Alfen01(this.chargy).tryToParseALFENFormat(signedMeterValues.map(value => value.payload));
 
-                            //     //if (preCTR != null)
-                            //     //    return preCTR;
+                            // //     //if (preCTR != null)
+                            // //     //    return preCTR;
 
-                            }
+                            // }
 
                             else if (signedMeterValueContext === oldChargeITMeterValueFormat)
                             {
@@ -890,12 +867,13 @@ export class ChargeIT {
                                         //#region ChargePoint information
 
                                         const chargePoint = signedMeterValue["chargePoint"];
-                                        if (!chargyLib.isMandatoryJSONObject(chargePoint))
+                                        if (chargePoint !== undefined &&
+                                            !chargyLib.isMandatoryJSONObject(chargePoint))
                                         {
                                             errors.push(chargyInterfaces.CreateError(this.chargy.GetMultilanguageTextWithParameter("MissingOrInvalid_SignedMeterValue_ChargePointInformationP",                 measurementCounter)));
                                             secondaryErrors += 1;
                                         }
-                                        else
+                                        else if (chargyLib.isMandatoryJSONObject(chargePoint))
                                         {
 
                                             if (!chargyLib.isMandatoryString(chargePoint["softwareVersion"]))
@@ -1109,7 +1087,7 @@ export class ChargeIT {
                                    );
                         }
 
-                        if (containerFormat === oldChargeITContainerFormat) {
+                        //if (containerFormat === oldChargeITContainerFormat) {
 
                             if (chargyLib.asJSONObject(signedMeterValues[0])?.["format"] == "ALFEN")
                                 return new Alfen(this.chargy).TryToParseALFENFormat(
@@ -1123,7 +1101,7 @@ export class ChargeIT {
                                            }
                                        );
 
-                        }
+                        //}
 
                         if (signedMeterValueContext === oldChargeITMeterValueFormat)
                             return this.TryToParseOldChargeITMeterValuesFormat(
@@ -1452,11 +1430,7 @@ export class ChargeIT {
 
                 if (chargyLib.isMandatoryJSONArray(chargingTariffs))
                 {
-
-                    for (let i = 0; i < chargingTariffs.length; i++)
-                    {
-                        // ToDo: Validate and import the charging tariffs!
-                    }
+                    // ToDo: Validate and import the charging tariffs!
 
                 }
 
@@ -1682,10 +1656,10 @@ export class ChargeIT {
 
                     //#endregion
 
-                    if      (smvContext?.startsWith("https://www.chargeit-mobility.com/contexts/bsm-ws36a-json"))
+                    if      (smvContext?.startsWith("https://www.chargeit-mobility.com/contexts/bsm-ws36a-json") === true)
                         return new BSMCrypt01(this.chargy).tryToParseBSM_WS36aMeasurements(CTR, evseIdStr, chargyLib.asString(chargingStation_controllerSoftwareVersion) ?? null, signedMeterValues);
 
-                    if (smvContext?.startsWith("ALFEN"))
+                    if (smvContext?.startsWith("ALFEN") === true)
                         return new Alfen(this.chargy).TryToParseALFENFormat(
                                          signedMeterValues.map(value => chargyLib.asString(chargyLib.asJSONObject(value)?.["payload"]) ?? ""),
                                          {

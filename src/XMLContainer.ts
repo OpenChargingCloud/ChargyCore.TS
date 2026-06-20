@@ -15,9 +15,9 @@
  * limitations under the License.
  */
 
-import { Chargy }                     from './chargy'
+import type { Chargy }                     from './chargy'
 import * as chargyInterfaces          from './interfaces/chargyInterfaces'
-import * as chargeTransparencyRecord  from './interfaces/IChargeTransparencyRecord'
+import type * as chargeTransparencyRecord  from './interfaces/IChargeTransparencyRecord'
 import * as chargyLib                 from './chargyLib'
 //import { EMHCrypt01 }                 from './EMHCrypt01'
 //import { Alfen }                      from './Alfen'
@@ -69,12 +69,12 @@ export class XMLContainer {
                 if (valueList        != null &&
                     valueList.length >= 1)
                 {
-                    for (let i=0; i<valueList.length; i++) {
+                    for (const valueElement of valueList) {
 
                         //#region publicKey
 
                         // Note: The public key might be optional...
-                        const publicKey = valueList[i]?.querySelector("publicKey");
+                        const publicKey = valueElement.querySelector("publicKey");
                         if (publicKey != null)
                         {
 
@@ -133,7 +133,7 @@ export class XMLContainer {
 
                         //#region meterValueSignature
 
-                        const meterValueSignature = valueList[i]?.querySelector("meterValueSignature");
+                        const meterValueSignature = valueElement.querySelector("meterValueSignature");
                         if (meterValueSignature != null)
                         {
 
@@ -184,7 +184,7 @@ export class XMLContainer {
 
                         //#region signatureMethod
 
-                        const signatureMethod = valueList[i]?.querySelector("signatureMethod")?.textContent.trim().toLowerCase() ?? "";
+                        const signatureMethod = valueElement.querySelector("signatureMethod")?.textContent.trim().toLowerCase() ?? "";
 
                         if (common.signatureMethod == "")
                             common.signatureMethod = signatureMethod;
@@ -200,7 +200,7 @@ export class XMLContainer {
 
                         //#region encodingMethod
 
-                        const encodingMethod  = valueList[i]?.querySelector("encodingMethod")?.textContent.trim().toLowerCase() ?? "";
+                        const encodingMethod  = valueElement.querySelector("encodingMethod")?.textContent.trim().toLowerCase() ?? "";
 
                         if (common.encodingMethod == "")
                             common.encodingMethod = encodingMethod;
@@ -216,7 +216,7 @@ export class XMLContainer {
 
                         //#region encodedMeterValue
 
-                        const encodedMeterValue = valueList[i]?.querySelector("encodedMeterValue");
+                        const encodedMeterValue = valueElement.querySelector("encodedMeterValue");
                         if (encodedMeterValue != null)
                         {
 

@@ -38,6 +38,7 @@ import { readQRCodeTextFromImage }          from './qrCodeReader'
 import { importPdfJs }                      from '#pdfjs-runtime'
 import defaultValidationRules               from '../validationRules.json'
 import seekBzip                             from 'seek-bzip';
+import type moment                          from 'moment';
 
 type DERPublicKey = {
     oids:      [number[], number[]];
@@ -57,8 +58,23 @@ type Asn1Builder = {
 };
 
 type Asn1Schema = {
-    decode<T = any>(data: Uint8Array | ArrayBuffer, encoding: string): T;
+    decode(data: Uint8Array | ArrayBuffer, encoding: string): unknown;
 };
+
+type PdfAttachment = {
+    filename: string;
+    content:  ArrayBuffer | Uint8Array;
+};
+
+function isPdfAttachment(value: unknown): value is PdfAttachment {
+
+    if (!chargyLib.isMandatoryJSONObject(value))
+        return false;
+
+    return typeof value["filename"] === "string" &&
+           (value["content"] instanceof ArrayBuffer || ArrayBuffer.isView(value["content"]));
+
+}
 
 type Asn1Module = {
     define: (name: string, body: (this: Asn1Builder) => void) => Asn1Schema;
@@ -78,7 +94,7 @@ type EllipticModule = {
     ec: new (curve: string) => EllipticCurve;
 };
 
-type MomentModule = typeof import("moment");
+type MomentModule = typeof moment;
 
 export class Chargy {
 
@@ -99,9 +115,6 @@ export class Chargy {
     private EVSEs                     = new Array<chargyInterfaces.IEVSE>();
     private meters                    = new Array<chargyInterfaces.IMeter>();
     private chargingSessions          = new Array<chargeTransparencyRecord.IChargingSession>();
-
-    private eMobilityProviders        = new Array<chargyInterfaces.IEMobilityProvider>();
-    private mediationServices         = new Array<chargyInterfaces.IMediationService>();
 
     public  currentCTR                = {} as chargeTransparencyRecord.IChargeTransparencyRecord;
     public  internalCTR               = {} as chargeTransparencyRecord.IChargeTransparencyRecord;
@@ -198,7 +211,7 @@ export class Chargy {
 
     private PublicKeyIdFromFileName(fileName: string): string {
 
-        return (fileName.indexOf('.') > -1
+        return (fileName.includes('.')
                     ? fileName.substring(0, fileName.indexOf('.'))
                     : fileName).replace(/[-_]?public[-_]?key/i, "");
 
@@ -221,7 +234,7 @@ export class Chargy {
             );
         });
 
-        const publicKeyDER   = ASN1_PublicKey.decode<DERPublicKey>(publicKeyBuffer, 'der');
+        const publicKeyDER   = ASN1_PublicKey.decode(publicKeyBuffer, 'der') as DERPublicKey;
 
         const KeyType_OID    = publicKeyDER.oids[0].join(".");
         let   KeyType        = "unknown";
@@ -832,7 +845,7 @@ export class Chargy {
 
                                 //#region A single compressed file without a path/filename, e.g. within bz2
 
-                                if (compressedFiles.length == 1 && compressedFiles[0]?.path == null)
+                                if (compressedFiles.length == 1)// && compressedFiles[0].path == null)
                                 {
                                     expandedFileInfos.push({
                                                           name:  FileInfo.name.substring(0, FileInfo.name.lastIndexOf('.')),
@@ -845,7 +858,7 @@ export class Chargy {
 
                                 //#region A chargepoint compressed archive file
 
-                                let CTRfile:any    = null;
+                                let CTRfile: chargyLib.JSONObject | null = null;
                                 let dataFile       = "";
                                 let signatureFile  = "";
 
@@ -896,11 +909,15 @@ export class Chargy {
                                         try
                                         {
 
-                                            CTRfile           = JSON.parse(dataFile);
+                                            const parsedCTRFile: unknown = JSON.parse(dataFile);
+                                            if (!chargyLib.isMandatoryJSONObject(parsedCTRFile))
+                                                throw new Error("Invalid chargepoint 'secrrct' JSON file!");
+
+                                            CTRfile           = parsedCTRFile;
 
                                             // Save the 'original' JSON with whitespaces for later signature verification!
-                                            CTRfile.original  = btoa(dataFile);
-                                            CTRfile.signature = signatureFile;
+                                            CTRfile["original"]  = btoa(dataFile);
+                                            CTRfile["signature"] = signatureFile;
 
                                             expandedFileInfos.push({
                                                 name: FileInfo.name,
@@ -981,7 +998,7 @@ export class Chargy {
         const archiveData = this.toUint8Array(data);
 
         if (mimeType === "application/zip")
-            return await this.extractZipArchive(archiveData);
+            return this.extractZipArchive(archiveData);
 
         if (mimeType === "application/x-tar")
             return this.extractTarArchive(archiveData);
@@ -1039,7 +1056,7 @@ export class Chargy {
 
             const prefix    = this.readTarString(header, 345, 155);
             const path      = prefix.length > 0 ? prefix + "/" + name : name;
-            const typeFlag  = String.fromCharCode(header[156] ?? 0);
+            const typeFlag  = String.fromCharCode(chargyLib.getArrayElement(header, 156, "Missing tar header type flag"));
             const dataStart = offset + 512;
             const dataEnd   = dataStart + size;
 
@@ -1228,58 +1245,62 @@ export class Chargy {
 
                     const pdfDocument  = fileInfo.data
                                             ? await pdfjsLib.getDocument({ data: fileInfo.data }).promise
-                                            : fileInfo.path
+                                            : fileInfo.path != null && fileInfo.path.length > 0
                                                   ? await pdfjsLib.getDocument({ url: fileInfo.path }).promise
                                                   : null;
 
-                    if (pdfDocument)
+                    if (pdfDocument !== null)
                     {
                         try
                         {
 
-                            const attachments = await pdfDocument.getAttachments();
+                            const attachmentsUnknown: unknown = await pdfDocument.getAttachments();
 
-                            Object.keys(attachments).forEach(fileName => {
+                            if (chargyLib.isMandatoryJSONObject(attachmentsUnknown))
+                                Object.values(attachmentsUnknown).forEach(attachmentUnknown => {
 
-                                const attachment = attachments[fileName];
+                                    if (!isPdfAttachment(attachmentUnknown))
+                                        return;
 
-                                if (attachment.filename.endsWith('.chargy'))
-                                    expandedFiles.push({
-                                        name:  attachment.filename,
-                                        path:  FileInfos[0]?.path,
-                                        type:  "application/chargy",
-                                        data:  attachment.content,
-                                        info:  "A CHARGY file extracted from a PDF/A-3 or newer attachment"
-                                    });
+                                    const attachment = attachmentUnknown;
 
-                                else if (attachment.filename.endsWith('.xml'))
-                                    expandedFiles.push({
-                                        name:  attachment.filename,
-                                        path:  FileInfos[0]?.path,
-                                        type:  "application/xml",
-                                        data:  attachment.content,
-                                        info:  "A XML file extracted from a PDF/A-3 or newer attachment"
-                                    });
+                                    if (attachment.filename.endsWith('.chargy'))
+                                        expandedFiles.push({
+                                            name:  attachment.filename,
+                                            path:  FileInfos[0]?.path,
+                                            type:  "application/chargy",
+                                            data:  attachment.content,
+                                            info:  "A CHARGY file extracted from a PDF/A-3 or newer attachment"
+                                        });
 
-                                else if (attachment.filename.endsWith('.json'))
-                                    expandedFiles.push({
-                                        name:  attachment.filename,
-                                        path:  FileInfos[0]?.path,
-                                        type:  "application/json",
-                                        data:  attachment.content,
-                                        info:  "A JSON file extracted from a PDF/A-3 or newer attachment"
-                                    });
+                                    else if (attachment.filename.endsWith('.xml'))
+                                        expandedFiles.push({
+                                            name:  attachment.filename,
+                                            path:  FileInfos[0]?.path,
+                                            type:  "application/xml",
+                                            data:  attachment.content,
+                                            info:  "A XML file extracted from a PDF/A-3 or newer attachment"
+                                        });
 
-                                else if (attachment.filename.endsWith('.csv'))
-                                    expandedFiles.push({
-                                        name:  attachment.filename,
-                                        path:  FileInfos[0]?.path,
-                                        type:  "text/csv",
-                                        data:  attachment.content,
-                                        info:  "A CSV file extracted from a PDF/A-3 or newer attachment"
-                                    });
+                                    else if (attachment.filename.endsWith('.json'))
+                                        expandedFiles.push({
+                                            name:  attachment.filename,
+                                            path:  FileInfos[0]?.path,
+                                            type:  "application/json",
+                                            data:  attachment.content,
+                                            info:  "A JSON file extracted from a PDF/A-3 or newer attachment"
+                                        });
 
-                            });
+                                    else if (attachment.filename.endsWith('.csv'))
+                                        expandedFiles.push({
+                                            name:  attachment.filename,
+                                            path:  FileInfos[0]?.path,
+                                            type:  "text/csv",
+                                            data:  attachment.content,
+                                            info:  "A CSV file extracted from a PDF/A-3 or newer attachment"
+                                        });
+
+                                });
 
                         } catch (error) {
                             console.error(`Error extracting PDF/A-3 attachments: ${String(error)}`);
@@ -1397,7 +1418,7 @@ export class Chargy {
 
                                 processedFile.result = await new SAFEXML(this).tryToParseSAFEXML(XMLDocument);
 
-                                if (processedFile.result.status &&
+                                if (processedFile.result.status != null &&
                                     processedFile.result.status !== chargyInterfaces.SessionVerificationResult.Unvalidated &&
                                     chargyLib.getElementsByLocalName(XMLDocument, "chargingStation").length === 0)
                                 {
@@ -1590,8 +1611,7 @@ export class Chargy {
                         if      (chargeTransparencyLiveLink.IsAChargeTransparencyLiveLink(JSONContent))
                         {
 
-                            if (JSONContent.timestamp == null)
-                                JSONContent.timestamp = new Date().toISOString();
+                            JSONContent.timestamp ??= new Date().toISOString();
 
                             processedFile.result = JSONContent;
 
@@ -1693,33 +1713,23 @@ export class Chargy {
         if (processedFiles.length == 1)
         {
 
-            const processedFile = processedFiles[0];
-            if (processedFile)
-            {
+            const processedFile = chargyLib.getFirstArrayElement(processedFiles, "Missing processed file");
 
-                if (chargeTransparencyRecord.IsAChargeTransparencyRecord(processedFile.result))
-                    return this.processChargeTransparencyRecord(processedFile.result);
+            if (chargeTransparencyRecord.IsAChargeTransparencyRecord(processedFile.result))
+                return this.processChargeTransparencyRecord(processedFile.result);
 
-                if (chargeTransparencyLiveLink.IsAChargeTransparencyLiveLink(processedFile.result))
-                    return processedFile.result;
-
-                if (publicKeyInfo.IsAPublicKeyLookup(processedFile.result))
-                    return {
-                        status:     chargyInterfaces.SessionVerificationResult.InvalidSessionFormat,
-                        message:    this.GetMultilanguageText("UnknownOrInvalidChargeTransparencyRecord"),
-                        certainty:  0
-                    };
-
-                // Can only be an ISessionCryptoResult/error message!
+            if (chargeTransparencyLiveLink.IsAChargeTransparencyLiveLink(processedFile.result))
                 return processedFile.result;
 
-            }
+            if (publicKeyInfo.IsAPublicKeyLookup(processedFile.result))
+                return {
+                    status:     chargyInterfaces.SessionVerificationResult.InvalidSessionFormat,
+                    message:    this.GetMultilanguageText("UnknownOrInvalidChargeTransparencyRecord"),
+                    certainty:  0
+                };
 
-            return {
-                status:     chargyInterfaces.SessionVerificationResult.InvalidSessionFormat,
-                message:    this.GetMultilanguageText("UnknownOrInvalidChargeTransparencyRecord"),
-                certainty:  0
-            };
+            // Can only be an ISessionCryptoResult/error message!
+            return processedFile.result;
 
         }
 
@@ -1750,18 +1760,20 @@ export class Chargy {
                     if (mergedCTR["@context"] === "")
                         mergedCTR["@context"] = processedFileResult["@context"];
 
-                    if (!mergedCTR.begin || (mergedCTR.begin && processedFileResult.begin && mergedCTR.begin > processedFileResult.begin))
+                    if (processedFileResult.begin != null &&
+                        processedFileResult.begin.length > 0 &&
+                        (mergedCTR.begin == null || mergedCTR.begin.length === 0 || mergedCTR.begin > processedFileResult.begin))
                         mergedCTR.begin = processedFileResult.begin;
 
-                    if (!mergedCTR.end || (mergedCTR.end && processedFileResult.end && mergedCTR.end < processedFileResult.end))
+                    if (processedFileResult.end != null &&
+                        processedFileResult.end.length > 0 &&
+                        (mergedCTR.end == null || mergedCTR.end.length === 0 || mergedCTR.end < processedFileResult.end))
                         mergedCTR.end = processedFileResult.end;
 
-                    if (!mergedCTR.description)
-                        mergedCTR.description = processedFileResult.description;
+                    mergedCTR.description ??= processedFileResult.description;
 
                     //ToDo: Is this a really good idea? Or should we fail, whenever this information is different?
-                    if (!mergedCTR.contract)
-                        mergedCTR.contract = processedFileResult.contract;
+                    mergedCTR.contract ??= processedFileResult.contract;
 
 
                     if (!mergedCTR.chargingStationOperators)
@@ -1807,8 +1819,7 @@ export class Chargy {
                 else if (publicKeyInfo.IsAPublicKeyInfo(processedFileResult))
                 {
 
-                    if (!mergedCTR.publicKeys)
-                        mergedCTR.publicKeys = new Array<publicKeyInfo.IPublicKeyInfo>();
+                    mergedCTR.publicKeys ??= new Array<publicKeyInfo.IPublicKeyInfo>();
 
                     mergedCTR.publicKeys.push(processedFileResult);
 
@@ -1817,8 +1828,7 @@ export class Chargy {
                 else if (publicKeyInfo.IsAPublicKeyLookup(processedFileResult))
                 {
 
-                    if (!mergedCTR.publicKeys)
-                        mergedCTR.publicKeys = new Array<publicKeyInfo.IPublicKeyInfo>();
+                    mergedCTR.publicKeys ??= new Array<publicKeyInfo.IPublicKeyInfo>();
 
                     for (const publicKey of processedFileResult.publicKeys)
                         mergedCTR.publicKeys.push(publicKey);
@@ -1828,8 +1838,7 @@ export class Chargy {
                 else
                 {
 
-                    if (mergedCTR.invalidDataSets === undefined)
-                        mergedCTR.invalidDataSets = new Array<chargeTransparencyRecord.IExtendedFileInfo>();
+                    mergedCTR.invalidDataSets ??= new Array<chargeTransparencyRecord.IExtendedFileInfo>();
 
                     mergedCTR.invalidDataSets.push(processedFile);
 
@@ -1878,9 +1887,6 @@ export class Chargy {
         this.EVSEs                     = [];
         this.meters                    = [];
         this.chargingSessions          = [];
-
-        this.eMobilityProviders        = [];
-        this.mediationServices         = [];
 
         //#endregion
 
@@ -2159,11 +2165,11 @@ export class Chargy {
                 continue;
             }
 
-            const firstValue = measurement.values[0];
-            const lastValue  = measurement.values[measurement.values.length - 1];
+            const firstValue = measurement.values.at(0);
+            const lastValue  = measurement.values.at(-1);
 
-            if (firstValue == null ||
-                lastValue  == null)
+            if (firstValue === undefined ||
+                lastValue  === undefined)
             {
                 continue;
             }
@@ -2431,18 +2437,20 @@ export class Chargy {
             if (mergedCTR["@context"] === "")
                 mergedCTR["@context"] = ctr["@context"];
 
-            if (!mergedCTR.begin || (mergedCTR.begin && ctr.begin && mergedCTR.begin > ctr.begin))
+            if (ctr.begin != null &&
+                ctr.begin.length > 0 &&
+                (mergedCTR.begin == null || mergedCTR.begin.length === 0 || mergedCTR.begin > ctr.begin))
                 mergedCTR.begin = ctr.begin;
 
-            if (!mergedCTR.end || (mergedCTR.end && ctr.end && mergedCTR.end < ctr.end))
+            if (ctr.end != null &&
+                ctr.end.length > 0 &&
+                (mergedCTR.end == null || mergedCTR.end.length === 0 || mergedCTR.end < ctr.end))
                 mergedCTR.end = ctr.end;
 
-            if (!mergedCTR.description)
-                mergedCTR.description = ctr.description;
+            mergedCTR.description ??= ctr.description;
 
             //ToDo: Is this a really good idea? Or should we fail, whenever this information is different?
-            if (!mergedCTR.contract)
-                mergedCTR.contract = ctr.contract;
+            mergedCTR.contract ??= ctr.contract;
 
 
             if (!mergedCTR.chargingStationOperators)

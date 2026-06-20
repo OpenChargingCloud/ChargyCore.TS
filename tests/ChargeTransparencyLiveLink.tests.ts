@@ -5,11 +5,17 @@ import { fileURLToPath } from "node:url";
 import { beforeAll, describe, expect, test, vi } from "vitest";
 
 import type {
-    IFileInfo
+    IFileInfo,
+    Chargy as ChargyClass
 } from "@open-charging-cloud/chargy-core";
 import {
     IsAChargeTransparencyLiveLink
 } from "@open-charging-cloud/chargy-core";
+import {
+    loadChargyTestDependencies,
+    parseI18NDictionary,
+    parseJSONRecord
+} from "./chargyTestRuntime";
 
 vi.mock("pdfjs-dist", () => ({
     GlobalWorkerOptions: {}
@@ -20,15 +26,17 @@ vi.stubGlobal("window", {
         language: "en"
     },
     chargyElectron: {
-        openExternal: () => Promise.resolve()
+        openExternal: async () => Promise.resolve()
     }
 });
 
 const require          = createRequire(import.meta.url);
 const currentDirectory = fileURLToPath(new URL(".",  import.meta.url));
 const projectRoot      = fileURLToPath(new URL("..", import.meta.url));
+const chargyDependencies = loadChargyTestDependencies(require);
 
-type ChargyConstructor = typeof import("@open-charging-cloud/chargy-core").Chargy;
+type ChargyConstructor = typeof ChargyClass;
+type DetectionResult   = ReturnType<InstanceType<ChargyConstructor>["DetectAndConvertContentFormat"]>;
 
 let Chargy: ChargyConstructor;
 
@@ -42,21 +50,21 @@ function readFixture(fileName: string): string {
 
 function createChargy(): InstanceType<ChargyConstructor> {
 
-    const i18n = JSON.parse(readFileSync(join(projectRoot, "i18n.json"), "utf8"));
+    const i18n = parseI18NDictionary(readFileSync(join(projectRoot, "i18n.json"), "utf8"));
 
     return new Chargy(
         i18n,
         [ "en" ],
-        require("elliptic"),
-        require("moment"),
-        require("asn1.js"),
-        require("base32-decode"),
+        chargyDependencies.elliptic,
+        chargyDependencies.moment,
+        chargyDependencies.asn1,
+        chargyDependencies.base32Decode,
         () => ""
     );
 
 }
 
-async function verifyChargeTransparencyLiveLink(fileName: string) {
+async function verifyChargeTransparencyLiveLink(fileName: string): DetectionResult {
 
     const fileInfo: IFileInfo = {
         name: fileName,
@@ -64,7 +72,7 @@ async function verifyChargeTransparencyLiveLink(fileName: string) {
         data: new TextEncoder().encode(readFixture(fileName))
     };
 
-    return await createChargy().DetectAndConvertContentFormat([ fileInfo ]);
+    return createChargy().DetectAndConvertContentFormat([ fileInfo ]);
 
 }
 
@@ -72,7 +80,7 @@ describe("Charge Transparency LiveLink", () => {
 
     test("recognizes live links by their JSON-LD context", () => {
 
-        const liveLink = JSON.parse(readFixture("ChargeTransparencyLive/ChargeTransparencyLiveLink_1.json"));
+        const liveLink = parseJSONRecord(readFixture("ChargeTransparencyLive/ChargeTransparencyLiveLink_1.json"));
 
         expect(IsAChargeTransparencyLiveLink(liveLink)).toBe(true);
         expect(IsAChargeTransparencyLiveLink({ ...liveLink, "@context": "https://example.com/other" })).toBe(false);
