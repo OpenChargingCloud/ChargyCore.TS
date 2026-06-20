@@ -19,7 +19,8 @@ import {
 import type {
     ICryptoResult,
     IFileInfo,
-    ISessionCryptoResult
+    ISessionCryptoResult,
+    IValidationRules
 } from '@open-charging-cloud/chargy-core';
 import type {
     IPublicKeyInfo
@@ -31,7 +32,8 @@ export {
     expectBinaryVerificationReport,
     expectArchiveVerificationReport,
     expectMultiArchiveVerificationReport,
-    expectVerificationReportWithPublicKey
+    expectVerificationReportWithPublicKey,
+    expectVerificationReportWithValidationRules
 }
 
 const require = createRequire(import.meta.url);
@@ -108,16 +110,17 @@ function archiveMimeType(fileName: string): string {
 
 }
 
-function createChargy(): Chargy {
+function createChargy(validationRules?: IValidationRules): Chargy {
 
     return new Chargy(
-        {},
+        JSON.parse(readFileSync(new URL("../i18n.json", import.meta.url), "utf8")),
         "en",
         require("elliptic"),
         require("moment"),
         require("asn1.js"),
         require("base32-decode"),
-        () => ""
+        () => "",
+        validationRules
     );
 
 }
@@ -141,6 +144,21 @@ async function expectVerificationReport(inputFixture: string, expectedFixture: s
 
     const report   = await verifyChargeData(inputFixture, input);
     const summary  = formatChargeDataVerificationReport(report);
+
+    expectReportLines(summary, expected);
+
+}
+
+async function expectVerificationReportWithValidationRules(inputFixture:           string,
+                                                           expectedFixture:        string,
+                                                           validationRulesFixture: string) {
+
+    const input           = readFixture(inputFixture);
+    const expected        = readFixture(expectedFixture);
+    const validationRules = JSON.parse(readFixture(validationRulesFixture)) as IValidationRules;
+
+    const report          = await verifyChargeData(inputFixture, input, undefined, validationRules);
+    const summary         = formatChargeDataVerificationReport(report);
 
     expectReportLines(summary, expected);
 
@@ -233,7 +251,8 @@ async function expectVerificationReportWithPublicKey(inputFixture: string, publi
 
 async function verifyChargeData(fileName:  string,
                                 input:     string | Uint8Array,
-                                type?:     string)
+                                type?:     string,
+                                validationRules?: IValidationRules)
 
     : Promise<IChargeTransparencyRecord   |
               IChargeTransparencyLiveLink |
@@ -250,11 +269,12 @@ async function verifyChargeData(fileName:  string,
             : input
     };
 
-    return await createChargy().DetectAndConvertContentFormat([ fileInfo ]);
+    return await createChargy(validationRules).DetectAndConvertContentFormat([ fileInfo ]);
 
 }
 
-async function verifyChargeDataFiles(fileInfos: IFileInfo[])
+async function verifyChargeDataFiles(fileInfos: IFileInfo[],
+                                     validationRules?: IValidationRules)
 
     : Promise<IChargeTransparencyRecord   |
               IChargeTransparencyLiveLink |
@@ -262,7 +282,7 @@ async function verifyChargeDataFiles(fileInfos: IFileInfo[])
               ISessionCryptoResult>
 
 {
-    return await createChargy().DetectAndConvertContentFormat(fileInfos);
+    return await createChargy(validationRules).DetectAndConvertContentFormat(fileInfos);
 }
 
 function formatChargeDataVerificationReport(report: IChargeTransparencyRecord | IChargeTransparencyLiveLink | IPublicKeyInfo | ISessionCryptoResult): string {
@@ -286,6 +306,13 @@ function formatChargeDataVerificationReport(report: IChargeTransparencyRecord | 
         "format: ctr",
         "sessions: " + sessions.length.toString()
     ];
+
+    if (report.warnings && report.warnings.length > 0) {
+        lines.push("warnings: " + report.warnings.length.toString());
+
+        for (const [warningIndex, warning] of report.warnings.entries())
+            lines.push("warning " + ((warningIndex + 1).toString()) + ": " + formatWarning(warning));
+    }
 
     for (const [sessionIndex, session] of sessions.entries()) {
 
@@ -339,4 +366,10 @@ function appendMeasurementValueLines(lines:              string[],
 
 function formatCryptoResult(result: ICryptoResult | undefined): string {
     return result?.status ?? "unknown";
+}
+
+function formatWarning(warning: { level: string; message: string }): string {
+
+    return warning.level + ": " + warning.message;
+
 }

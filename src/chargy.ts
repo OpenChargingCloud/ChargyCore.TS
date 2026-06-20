@@ -36,6 +36,7 @@ import * as publicKeyInfo                   from './interfaces/IPublicKeyInfo'
 import * as chargyLib                       from './chargyLib'
 import { readQRCodeTextFromImage }          from './qrCodeReader'
 import { importPdfJs }                      from '#pdfjs-runtime'
+import defaultValidationRules               from '../validationRules.json'
 import seekBzip                             from 'seek-bzip';
 
 type DERPublicKey = {
@@ -90,6 +91,7 @@ export class Chargy {
     public  readonly asn1:            Asn1Module;
     public  readonly base32Decode:    Base32Decode;
     public  readonly showPKIDetails:  chargyInterfaces.ShowPKIDetailsFunction;
+    public  readonly validationRules:  chargyInterfaces.IValidationRules;
 
     private chargingStationOperators  = new Array<chargyInterfaces.IChargingStationOperator>();
     private chargingPools             = new Array<chargyInterfaces.IChargingPool>();
@@ -112,7 +114,8 @@ export class Chargy {
                 moment:          MomentModule,
                 asn1:            Asn1Module,
                 base32Decode:    Base32Decode,
-                ShowPKIDetails:  chargyInterfaces.ShowPKIDetailsFunction) {
+                ShowPKIDetails:  chargyInterfaces.ShowPKIDetailsFunction,
+                validationRules: chargyInterfaces.IValidationRules = defaultValidationRules as chargyInterfaces.IValidationRules) {
 
         this.i18n            = i18n;
         this.UILanguage      = UILanguage;
@@ -121,6 +124,7 @@ export class Chargy {
         this.asn1            = asn1;
         this.base32Decode    = base32Decode;
         this.showPKIDetails  = ShowPKIDetails;
+        this.validationRules  = validationRules;
 
     }
 
@@ -2056,9 +2060,176 @@ export class Chargy {
 
     //#endregion
 
+    //#region (private) hasInplausibleChargingSessionTotalEnergyMeasurement(chargingSession)
+
+    private hasInplausibleChargingSessionTotalEnergyMeasurement(chargingSession: chargeTransparencyRecord.IChargingSession): boolean
+    {
+
+        for (const measurement of chargingSession.measurements)
+        {
+
+            if (measurement.name !== "ENERGY_TOTAL" ||
+                measurement.values.length < 2)
+            {
+                continue;
+            }
+
+            const firstValue = measurement.values[0];
+            const lastValue  = measurement.values[measurement.values.length - 1];
+
+            if (firstValue == null ||
+                lastValue  == null)
+            {
+                continue;
+            }
+
+            const firstValueKWh = this.measurementValueInKWh(measurement, firstValue);
+            const lastValueKWh  = this.measurementValueInKWh(measurement, lastValue);
+
+            if (firstValueKWh == null ||
+                lastValueKWh  == null)
+            {
+                continue;
+            }
+
+            if (this.isInplausibleChargingSessionTotalEnergy(lastValueKWh - firstValueKWh))
+                return true;
+
+        }
+
+        return false;
+
+    }
+
+    private isInplausibleChargingSessionTotalEnergy(totalEnergyKWh: number): boolean
+    {
+
+        const totalEnergyRule = this.validationRules.chargingSession?.totalEnergy?.rule;
+
+        if (totalEnergyRule == null)
+            return false;
+
+        const [ operator, thresholdValue, thresholdUnit ] = totalEnergyRule;
+        const thresholdKWh = this.energyValueInKWh(thresholdValue, thresholdUnit);
+
+        if (thresholdKWh == null)
+            return false;
+
+        switch (operator)
+        {
+
+            case ">":
+                return totalEnergyKWh > thresholdKWh;
+
+            case ">=":
+                return totalEnergyKWh >= thresholdKWh;
+
+            case "<":
+                return totalEnergyKWh < thresholdKWh;
+
+            case "<=":
+                return totalEnergyKWh <= thresholdKWh;
+
+            case "=":
+            case "==":
+                return totalEnergyKWh === thresholdKWh;
+
+            default:
+                return false;
+
+        }
+
+    }
+
+    private energyValueInKWh(value: string | number, unit: string): number | undefined
+    {
+
+        const numericValue = typeof value === "number"
+                                 ? value
+                                 : Number.parseFloat(value);
+
+        if (!Number.isFinite(numericValue))
+            return undefined;
+
+        switch (unit.trim().toLowerCase())
+        {
+
+            case "wh":
+                return numericValue / 1000;
+
+            case "kwh":
+                return numericValue;
+
+            case "mwh":
+                return numericValue * 1000;
+
+            default:
+                return undefined;
+
+        }
+
+    }
+
+    private measurementValueInKWh(measurement:      chargeTransparencyRecord.IMeasurement,
+                                  measurementValue: chargeTransparencyRecord.IMeasurementValue): number | undefined
+    {
+
+        const value = measurementValue.value.toNumber();
+
+        if (!Number.isFinite(value))
+            return undefined;
+
+        const unit = measurement.unit?.trim().toLowerCase();
+
+        if (unit === "kwh")
+            return value;
+
+        if (unit === "wh" ||
+            measurement.unitEncoded === 30)
+        {
+            return value / 1000;
+        }
+
+        return undefined;
+
+    }
+
+    private getChargingSessionTotalEnergyWarningLevel(): chargyInterfaces.WarningLevel
+    {
+
+        return this.validationRules.chargingSession?.totalEnergy?.level ??
+               chargyInterfaces.WarningLevel.low;
+
+    }
+
+    private addChargeTransparencyRecordWarning(CTR:     chargeTransparencyRecord.IChargeTransparencyRecord | undefined,
+                                               warning: chargyInterfaces.IWarning): void
+    {
+
+        if (CTR == null)
+            return;
+
+        CTR.warnings ??= [];
+
+        if (!CTR.warnings.some(existingWarning => this.isSameWarning(existingWarning, warning)))
+            CTR.warnings.push(warning);
+
+    }
+
+    private isSameWarning(left:  chargyInterfaces.IWarning,
+                          right: chargyInterfaces.IWarning): boolean
+    {
+
+        return left.level   === right.level &&
+               left.message === right.message;
+
+    }
+
+    //#endregion
+
     //#region (private) processChargingSession(chargingSession)
 
-    private async processChargingSession(chargingSession: chargeTransparencyRecord.IChargingSession) : Promise<chargyInterfaces.ISessionCryptoResult>
+    private async processChargingSession(chargingSession: chargeTransparencyRecord.IChargingSession): Promise<chargyInterfaces.ISessionCryptoResult>
     {
 
         //ToDo: Verify @id exists
@@ -2072,49 +2243,81 @@ export class Chargy {
         //ToDo: Verify tariffId                   => set tariff
         //ToDo: Verify measurements exists & count >= 1
 
+        let verificationResult: chargyInterfaces.ISessionCryptoResult;
+
         switch (chargingSession["@context"])
         {
 
             case "https://open.charging.cloud/contexts/SessionSignatureFormats/GDFCrypt01+json":
                 chargingSession.method = new GDFCrypt01(this);
-                return await chargingSession.method.VerifyChargingSession(chargingSession);
+                verificationResult = await chargingSession.method.VerifyChargingSession(chargingSession);
+                break;
 
             case "https://open.charging.cloud/contexts/SessionSignatureFormats/EMHCrypt01+json":
                 chargingSession.method = new EMHCrypt01(this);
-                return await chargingSession.method.VerifyChargingSession(chargingSession);
+                verificationResult = await chargingSession.method.VerifyChargingSession(chargingSession);
+                break;
 
             case "https://open.charging.cloud/contexts/SessionSignatureFormats/OCMFv1.0+json":
                 chargingSession.method = new OCMFv1_x(this);
-                return await chargingSession.method.VerifyChargingSession(chargingSession);
+                verificationResult = await chargingSession.method.VerifyChargingSession(chargingSession);
+                break;
 
             case "https://open.charging.cloud/contexts/SessionSignatureFormats/ChargePointCrypt01+json":
                 chargingSession.method = new ChargePointCrypt01(this);
-                return await chargingSession.method.VerifyChargingSession(chargingSession);
+                verificationResult = await chargingSession.method.VerifyChargingSession(chargingSession);
+                break;
 
             case "https://open.charging.cloud/contexts/SessionSignatureFormats/AlfenCrypt01+json":
                 chargingSession.method = new AlfenCrypt01(this);
-                return await chargingSession.method.VerifyChargingSession(chargingSession);
+                verificationResult = await chargingSession.method.VerifyChargingSession(chargingSession);
+                break;
 
             case "https://open.charging.cloud/contexts/SessionSignatureFormats/MennekesCrypt01+json":
                 chargingSession.method = new MennekesCrypt01(this);
-                return await chargingSession.method.VerifyChargingSession(chargingSession);
+                verificationResult = await chargingSession.method.VerifyChargingSession(chargingSession);
+                break;
 
             case "https://open.charging.cloud/contexts/SessionSignatureFormats/PCDF+json":
                 chargingSession.method = new PCDFCrypt01(this);
-                return await chargingSession.method.VerifyChargingSession(chargingSession);
+                verificationResult = await chargingSession.method.VerifyChargingSession(chargingSession);
+                break;
 
             case "https://open.charging.cloud/contexts/SessionSignatureFormats/bsm-ws36a-v0+json":
                 chargingSession.method = new BSMCrypt01(this);
-                return await chargingSession.method.VerifyChargingSession(chargingSession);
+                verificationResult = await chargingSession.method.VerifyChargingSession(chargingSession);
+                break;
 
             default:
-                return {
+                verificationResult = {
                     status:    chargyInterfaces.SessionVerificationResult.UnknownSessionFormat,
                     message:   this.GetLocalizedMessage("UnknownOrInvalidChargingSessionFormat"),
                     certainty: 0
                 }
+                break;
 
         }
+
+        if (verificationResult.status === chargyInterfaces.SessionVerificationResult.ValidSignature &&
+            this.hasInplausibleChargingSessionTotalEnergyMeasurement(chargingSession))
+        {
+
+            this.addChargeTransparencyRecordWarning(
+                chargingSession.ctr,
+                {
+                    level:   this.getChargingSessionTotalEnergyWarningLevel(),
+                    message: this.GetLocalizedMessage("InplausibleTotalEnergyMeasurementWarning")
+                }
+            );
+
+            return {
+                ...verificationResult,
+                status: chargyInterfaces.SessionVerificationResult.InplausibleMeasurement
+            };
+
+        }
+
+        return verificationResult;
 
     }
 

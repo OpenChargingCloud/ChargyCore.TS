@@ -91,6 +91,11 @@
         "en": "Invalid charging session!"
     },
 
+    "InplausibleTotalEnergyMeasurementWarning": {
+        "de": "Die geladene Energiemenge ist unplausibel hoch.",
+        "en": "The charged energy amount is implausibly high."
+    },
+
 
 
     "Unbekanntes Messdatensatzformat!": {

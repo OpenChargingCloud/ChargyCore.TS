@@ -55,7 +55,7 @@ export class OCPI {
     {
 
         const errors    = new Array<string>();
-        const warnings  = new Array<string>();
+        const warnings  = new Array<chargyInterfaces.IWarning>();
 
         if (!chargyLib.isMandatoryJSONObject(SomeJSON))
         {

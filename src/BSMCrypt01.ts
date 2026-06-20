@@ -112,7 +112,7 @@ interface IBSMDataSet
     measurementId:              unknown;
     signature:                  string;
     errors:                     string[];
-    warnings:                   string[];
+    warnings:                   chargyInterfaces.IWarning[];
 }
 
 export interface IBSMCrypt01Result extends chargyInterfaces.ICryptoResult
@@ -203,7 +203,7 @@ export class BSMCrypt01 extends ACrypt {
         }
 
         const errors    = new Array<string>();
-        const warnings  = new Array<string>();
+        const warnings  = new Array<chargyInterfaces.IWarning>();
 
         // How sure we are, that this is really a BSM meter value format
         const numberOfFormatChecks  = 2*39; // At least two signed meter values!
@@ -425,7 +425,7 @@ export class BSMCrypt01 extends ACrypt {
             {
 
                 const currentErrors:   Array<string>  = [];
-                const currentWarnings: Array<string>  = [];
+                const currentWarnings: Array<chargyInterfaces.IWarning>  = [];
 
                 measurementCounter++;
 
@@ -661,7 +661,10 @@ export class BSMCrypt01 extends ACrypt {
                     // software versions is hard to do when it comes to suffixs
                     // for release candidates, betas, ...
                     if (ExpectedCscSwVersion !== null && ExpectedCscSwVersion !== csc_sw_version)
-                        currentWarnings.push(this.chargy.GetLocalizedMessage("Inconsistent_ChargingStation_FirmwareVersion"));
+                        currentWarnings.push({
+                            level:   chargyInterfaces.WarningLevel.medium,
+                            message: this.chargy.GetLocalizedMessage("Inconsistent_ChargingStation_FirmwareVersion")
+                        });
 
                     previousCscSwVersion = csc_sw_version;
 

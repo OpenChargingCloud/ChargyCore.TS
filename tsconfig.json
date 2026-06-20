@@ -37,6 +37,7 @@
     "vitest.config.ts",
     "vitest.browser.config.ts",
     "vitest.bundle.config.ts",
+    "vitest.workspace.config.ts",
     "tsup.config.ts"
   ],
   "exclude": [

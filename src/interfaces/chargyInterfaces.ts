@@ -452,6 +452,17 @@ export enum DisplayPrefixes {
     GIGA
 }
 
+export enum WarningLevel {
+    low         = "low",
+    medium      = "medium",
+    high        = "high"
+}
+
+export interface IWarning {
+    level:       WarningLevel;
+    message:     string;
+}
+
 
 export interface ISessionCryptoResult extends chargyLib.JSONObject
 {
@@ -466,7 +477,7 @@ export interface ISessionCryptoResult extends chargyLib.JSONObject
     // hopefully one will be the best matching parser.
     certainty:                  number;
 
-    warnings?:                  Array<string>;
+    warnings?:                  Array<IWarning>;
     errors?:                    Array<string>;
 
 }
@@ -486,7 +497,7 @@ export interface ICryptoResult
 {
     status:                     VerificationResult;
     errors?:                    Array<string>;
-    warnings?:                  Array<string>;
+    warnings?:                  Array<IWarning>;
 }
 
 export function isICryptoResult(obj: unknown): obj is ICryptoResult {
@@ -545,6 +556,7 @@ export enum SessionVerificationResult {
 
     EnergyMeterNotFound               = "EnergyMeterNotFound",
     InvalidMeasurement                = "InvalidMeasurement",
+    InplausibleMeasurement            = "InplausibleMeasurement",
 
     PublicKeyNotFound                 = "PublicKeyNotFound",
     UnknownPublicKeyFormat            = "UnknownPublicKeyFormat",
@@ -634,6 +646,25 @@ export interface IMultilanguageText {
 // The i18n.json dictionary: message key => language => localized text
 export interface I18NDictionary {
     [key: string]:  IMultilanguageText;
+}
+
+export type ValidationRuleOperator = ">" | ">=" | "<" | "<=" | "=" | "==";
+
+export type EnergyValidationRule = [
+    operator:  ValidationRuleOperator,
+    threshold: string,
+    unit:      string
+];
+
+export interface IValidationRule<T> {
+    rule:   T;
+    level:  WarningLevel;
+}
+
+export interface IValidationRules {
+    chargingSession?: {
+        totalEnergy?: IValidationRule<EnergyValidationRule>;
+    };
 }
 
 export interface IResult {

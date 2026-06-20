@@ -13,5 +13,6 @@
   "eslint.lintTask.enable": true,
   "editor.codeActionsOnSave": {
     "source.fixAll.eslint": "explicit"
-  }
+  },
+  "vitest.commandLine": "npx vitest --config vitest.workspace.config.ts"
 }

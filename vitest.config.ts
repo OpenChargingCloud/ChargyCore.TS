@@ -8,6 +8,7 @@ export default defineConfig({
     }
   },
   test: {
+    name: "node",
     environment: "node",
     globals: false,
     include: [

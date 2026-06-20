@@ -65,7 +65,7 @@ export interface IChargeTransparencyRecord extends chargyLib.JSONObject
     // hopefully one will be the best matching parser.
     certainty:                  number;
 
-    warnings?:                  Array<string>;
+    warnings?:                  Array<chargyInterfaces.IWarning>;
     errors?:                    Array<string>;
     status?:                    chargyInterfaces.SessionVerificationResult;
 
@@ -174,7 +174,7 @@ export interface IMeasurementValue
     statusAdapter?:             string;
 
     errors?:                    Array<string>;
-    warnings?:                  Array<string>;
+    warnings?:                  Array<chargyInterfaces.IWarning>;
 
     signatures?:                Array<chargyInterfaces.ISignature|ISignatureRS>;
     result?:                    chargyInterfaces.ICryptoResult;
