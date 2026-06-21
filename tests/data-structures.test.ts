@@ -53,9 +53,6 @@ vi.mock("pdfjs-dist", () => ({
 vi.stubGlobal("window", {
     navigator: {
         language: "en"
-    },
-    chargyElectron: {
-        openExternal: async () => Promise.resolve()
     }
 });
 

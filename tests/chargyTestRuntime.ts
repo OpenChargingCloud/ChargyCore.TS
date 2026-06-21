@@ -1,6 +1,9 @@
+import { createRequire } from "node:module";
 import type {
     Chargy,
     I18NDictionary,
+    LanguageStrings,
+    ShowPKIDetailsFunction,
     IValidationRules,
     SignedJSONMessage
 } from "@open-charging-cloud/chargy-core";
@@ -16,6 +19,18 @@ export type ChargyTestDependencies = {
     base32Decode:  ChargyConstructorArguments[5];
 };
 
+type ChargyConstructor = new (...args: ChargyConstructorArguments) => Chargy;
+
+type CreateTestChargyOptions = {
+    i18n?:            I18NDictionary;
+    uiLanguages?:     LanguageStrings;
+    showPKIDetails?:  ShowPKIDetailsFunction;
+    validationRules?: IValidationRules;
+};
+
+const requireModule = createRequire(import.meta.url);
+const chargyDependencies = loadChargyTestDependencies(requireModule);
+
 export function loadChargyTestDependencies(requireModule: ModuleRequire): ChargyTestDependencies {
 
     return {
@@ -24,6 +39,23 @@ export function loadChargyTestDependencies(requireModule: ModuleRequire): Chargy
         asn1:          requireModule("asn1.js")       as ChargyConstructorArguments[4],
         base32Decode:  requireModule("base32-decode") as ChargyConstructorArguments[5]
     };
+
+}
+
+export function createTestChargy(ChargyClass: ChargyConstructor,
+                                 options:     CreateTestChargyOptions = {}): Chargy
+{
+
+    return new ChargyClass(
+        options.i18n            ?? {},
+        options.uiLanguages     ?? [ "en" ],
+        chargyDependencies.elliptic,
+        chargyDependencies.moment,
+        chargyDependencies.asn1,
+        chargyDependencies.base32Decode,
+        options.showPKIDetails  ?? ((): string => ""),
+        options.validationRules
+    );
 
 }
 

@@ -1,5 +1,4 @@
 import { readFileSync } from "node:fs";
-import { createRequire } from "node:module";
 import { createSign, generateKeyPairSync } from "node:crypto";
 import { DOMParser } from "@oozcitak/dom";
 import { describe, expect, test, vi } from 'vitest';
@@ -25,10 +24,7 @@ import {
     validatePCDFFields,
     verifyPCDFDocument
 } from '@open-charging-cloud/chargy-core';
-import { loadChargyTestDependencies } from './chargyTestRuntime';
-
-const require = createRequire(import.meta.url);
-const chargyDependencies = loadChargyTestDependencies(require);
+import { createTestChargy } from './chargyTestRuntime';
 
 vi.mock('pdfjs-dist', async () => {
     const pdfjs = await import('pdfjs-dist/legacy/build/pdf.mjs');
@@ -45,20 +41,6 @@ vi.stubGlobal('window', {
 vi.stubGlobal('DOMParser', DOMParser);
 
 type TestPCDFFields = Record<typeof PCDF_FIELD_ORDER[number], string>;
-
-function createChargy(): Chargy {
-
-    return new Chargy(
-        {},
-        [ "en" ],
-        chargyDependencies.elliptic,
-        chargyDependencies.moment,
-        chargyDependencies.asn1,
-        chargyDependencies.base32Decode,
-        () => ""
-    );
-
-}
 
 function generatePCDF(overrides?: Partial<TestPCDFFields>): {
     pcdf:         string;
@@ -218,7 +200,7 @@ describe('PCDF crypto', () => {
         const generated = generatePCDF();
         const parsed    = parsePCDFDocument(generated.pcdf);
         const data      = validatePCDFFields(parsed.fields);
-        const chargy    = createChargy();
+        const chargy    = createTestChargy(Chargy);
 
         const result = await verifyPCDFDocument({
             "@context":        "PCDF",
@@ -242,7 +224,7 @@ describe('PCDF crypto', () => {
         const generated = generatePCDF();
         const parsed    = parsePCDFDocument(generated.pcdf.replace("0001.234*kWh", "0001.235*kWh"));
         const data      = validatePCDFFields(parsed.fields);
-        const chargy    = createChargy();
+        const chargy    = createTestChargy(Chargy);
 
         const result = await verifyPCDFDocument({
             "@context":        "PCDF",
@@ -274,7 +256,7 @@ describe('PCDF Chargy integration', () => {
             data: new TextEncoder().encode(generated.pcdf)
         };
 
-        const result = await createChargy().DetectAndConvertContentFormat([ fileInfo ]);
+        const result = await createTestChargy(Chargy).DetectAndConvertContentFormat([ fileInfo ]);
 
         expect(IsAChargeTransparencyRecord(result)).toBe(true);
 
@@ -305,7 +287,7 @@ describe('PCDF Chargy integration', () => {
             data: new TextEncoder().encode(tampered)
         };
 
-        const result = await createChargy().DetectAndConvertContentFormat([ fileInfo ]);
+        const result = await createTestChargy(Chargy).DetectAndConvertContentFormat([ fileInfo ]);
 
         expect(IsAChargeTransparencyRecord(result)).toBe(true);
 

@@ -1,18 +1,17 @@
 import { readFileSync } from "node:fs";
-import { createRequire } from "node:module";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { beforeAll, describe, expect, test, vi } from "vitest";
+import { describe, expect, test, vi } from "vitest";
 
 import type {
-    IFileInfo,
-    Chargy as ChargyClass
-} from "@open-charging-cloud/chargy-core";
+    IFileInfo
+} from "../src/interfaces/chargyInterfaces";
+import { Chargy } from "../src/chargy";
 import {
     IsAChargeTransparencyLiveLink
-} from "@open-charging-cloud/chargy-core";
+} from "../src/interfaces/IChargeTransparencyLiveLink";
 import {
-    loadChargyTestDependencies,
+    createTestChargy,
     parseI18NDictionary,
     parseJSONRecord
 } from "./chargyTestRuntime";
@@ -24,44 +23,17 @@ vi.mock("pdfjs-dist", () => ({
 vi.stubGlobal("window", {
     navigator: {
         language: "en"
-    },
-    chargyElectron: {
-        openExternal: async () => Promise.resolve()
     }
 });
 
-const require          = createRequire(import.meta.url);
 const currentDirectory = fileURLToPath(new URL(".",  import.meta.url));
 const projectRoot      = fileURLToPath(new URL("..", import.meta.url));
-const chargyDependencies = loadChargyTestDependencies(require);
+const coreI18n         = parseI18NDictionary(readFileSync(join(projectRoot, "i18n.json"), "utf8"));
 
-type ChargyConstructor = typeof ChargyClass;
-type DetectionResult   = ReturnType<InstanceType<ChargyConstructor>["DetectAndConvertContentFormat"]>;
-
-let Chargy: ChargyConstructor;
-
-beforeAll(async () => {
-    ({ Chargy } = await import("@open-charging-cloud/chargy-core"));
-});
+type DetectionResult = ReturnType<Chargy["DetectAndConvertContentFormat"]>;
 
 function readFixture(fileName: string): string {
     return readFileSync(join(currentDirectory, "fixtures", fileName), "utf8").trim();
-}
-
-function createChargy(): InstanceType<ChargyConstructor> {
-
-    const i18n = parseI18NDictionary(readFileSync(join(projectRoot, "i18n.json"), "utf8"));
-
-    return new Chargy(
-        i18n,
-        [ "en" ],
-        chargyDependencies.elliptic,
-        chargyDependencies.moment,
-        chargyDependencies.asn1,
-        chargyDependencies.base32Decode,
-        () => ""
-    );
-
 }
 
 async function verifyChargeTransparencyLiveLink(fileName: string): DetectionResult {
@@ -72,7 +44,7 @@ async function verifyChargeTransparencyLiveLink(fileName: string): DetectionResu
         data: new TextEncoder().encode(readFixture(fileName))
     };
 
-    return createChargy().DetectAndConvertContentFormat([ fileInfo ]);
+    return createTestChargy(Chargy, { i18n: coreI18n }).DetectAndConvertContentFormat([ fileInfo ]);
 
 }
 

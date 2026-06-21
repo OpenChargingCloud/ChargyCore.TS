@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2018-2026 GraphDefined GmbH <achim.friedland@graphdefined.com>
- * This file is part of Chargy Desktop App <https://github.com/OpenChargingCloud/ChargyDesktopApp>
+ * This file is part of Chargy Core <https://github.com/OpenChargingCloud/ChargyCore.TS>
  *
  * Licensed under the Affero GPL license, Version 3.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -142,81 +142,101 @@ export class Chargy {
     }
 
 
-    public SetUILanguages(UILanguages: chargyInterfaces.LanguageStrings): void {
+    private fileNameWithoutExtension(fileName: string): string {
 
-        this.uiLanguages = this.NormalizeUILanguages(UILanguages);
+        const lastSeparator = Math.max(fileName.lastIndexOf('/'), fileName.lastIndexOf('\\'));
+        const lastDot       = fileName.lastIndexOf('.');
+
+        if (lastDot > lastSeparator)
+            return fileName.substring(0, lastDot);
+
+        return fileName;
 
     }
 
+    private tryExtractChargeTransparencyTextFromURL(qrText: string): string {
 
-    private NormalizeUILanguages(UILanguages: chargyInterfaces.LanguageStrings): chargyInterfaces.LanguageStrings {
+        if (!qrText.startsWith("http://") && !qrText.startsWith("https://"))
+            return qrText;
 
-        const languages = new Array<chargyInterfaces.LanguageString>();
+        try
+        {
 
-        for (const language of UILanguages) {
+            const url = new URL(qrText);
 
-            const normalized = language.trim();
+            const candidates = [
+                url.hash.startsWith("#") ? url.hash.substring(1) : url.hash,
+                url.searchParams.get("data"),
+                url.searchParams.get("content"),
+                url.searchParams.get("ctr"),
+                url.searchParams.get("record"),
+                url.searchParams.get("payload"),
+                url.searchParams.get("q")
+            ];
 
-            if (normalized.length > 0 &&
-                !languages.includes(normalized))
+            for (const candidate of candidates)
             {
-                languages.push(normalized);
+                const decodedCandidate = candidate != null
+                                             ? decodeURIComponent(candidate).trim()
+                                             : "";
+
+                if (decodedCandidate.startsWith("<?xml") ||
+                    decodedCandidate.startsWith("<values") ||
+                    decodedCandidate.startsWith("{")      ||
+                    decodedCandidate.startsWith("[")      ||
+                    decodedCandidate.startsWith("OCMF")   ||
+                    decodedCandidate.startsWith("AP;"))
+                {
+                    return decodedCandidate;
+                }
             }
-
+        }
+        catch
+        {
+            console.log("Invalid URL in QR code: " + qrText);
         }
 
-        return languages.length > 0
-                   ? languages
-                   : [ "en" ];
+        return qrText;
 
     }
 
+    private tryExtractSignedDataTextFromXML(qrText: string): string {
 
-    private FindBestMultilanguageText(Text: chargyInterfaces.IMultilanguageText): string | undefined {
+        const trimmedQRCodeText = qrText.trim();
 
-        for (const language of this.uiLanguages) {
+        if (!trimmedQRCodeText.startsWith("<?xml") && !trimmedQRCodeText.startsWith("<"))
+            return qrText;
 
-            const localLanguage = Text[language];
+        try
+        {
+            const xmlDocument       = new DOMParser().parseFromString(trimmedQRCodeText, "text/xml");
+            const signedDataValues  = chargyLib.getElementsByLocalName(xmlDocument, "signedData").
+                                         filter(signedData => (signedData.getAttribute("format") ?? "").trim().toLowerCase() === "alfen").
+                                         map   (signedData => signedData.textContent.trim()).
+                                         filter(signedData => signedData.startsWith("AP;"));
 
-            if (localLanguage !== undefined)
-                return localLanguage;
-
+            if (signedDataValues.length > 0)
+                return signedDataValues.join("\n");
+        }
+        catch
+        {
+            console.log("Error parsing XML content from QR code: " + qrText);
         }
 
-        const english = Text["en"];
-        if (english !== undefined)
-            return english;
-
-        return Object.values(Text).find(value => value !== undefined);
+        return qrText;
 
     }
 
 
-    private CompleteMultilanguageText(Text:         chargyInterfaces.IMultilanguageText | undefined,
-                                      fallbackText: string): chargyInterfaces.IMultilanguageText {
+    //#region Public key methods...
 
-        const result: chargyInterfaces.IMultilanguageText = {
-            ...(Text ?? {})
-        };
-
-        const fallback = this.FindBestMultilanguageText(result) ?? fallbackText;
-
-        for (const language of this.uiLanguages)
-            result[language] ??= fallback;
-
-        return result;
-
-    }
-
-
-    private PublicKeyIdFromFileName(fileName: string): string {
+        private PublicKeyIdFromFileName(fileName: string): string {
 
         return (fileName.includes('.')
                     ? fileName.substring(0, fileName.indexOf('.'))
                     : fileName).replace(/[-_]?public[-_]?key/i, "");
 
     }
-
 
     private TryToParseDERPublicKey(keyId:            string,
                                    publicKeyBuffer:  Buffer): publicKeyInfo.IPublicKeyLookup & { "@id": string, "@context": string } {
@@ -296,7 +316,6 @@ export class Chargy {
 
     }
 
-
     private IsHexEncodedPublicKeyFile(fileName:     string,
                                       textContent?: string): boolean {
 
@@ -316,7 +335,6 @@ export class Chargy {
                /^[0-9a-fA-F]+$/.test(publicKeyHEX);
 
     }
-
 
     private TryToGetDERPublicKeyHEX(fileName:     string,
                                     textContent?: string): string|undefined {
@@ -344,7 +362,11 @@ export class Chargy {
 
     }
 
-    private isSupportedQRCodeImageFile(fileInfo: chargyInterfaces.IFileInfo,
+    //#endregion
+
+    //#region QR code image files...
+
+    private isSupportedQRCodeImageFile(fileInfo:  chargyInterfaces.IFileInfo,
                                        mimeType?: string): boolean {
 
         const mimeTypeToCheck = (mimeType ?? fileInfo.type ?? "").toLowerCase();
@@ -364,107 +386,6 @@ export class Chargy {
                fileName.endsWith(".webp")           ||
                fileName.endsWith(".bmp")            ||
                fileName.endsWith(".svg");
-
-    }
-
-    private fileNameWithoutExtension(fileName: string): string {
-
-        const lastSeparator = Math.max(fileName.lastIndexOf('/'), fileName.lastIndexOf('\\'));
-        const lastDot       = fileName.lastIndexOf('.');
-
-        if (lastDot > lastSeparator)
-            return fileName.substring(0, lastDot);
-
-        return fileName;
-
-    }
-
-    private textFileNameForQRCodeContent(fileName: string,
-                                         qrText:   string): string {
-
-        const trimmedQRCodeText = qrText.trimStart();
-        const baseFileName      = this.fileNameWithoutExtension(fileName);
-
-        if (trimmedQRCodeText.startsWith("<?xml") || trimmedQRCodeText.startsWith("<"))
-            return baseFileName + ".xml";
-
-        if (trimmedQRCodeText.startsWith("{") || trimmedQRCodeText.startsWith("["))
-            return baseFileName + ".json";
-
-        return baseFileName + ".txt";
-
-    }
-
-    private tryExtractChargeTransparencyTextFromURL(qrText: string): string {
-
-        if (!qrText.startsWith("http://") && !qrText.startsWith("https://"))
-            return qrText;
-
-        try
-        {
-
-            const url = new URL(qrText);
-
-            const candidates = [
-                url.hash.startsWith("#") ? url.hash.substring(1) : url.hash,
-                url.searchParams.get("data"),
-                url.searchParams.get("content"),
-                url.searchParams.get("ctr"),
-                url.searchParams.get("record"),
-                url.searchParams.get("payload"),
-                url.searchParams.get("q")
-            ];
-
-            for (const candidate of candidates)
-            {
-                const decodedCandidate = candidate != null
-                                             ? decodeURIComponent(candidate).trim()
-                                             : "";
-
-                if (decodedCandidate.startsWith("<?xml") ||
-                    decodedCandidate.startsWith("<values") ||
-                    decodedCandidate.startsWith("{")      ||
-                    decodedCandidate.startsWith("[")      ||
-                    decodedCandidate.startsWith("OCMF")   ||
-                    decodedCandidate.startsWith("AP;"))
-                {
-                    return decodedCandidate;
-                }
-            }
-        }
-        catch
-        {
-            console.log("Invalid URL in QR code: " + qrText);
-        }
-
-        return qrText;
-
-    }
-
-    private tryExtractSignedDataTextFromXML(qrText: string): string {
-
-        const trimmedQRCodeText = qrText.trim();
-
-        if (!trimmedQRCodeText.startsWith("<?xml") && !trimmedQRCodeText.startsWith("<"))
-            return qrText;
-
-        try
-        {
-            const xmlDocument       = new DOMParser().parseFromString(trimmedQRCodeText, "text/xml");
-            const signedDataValues  = chargyLib.getElementsByLocalName(xmlDocument, "signedData").
-                                         filter(signedData => (signedData.getAttribute("format") ?? "").trim().toLowerCase() === "alfen").
-                                         map   (signedData => signedData.textContent.trim()).
-                                         filter(signedData => signedData.startsWith("AP;"));
-
-            if (signedDataValues.length > 0)
-                return signedDataValues.join("\n");
-        }
-        catch
-        {
-            console.log("Error parsing XML content from QR code: " + qrText);
-        }
-
-        return qrText;
 
     }
 
@@ -513,7 +434,91 @@ export class Chargy {
 
     }
 
-    //#region GetLocalizedMessages...
+    private textFileNameForQRCodeContent(fileName: string,
+                                         qrText:   string): string {
+
+        const trimmedQRCodeText = qrText.trimStart();
+        const baseFileName      = this.fileNameWithoutExtension(fileName);
+
+        if (trimmedQRCodeText.startsWith("<?xml") || trimmedQRCodeText.startsWith("<"))
+            return baseFileName + ".xml";
+
+        if (trimmedQRCodeText.startsWith("{") || trimmedQRCodeText.startsWith("["))
+            return baseFileName + ".json";
+
+        return baseFileName + ".txt";
+
+    }
+
+    //#endregion
+
+    //#region i18n...
+
+    public SetUILanguages(UILanguages: chargyInterfaces.LanguageStrings): void {
+
+        this.uiLanguages = this.NormalizeUILanguages(UILanguages);
+
+    }
+
+
+    private NormalizeUILanguages(UILanguages: chargyInterfaces.LanguageStrings): chargyInterfaces.LanguageStrings {
+
+        const languages = new Array<chargyInterfaces.LanguageString>();
+
+        for (const language of UILanguages) {
+
+            const normalized = language.trim();
+
+            if (normalized.length > 0 &&
+                !languages.includes(normalized))
+            {
+                languages.push(normalized);
+            }
+
+        }
+
+        return languages.length > 0
+                   ? languages
+                   : [ "en" ];
+
+    }
+
+
+    private FindBestMultilanguageText(Text: chargyInterfaces.IMultilanguageText): string | undefined {
+
+        for (const language of this.uiLanguages) {
+
+            const localLanguage = Text[language];
+
+            if (localLanguage !== undefined)
+                return localLanguage;
+
+        }
+
+        const english = Text["en"];
+        if (english !== undefined)
+            return english;
+
+        return Object.values(Text).find(value => value !== undefined);
+
+    }
+
+
+    private CompleteMultilanguageText(Text:         chargyInterfaces.IMultilanguageText | undefined,
+                                      fallbackText: string): chargyInterfaces.IMultilanguageText {
+
+        const result: chargyInterfaces.IMultilanguageText = {
+            ...(Text ?? {})
+        };
+
+        const fallback = this.FindBestMultilanguageText(result) ?? fallbackText;
+
+        for (const language of this.uiLanguages)
+            result[language] ??= fallback;
+
+        return result;
+
+    }
 
     public GetLocalizedMessage(Text: string): string
     {
@@ -582,6 +587,20 @@ export class Chargy {
         }
 
         return this.CompleteMultilanguageText(parameterizedText, Text.replace("%p", String(Parameter)));
+
+    }
+
+    public getLocalizedText(data: chargyInterfaces.IMultilanguageText|undefined): string|undefined {
+
+        if (data == null)
+            return undefined;
+
+        const bestLanguage = this.FindBestMultilanguageText(data);
+
+        if (bestLanguage == null)
+            return undefined;
+
+        return data[bestLanguage];
 
     }
 
@@ -989,8 +1008,6 @@ export class Chargy {
 
     }
 
-    //#endregion
-
     private async extractArchive(fileName:  string,
                                  data:      ArrayBuffer | Uint8Array,
                                  mimeType:  string): Promise<Array<chargyInterfaces.TarInfo>> {
@@ -1206,6 +1223,7 @@ export class Chargy {
 
     }
 
+    //#endregion
 
     //#region DetectAndConvertContentFormat(FileInfos)
 

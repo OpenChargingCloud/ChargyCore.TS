@@ -1,10 +1,9 @@
 import { expect, vi }     from 'vitest';
 import { Chargy }         from '@open-charging-cloud/chargy-core';
 import { readFileSync }   from "node:fs";
-import { createRequire }  from "node:module";
 import { DOMParser }      from "@oozcitak/dom";
 import {
-    loadChargyTestDependencies,
+    createTestChargy,
     parseI18NDictionary,
     parseValidationRules
 } from "./chargyTestRuntime";
@@ -34,9 +33,6 @@ export {
     expectVerificationReportWithPublicKey,
     expectVerificationReportWithValidationRules
 }
-
-const require = createRequire(import.meta.url);
-const chargyDependencies = loadChargyTestDependencies(require);
 
 vi.mock('pdfjs-dist', async () => {
     const pdfjs = await import('pdfjs-dist/legacy/build/pdf.mjs');
@@ -113,18 +109,13 @@ function archiveMimeType(fileName: string): string {
 
 }
 
-function createChargy(validationRules?: IValidationRules): Chargy {
+function createVerificationChargy(validationRules?: IValidationRules): Chargy {
 
-    return new Chargy(
-        parseI18NDictionary(readFileSync(new URL("../i18n.json", import.meta.url), "utf8")),
-        [ "en" ],
-        chargyDependencies.elliptic,
-        chargyDependencies.moment,
-        chargyDependencies.asn1,
-        chargyDependencies.base32Decode,
-        () => "",
-        validationRules
-    );
+    const i18n = parseI18NDictionary(readFileSync(new URL("../i18n.json", import.meta.url), "utf8"));
+
+    return validationRules === undefined
+               ? createTestChargy(Chargy, { i18n })
+               : createTestChargy(Chargy, { i18n, validationRules });
 
 }
 
@@ -271,7 +262,7 @@ async function verifyChargeData(fileName:  string,
             : input
     };
 
-    return createChargy(validationRules).DetectAndConvertContentFormat([ fileInfo ]);
+    return createVerificationChargy(validationRules).DetectAndConvertContentFormat([ fileInfo ]);
 
 }
 
@@ -284,7 +275,7 @@ async function verifyChargeDataFiles(fileInfos: IFileInfo[],
               ISessionCryptoResult>
 
 {
-    return createChargy(validationRules).DetectAndConvertContentFormat(fileInfos);
+    return createVerificationChargy(validationRules).DetectAndConvertContentFormat(fileInfos);
 }
 
 function formatChargeDataVerificationReport(report: IChargeTransparencyRecord | IChargeTransparencyLiveLink | IPublicKeyInfo | ISessionCryptoResult): string {

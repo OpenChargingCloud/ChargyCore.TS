@@ -1,27 +1,9 @@
-import { createRequire } from "node:module";
 import { DOMParser } from "@oozcitak/dom";
 import { describe, expect, test } from 'vitest';
 import { expectVerificationReport, expectArchiveVerificationReport } from './testHelper';
 import { Chargy } from '@open-charging-cloud/chargy-core';
 import { SAFEXML } from '@open-charging-cloud/chargy-core';
-import { loadChargyTestDependencies } from './chargyTestRuntime';
-
-const require = createRequire(import.meta.url);
-const chargyDependencies = loadChargyTestDependencies(require);
-
-function createChargy(): Chargy {
-
-    return new Chargy(
-        {},
-        [ "en" ],
-        chargyDependencies.elliptic,
-        chargyDependencies.moment,
-        chargyDependencies.asn1,
-        chargyDependencies.base32Decode,
-        () => ""
-    );
-
-}
+import { createTestChargy } from './chargyTestRuntime';
 
 describe('SAFE Tests', () => {
 
@@ -34,7 +16,7 @@ describe('SAFE Tests', () => {
     </value>
 </values>`, "text/xml");
 
-        const result = await new SAFEXML(createChargy()).tryToParseSAFEXML(xmlDocument);
+        const result = await new SAFEXML(createTestChargy(Chargy)).tryToParseSAFEXML(xmlDocument);
 
         expect(result).toMatchObject({
             status:  "InvalidSessionFormat",
