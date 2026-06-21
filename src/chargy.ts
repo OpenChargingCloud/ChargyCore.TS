@@ -590,17 +590,12 @@ export class Chargy {
 
     }
 
-    public getLocalizedText(data: chargyInterfaces.IMultilanguageText|undefined): string|undefined {
+    public GetLocalizedText(data: chargyInterfaces.IMultilanguageText|undefined): string|undefined {
 
         if (data == null)
             return undefined;
 
-        const bestLanguage = this.FindBestMultilanguageText(data);
-
-        if (bestLanguage == null)
-            return undefined;
-
-        return data[bestLanguage];
+        return this.FindBestMultilanguageText(data);
 
     }
 
