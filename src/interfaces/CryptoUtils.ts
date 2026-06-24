@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2018-2026 GraphDefined GmbH <achim.friedland@graphdefined.com>
- This file is part of Chargy Core <https://github.com/OpenChargingCloud/ChargyCore.TS>
+ This file is part of ChargyCore <https://github.com/OpenChargingCloud/ChargyCore.TS>
  *
  * Licensed under the Affero GPL license, Version 3.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,13 +15,9 @@
  * limitations under the License.
  */
 
-import { ec as EC } from "elliptic";
+import { ec as EC }        from "elliptic";
+import * as chargyLib      from './chargyLib'
 
-import {
-    canonicalJSONBytes
-} from "./CanonicalJSON";
-
-export type JSONMessage = Record<string, unknown>;
 
 export interface JSONSignature {
     publicKey:     string;
@@ -30,7 +26,7 @@ export interface JSONSignature {
     signatureHEX:  string;
 }
 
-export interface SignedJSONMessage extends JSONMessage {
+export interface SignedJSONMessage extends chargyLib.JSONObject {
     signatures?: JSONSignature[];
 }
 
@@ -84,9 +80,9 @@ export async function SignMessage(JSONMessage: SignedJSONMessage,
 
 }
 
-export async function signJSONMessage(JSONMessage: SignedJSONMessage | null | undefined,
-                                      KeyPairs:    Array<EC.KeyPair | null | undefined> | null | undefined,
-                                      options?:    SignJSONMessageOptions): Promise<boolean> {
+export async function signJSONMessage(JSONMessage:  SignedJSONMessage | null | undefined,
+                                      KeyPairs:     Array<EC.KeyPair  | null | undefined> | null | undefined,
+                                      options?:     SignJSONMessageOptions): Promise<boolean> {
 
     if (JSONMessage == null || KeyPairs == null || KeyPairs.length === 0)
         return false;
@@ -107,23 +103,23 @@ export async function signJSONMessage(JSONMessage: SignedJSONMessage | null | un
         if (KeyPair == null || !hasPrivateAndPublicKey(KeyPair))
             continue;
 
-        const messageJSON = cloneMessageWithoutSignatures(JSONMessage);
-        const plainText   = canonicalJSONBytes(messageJSON);
-        const sha256Hash  = await sha256(plainText);
+        const messageJSON     = cloneMessageWithoutSignatures(JSONMessage);
+        const plainText       = canonicalJSONBytes(messageJSON);
+        const sha256Hash      = await chargyLib.sha256____(plainText);
 
         JSONMessage.signatures ??= [];
 
-        const publicKeyBytes = Uint8Array.from(KeyPair.getPublic(false, "array"));
-        const signature      = KeyPair.sign(sha256Hash, {
+        const publicKeyBytes  = Uint8Array.from(KeyPair.getPublic(false, "array"));
+        const signature       = KeyPair.sign(sha256Hash, {
             canonical: resolvedOptions.canonical
         });
-        const signatureBytes = Uint8Array.from(signature.toDER());
+        const signatureBytes  = Uint8Array.from(signature.toDER());
 
         const signatureJSON: JSONSignature = {
-            publicKey:     bytesToBase64(publicKeyBytes),
-            publicKeyHEX:  bytesToHex(publicKeyBytes),
-            signature:     bytesToBase64(signatureBytes),
-            signatureHEX:  bytesToHex(signatureBytes)
+            publicKey:     chargyLib.bytesToBase64(publicKeyBytes),
+            publicKeyHEX:  chargyLib.bytesToHex(publicKeyBytes),
+            signature:     chargyLib.bytesToBase64(signatureBytes),
+            signatureHEX:  chargyLib.bytesToHex(signatureBytes)
         };
 
         JSONMessage.signatures.push(signatureJSON);
@@ -137,17 +133,17 @@ export async function signJSONMessage(JSONMessage: SignedJSONMessage | null | un
 
 }
 
-export async function verifyJSONSignature(JSONMessage: SignedJSONMessage,
-                                          signature:   JSONSignature,
-                                          options?:    SignJSONMessageOptions): Promise<boolean> {
+export async function verifyJSONSignature(JSONMessage:  SignedJSONMessage,
+                                          signature:    JSONSignature,
+                                          options?:     SignJSONMessageOptions): Promise<boolean> {
 
     return isVerificationTrue(await verifyJSONSignatureResult(JSONMessage, signature, options));
 
 }
 
-export async function verifyJSONSignatureResult(JSONMessage: SignedJSONMessage | null | undefined,
-                                                signature:   unknown,
-                                                options?:    SignJSONMessageOptions): Promise<JSONSignatureVerificationResult> {
+export async function verifyJSONSignatureResult(JSONMessage:  SignedJSONMessage | null | undefined,
+                                                signature:    unknown,
+                                                options?:     SignJSONMessageOptions): Promise<JSONSignatureVerificationResult> {
 
     if (JSONMessage == null)
         return verificationResult(JSONSignatureVerificationStatus.InvalidJSON,
@@ -174,7 +170,7 @@ export async function verifyJSONSignatureResult(JSONMessage: SignedJSONMessage |
     {
         const messageJSON = cloneMessageWithoutSignatures(JSONMessage);
         const plainText   = canonicalJSONBytes(messageJSON);
-        sha256Hash        = await sha256(plainText);
+        sha256Hash        = await chargyLib.sha256____(plainText);
     }
     catch (exception)
     {
@@ -290,7 +286,7 @@ export async function parseAndVerifyJSONSignatures(JSONMessage: string,
 
 }
 
-function cloneMessageWithoutSignatures(JSONMessage: SignedJSONMessage): JSONMessage {
+function cloneMessageWithoutSignatures(JSONMessage: SignedJSONMessage): chargyLib.JSONObject {
 
     const messageJSON = {
         ...JSONMessage
@@ -324,7 +320,7 @@ function parseSignedJSONMessage(JSONMessage: unknown): {
         }
     }
 
-    if (!isJSONRecord(parsedMessage))
+    if (!chargyLib.isMandatoryJSONObject(parsedMessage))
         return {
             result: verificationResult(JSONSignatureVerificationStatus.InvalidJSON,
                                        "JSON message must be an object.")
@@ -344,7 +340,7 @@ function parseSignedJSONMessage(JSONMessage: unknown): {
 
 function isJSONSignature(value: unknown): value is JSONSignature {
 
-    return isJSONRecord(value)                 &&
+    return chargyLib.isMandatoryJSONObject(value)    &&
            typeof value["publicKey"]    === "string" &&
            typeof value["publicKeyHEX"] === "string" &&
            typeof value["signature"]    === "string" &&
@@ -356,8 +352,8 @@ function signatureEncodingsMatch(signature: JSONSignature): boolean {
 
     try
     {
-        return bytesToHex(base64ToBytes(signature.publicKey)).toLowerCase()  === signature.publicKeyHEX.toLowerCase() &&
-               bytesToHex(base64ToBytes(signature.signature)).toLowerCase()  === signature.signatureHEX.toLowerCase();
+        return chargyLib.bytesToHex(chargyLib.base64ToBytes(signature.publicKey)).toLowerCase()  === signature.publicKeyHEX.toLowerCase() &&
+               chargyLib.bytesToHex(chargyLib.base64ToBytes(signature.signature)).toLowerCase()  === signature.signatureHEX.toLowerCase();
     }
     catch
     {
@@ -396,51 +392,157 @@ function isVerificationTrue(result: JSONSignatureVerificationResult | JSONSignat
 
 }
 
-function isJSONRecord(value: unknown): value is Record<string, unknown> {
+export class CanonicalJSONError extends TypeError {
 
-    return value != null &&
-           typeof value === "object" &&
-           !Array.isArray(value);
-
-}
-
-async function sha256(data: Uint8Array): Promise<Uint8Array> {
-
-    const digest = await crypto.subtle.digest("SHA-256", data as BufferSource);
-    return new Uint8Array(digest);
+    public constructor(message: string) {
+        super(message);
+        this.name = "CanonicalJSONError";
+    }
 
 }
 
-function bytesToHex(bytes: Uint8Array): string {
+export function canonicalJSONStringify(value: unknown): string {
+    return serializeJSONValue(value, "$", new WeakSet());
+}
 
-    return Array.from(bytes, byte => byte.toString(16).padStart(2, "0")).join("");
+export function canonicalJSONBytes(value: unknown): Uint8Array {
+    return new TextEncoder().encode(canonicalJSONStringify(value));
+}
+
+function serializeJSONValue(value: unknown,
+                            path:  string,
+                            seen:  WeakSet<object>): string {
+
+    switch (typeof value)
+    {
+
+        case "string":
+            return JSON.stringify(value);
+
+        case "number":
+            if (!Number.isFinite(value))
+                throw new CanonicalJSONError(`Non-finite number at ${path} is not valid JSON.`);
+
+            return JSON.stringify(value);
+
+        case "boolean":
+            return value ? "true" : "false";
+
+        case "object":
+            if (value === null)
+                return "null";
+
+            return Array.isArray(value)
+                       ? serializeJSONArray(value, path, seen)
+                       : serializeJSONObject(value, path, seen);
+
+        case "bigint":
+            throw new CanonicalJSONError(`BigInt at ${path} is not valid JSON.`);
+
+        case "undefined":
+            throw new CanonicalJSONError(`Undefined value at ${path} is not valid JSON.`);
+
+        case "function":
+            throw new CanonicalJSONError(`Function at ${path} is not valid JSON.`);
+
+        case "symbol":
+            throw new CanonicalJSONError(`Symbol at ${path} is not valid JSON.`);
+
+    }
 
 }
 
-function base64ToBytes(value: string): Uint8Array {
+function serializeJSONArray(value: unknown[],
+                            path:  string,
+                            seen:  WeakSet<object>): string {
 
-    if (typeof Buffer !== "undefined")
-        return Uint8Array.from(Buffer.from(value, "base64"));
+    if (seen.has(value))
+        throw new CanonicalJSONError(`Circular reference at ${path} is not valid JSON.`);
 
-    const binary = atob(value);
-    const bytes  = new Uint8Array(binary.length);
+    seen.add(value);
 
-    for (let i = 0; i < binary.length; i++)
-        bytes[i] = binary.charCodeAt(i);
+    const indexedKeys = new Set<string>();
 
-    return bytes;
+    for (let i = 0; i < value.length; i++)
+    {
+        if (!Object.prototype.hasOwnProperty.call(value, i))
+            throw new CanonicalJSONError(`Sparse array slot at ${path}[${String(i)}] is not valid JSON.`);
+
+        indexedKeys.add(String(i));
+    }
+
+    for (const key of Object.keys(value))
+    {
+        if (!indexedKeys.has(key))
+            throw new CanonicalJSONError(`Non-index array property ${formatPathProperty(key)} at ${path} is not valid JSON.`);
+    }
+
+    rejectEnumerableSymbolProperties(value, path);
+
+    const serializedItems = value.map((item, index) =>
+        serializeJSONValue(item, `${path}[${String(index)}]`, seen)
+    );
+
+    seen.delete(value);
+
+    return `[${serializedItems.join(",")}]`;
 
 }
 
-function bytesToBase64(bytes: Uint8Array): string {
+function serializeJSONObject(value: object,
+                             path:  string,
+                             seen:  WeakSet<object>): string {
 
-    if (typeof Buffer !== "undefined")
-        return Buffer.from(bytes).toString("base64");
+    if (Object.prototype.toString.call(value) !== "[object Object]")
+        throw new CanonicalJSONError(`Unsupported object at ${path} is not valid JSON.`);
 
-    let binary = "";
-    for (const byte of bytes)
-        binary += String.fromCharCode(byte);
+    if (seen.has(value))
+        throw new CanonicalJSONError(`Circular reference at ${path} is not valid JSON.`);
 
-    return btoa(binary);
+    seen.add(value);
+    rejectEnumerableSymbolProperties(value, path);
+
+    const serializedProperties = Object.keys(value)
+                                       .sort(compareOrdinal)
+                                       .map(key => {
+                                           const serializedKey   = JSON.stringify(key);
+                                           const serializedValue = serializeJSONValue(
+                                               (value as Record<string, unknown>)[key],
+                                               `${path}${formatPathProperty(key)}`,
+                                               seen
+                                           );
+
+                                           return `${serializedKey}:${serializedValue}`;
+                                       });
+
+    seen.delete(value);
+
+    return `{${serializedProperties.join(",")}}`;
+
+}
+
+function rejectEnumerableSymbolProperties(value: object,
+                                          path:  string): void {
+
+    for (const symbol of Object.getOwnPropertySymbols(value))
+    {
+        if (Object.prototype.propertyIsEnumerable.call(value, symbol))
+            throw new CanonicalJSONError(`Symbol property at ${path} is not valid JSON.`);
+    }
+
+}
+
+function compareOrdinal(left:  string,
+                        right: string): number {
+
+    return left < right ? -1 : left > right ? 1 : 0;
+
+}
+
+function formatPathProperty(propertyName: string): string {
+
+    return /^[A-Za-z_$][A-Za-z0-9_$]*$/.test(propertyName)
+               ? `.${propertyName}`
+               : `[${JSON.stringify(propertyName)}]`;
 
 }

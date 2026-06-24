@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2018-2026 GraphDefined GmbH <achim.friedland@graphdefined.com>
- This file is part of Chargy Core <https://github.com/OpenChargingCloud/ChargyCore.TS>
+ This file is part of ChargyCore <https://github.com/OpenChargingCloud/ChargyCore.TS>
  *
  * Licensed under the Affero GPL license, Version 3.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,7 +18,7 @@
 import type { Chargy }                     from './chargy'
 import * as chargyInterfaces          from './interfaces/chargyInterfaces'
 import type * as chargeTransparencyRecord  from './interfaces/IChargeTransparencyRecord'
-import * as chargyLib                 from './chargyLib'
+import * as chargyLib                 from './interfaces/chargyLib'
 //import { EMHCrypt01 }                 from './EMHCrypt01'
 //import { Alfen }                      from './Alfen'
 //import { OCMF }                       from './OCMF'

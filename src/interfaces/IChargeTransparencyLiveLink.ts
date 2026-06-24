@@ -1,6 +1,6 @@
 ﻿/*
  * Copyright (c) 2018-2026 GraphDefined GmbH <achim.friedland@graphdefined.com>
- * This file is part of Chargy Core <https://github.com/OpenChargingCloud/ChargyCore.TS>
+ * This file is part of ChargyCore <https://github.com/OpenChargingCloud/ChargyCore.TS>
  *
  * Licensed under the Affero GPL license, Version 3.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,14 +16,14 @@
  */
 
 import * as chargyInterfaces  from './chargyInterfaces'
-import * as chargyLib         from '../chargyLib'
+import * as chargyLib         from './chargyLib'
 
 
 export const ChargeTransparencyLiveLinkContext = "https://open.charging.cloud/contexts/chargeTransparency/live/link/1.0";
 
 
 function isConnector(data: unknown): data is IConnector {
-    if (!chargyInterfaces.isObject(data))
+    if (!chargyLib.isObject(data))
         return false;
 
     return [ "standard", "format", "powerType", "maxPower" ].
@@ -35,7 +35,7 @@ function isTransportURL(data: unknown): data is ITransportURL|string {
     if (typeof data === "string")
         return data.trim() !== "";
 
-    return chargyInterfaces.isObject(data) &&
+    return chargyLib.isObject(data) &&
            typeof data["url"] === "string" &&
            (data["priority"] === undefined || typeof data["priority"] === "number") &&
            (data["weight"]   === undefined || typeof data["weight"]   === "number");
@@ -44,7 +44,7 @@ function isTransportURL(data: unknown): data is ITransportURL|string {
 
 function isTransport(data: unknown): data is Transport {
 
-    if (!chargyInterfaces.isObject(data))
+    if (!chargyLib.isObject(data))
         return false;
 
     const type = data["type"];
@@ -69,17 +69,17 @@ export function IsAChargeTransparencyLiveLink(data: unknown): data is IChargeTra
 
     return data["@context"]    === ChargeTransparencyLiveLinkContext &&
           (data["timestamp"]   === undefined || data["timestamp"] === null || typeof data["timestamp"] === "string") &&
-          (data["description"] === undefined || chargyInterfaces.isMultilanguageText(data["description"])) &&
+          (data["description"] === undefined || chargyLib.isI18NString(data["description"])) &&
           (data["imageURLs"]   === undefined || (Array.isArray(data["imageURLs"]) && data["imageURLs"].every(value => typeof value === "string"))) &&
           (data["geoLocation"] === undefined || chargyInterfaces.isGeoLocation(data["geoLocation"])) &&
           (data["connector"]   === undefined || isConnector(data["connector"])) &&
           (data["transports"]  === undefined || (Array.isArray(data["transports"]) && data["transports"].every(isTransport))) &&
-          (data["signatures"]  === undefined || Array.isArray(data["signatures"]));
+          (data["signatures"]  === undefined ||  Array.isArray(data["signatures"]));
 
 }
 
 function isTOTPConfig(data: unknown): data is TOTPConfig {
-    return chargyInterfaces.isObject(data) &&
+    return chargyLib.isObject(data) &&
            typeof data["initialSharedSecret"] === "string" &&
            typeof data["timeStep"]            === "number";
 }
@@ -92,7 +92,7 @@ export interface IChargeTransparencyLiveLink extends chargyLib.JSONObject {
     timestamp?:     string|null;
 
     /** Multi-language description */
-    description?:   chargyInterfaces.IMultilanguageText;
+    description?:   chargyLib.I18NString;
 
     /** URLs to images / logos */
     imageURLs?:     string[];

@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2018-2026 GraphDefined GmbH <achim.friedland@graphdefined.com>
- This file is part of Chargy Core <https://github.com/OpenChargingCloud/ChargyCore.TS>
+ This file is part of ChargyCore <https://github.com/OpenChargingCloud/ChargyCore.TS>
  *
  * Licensed under the Affero GPL license, Version 3.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,7 +20,7 @@ import type { Chargy,
 import { ACrypt }                     from './ACrypt'
 import * as chargyInterfaces          from './interfaces/chargyInterfaces'
 import type * as chargeTransparencyRecord  from './interfaces/IChargeTransparencyRecord'
-import * as chargyLib                 from './chargyLib'
+import * as chargyLib                 from './interfaces/chargyLib'
 import Decimal                        from 'decimal.js'
 
 
@@ -120,7 +120,7 @@ export interface IBSMCrypt01Result extends chargyInterfaces.ICryptoResult
 {
     sha256value?:                  string,
     meterId?:                      string,
-    meter?:                        chargyInterfaces.IMeter,
+    meter?:                        chargyInterfaces.IEnergyMeter,
     timestamp?:                    string,
 
     ArraySize:                     number,
@@ -823,7 +823,7 @@ export class BSMCrypt01 extends ACrypt {
                 "@context":                     "https://open.charging.cloud/contexts/SessionSignatureFormats/bsm-ws36a-v0+json",
                 "begin":                        firstDataSet.time,
                 "end":                          lastDataSet.time,
-                "EVSEId":                       CTR.chargingStationOperators?.[0]?.["chargingStations"]?.[0]?.["EVSEs"][0]?.["@id"],
+                "EVSEId":                       CTR.chargingStationOperators?.[0]?.["chargingStations"]?.[0]?.["EVSEs"]?.[0]?.["@id"],
 
                 "authorizationStart": {
                     "@id":                      common.contract_id,
@@ -966,7 +966,7 @@ export class BSMCrypt01 extends ACrypt {
                 const firstChargingSession = chargyLib.getFirstArrayElement(CTR.chargingSessions, "Missing first BSM charging session");
                 const lastChargingSession  = chargyLib.getLastArrayElement (CTR.chargingSessions, "Missing last BSM charging session");
 
-                if (CTR.begin == undefined || CTR.begin === "" || CTR.begin > firstChargingSession.begin)
+                if (firstChargingSession.begin !== undefined && (CTR.begin == undefined || CTR.begin === "" || CTR.begin > firstChargingSession.begin))
                 {
                     CTR.begin = firstChargingSession.begin;
                 }
@@ -979,24 +979,23 @@ export class BSMCrypt01 extends ACrypt {
 
             }
 
-            if (CTR.contract == null)
-                CTR.contract = {
-                    "@id":       common.contract_id,
-                    "@context":  common.contract_type,
-                };
-            else
-            {
-                //ToDo: What to do when there are different values?!
-                CTR.contract["@id"]      = common.contract_id;
-                CTR.contract["@context"] = common.contract_type;
-            }
+            CTR.contracts = [{
+                "@id":       common.contract_id,
+                "@context":  common.contract_type,
+            }];
 
-            (CTR.chargingStationOperators?.[0]?.chargingStations?.[0]?.EVSEs[0]?.meters)?.push({
+            (CTR.chargingStationOperators?.[0]?.chargingStations?.[0]?.EVSEs?.[0]?.energyMeters)?.push({
                 "@id":               common.meterInfo_meterId,
-                model:               common.meterInfo_type,
-                manufacturer:        common.meterInfo_manufacturer,
-                manufacturerURL:     "https://www.bzr-bauer.de",
-                firmwareVersion:     common.meterInfo_firmwareVersion,
+                model:               { name: common.meterInfo_type },
+                manufacturer:        {
+                                         name: common.meterInfo_manufacturer,
+                                         contact: {
+                                             web:  "https://www.bzr-bauer.de"
+                                         }
+                                     },
+                firmware: {
+                    version:         common.meterInfo_firmwareVersion
+                },
                 //hardwareVersion?:    string;
                 signatureInfos:      {
                                          hash:            chargyInterfaces.CryptoHashAlgorithms.SHA256,
@@ -1048,7 +1047,7 @@ export class BSMCrypt01 extends ACrypt {
         let sessionResult = chargyInterfaces.SessionVerificationResult.UnknownSessionFormat;
 
         {
-            for (const measurement of chargingSession.measurements)
+            for (const measurement of chargingSession.measurements ?? [])
             {
 
                 measurement.chargingSession = chargingSession;
@@ -1435,23 +1434,23 @@ export class BSMCrypt01 extends ACrypt {
                     try
                     {
 
-                        const signatureDiv    = publicKeySignatureContainer?.appendChild(document.createElement('div'));
-                        const chargingSession = measurementValue.measurement.chargingSession;
-                        const evse            = chargingSession?.EVSE;
-                        const meter           = evse?.meters.at(0);
-                        const publicKey    = meter?.publicKeys?.at(0);
+                        const signatureDiv     = publicKeySignatureContainer?.appendChild(document.createElement('div'));
+                        const chargingSession  = measurementValue.measurement.chargingSession;
+                        const evse             = chargingSession?.EVSE;
+                        const energyMeter      = evse?.           energyMeters?.at(0);
+                        const publicKey        = energyMeter?.    publicKeys?.  at(0);
 
-                        if (signatureDiv                                                                  != null &&
-                            chargingSession                                                               != null &&
-                            evse                                                                          != null &&
-                            meter                                                                         != null &&
-                            publicKey                                                                     != null)
+                        if (signatureDiv      != null &&
+                            chargingSession   != null &&
+                            evse              != null &&
+                            energyMeter       != null &&
+                            publicKey         != null)
                         {
 
                             signatureDiv.innerHTML = await this.chargy.CheckMeterPublicKeySignature(
                                                                chargingSession.chargingStation,
                                                                evse,
-                                                               meter,
+                                                               energyMeter,
                                                                publicKey,
                                                                signature
                                                            );
@@ -1484,9 +1483,7 @@ export class BSMCrypt01 extends ACrypt {
                 chargyLib.getArrayLikeElement(SignatureExpectedDiv.parentElement.children, 0, "Missing expected signature header").innerHTML  = "Erwartete Signatur (" + (result.signature.format ?? "") + ", hex)";
             }
 
-            if (result.signature.r != null &&
-                result.signature.r.length > 0 &&
-                result.signature.s != null &&
+            if (result.signature.r.length > 0 &&
                 result.signature.s.length > 0)
                 SignatureExpectedDiv.innerHTML  = "r: " + (result.signature.r.toLowerCase().match(/.{1,8}/g)?.join(" ") ?? "-") + "<br />" +
                                                   "s: " + (result.signature.s.toLowerCase().match(/.{1,8}/g)?.join(" ") ?? "-");

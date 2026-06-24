@@ -1393,6 +1393,36 @@
     "warningLevel_high": {
         "de": "hoch",
         "en": "high"
+    },
+
+    "chargingProgressEnergyDatasetLabel": {
+        "de": "Geladene Energie",
+        "en": "Charged energy"
+    },
+
+    "chargingProgressEnergyLinkLabel": {
+        "de": "Ladeenergie (kWh)",
+        "en": "Charging energy (kWh)"
+    },
+
+    "chargingProgressPowerDatasetLabel": {
+        "de": "Ladeleistung",
+        "en": "Charging power"
+    },
+
+    "chargingProgressPowerLinkLabel": {
+        "de": "Ladeleistung (KW)",
+        "en": "Charging power (KW)"
+    },
+
+    "chargingProgressEnergyYAxisLabel": {
+        "de": "Ladeenergie",
+        "en": "Charging energy"
+    },
+
+    "chargingProgressPowerYAxisLabel": {
+        "de": "Ladeleistung",
+        "en": "Charging power"
     }
 
 }

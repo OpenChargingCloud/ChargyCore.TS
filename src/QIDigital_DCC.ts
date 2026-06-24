@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2018-2026 GraphDefined GmbH <achim.friedland@graphdefined.com>
- * This file is part of Chargy Core <https://github.com/OpenChargingCloud/ChargyCore.TS>
+ * This file is part of ChargyCore <https://github.com/OpenChargingCloud/ChargyCore.TS>
  *
  * Licensed under the Affero GPL license, Version 3.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,6 +15,7 @@
  * limitations under the License.
  */
 
+import type * as chargyLib         from './interfaces/chargyLib'
 import type * as chargyInterfaces  from './interfaces/chargyInterfaces'
 
 
@@ -74,7 +75,7 @@ export interface AdministrativeDataType {
  * @interface SoftwareType
  */
 export interface SoftwareType {
-    name:                           chargyInterfaces.IMultilanguageText;
+    name:                           chargyLib.I18NString;
     release:                        string;
     type?:                          'application' | 'bios' | 'driver' | 'editor' | 'firmware' | 'library' | 'os' | 'other';
     description?:                   RichContentType;
@@ -87,7 +88,7 @@ export interface SoftwareType {
  * @interface RefTypeDefinitionType
  */
 export interface RefTypeDefinitionType {
-    name:                           chargyInterfaces.IMultilanguageText;
+    name:                           chargyLib.I18NString;
     description?:                   RichContentType;
     namespace:                      string;
     link:                           string;
@@ -98,7 +99,7 @@ export interface RefTypeDefinitionType {
 }
 
 export interface RichContentType {
-    name?:                          chargyInterfaces.IMultilanguageText;
+    name?:                          chargyLib.I18NString;
     content?:                       Array<IDCCStringWithLangType>;
     file?:                          Array<ByteDataType>;
     formula?:                       Array<FormulaType>;
@@ -124,7 +125,7 @@ export interface FormulaType {
 }
 
 export interface UsedMethodType {
-    name:                           chargyInterfaces.IMultilanguageText;
+    name:                           chargyLib.I18NString;
     description?:                   RichContentType;
     norm?:                          Array<string>;
     reference?:                     Array<string>;
@@ -135,13 +136,13 @@ export interface UsedMethodType {
 export interface IdentificationType {
     issuer:                         'manufacturer' | 'calibrationLaboratory' | 'customer' | 'owner' | 'other';
     value:                          string;
-    name?:                          chargyInterfaces.IMultilanguageText;
+    name?:                          chargyLib.I18NString;
     id?:                            string;
     refType?:                       string;
 }
 
 export interface MeasuringEquipmentType {
-    name:                           chargyInterfaces.IMultilanguageText;
+    name:                           chargyLib.I18NString;
     equipmentClass?:                Array<EquipmentClassType>;
     description?:                   RichContentType;
     certificate?:                   HashType;
@@ -154,7 +155,7 @@ export interface MeasuringEquipmentType {
 }
 
 export interface PrimitiveQuantityType {
-    name?:                          chargyInterfaces.IMultilanguageText;
+    name?:                          chargyLib.I18NString;
     description?:                   RichContentType;
     noQuantity?:                    RichContentType;
     charsXMLList?:                  Array<string>;
@@ -177,7 +178,7 @@ export interface EquipmentClassType {
 }
 
 export interface HashType {
-    referral:                       chargyInterfaces.IMultilanguageText;
+    referral:                       chargyLib.I18NString;
     referralID:                     string;
     procedure:                      string;
     value:                          string;
@@ -219,7 +220,7 @@ export interface RealQuantityType {
 }
 
 export interface ContactNotStrictType {
-    name:                           chargyInterfaces.IMultilanguageText;
+    name:                           chargyLib.I18NString;
     eMail?:                         string;
     phone?:                         string;
     fax?:                           string;
@@ -231,7 +232,7 @@ export interface ContactNotStrictType {
 }
 
 export interface ResultType {
-    name:                           chargyInterfaces.IMultilanguageText;
+    name:                           chargyLib.I18NString;
     description?:                   RichContentType;
     data:                           DataType;
     id?:                            string;
@@ -244,7 +245,7 @@ export interface ResultType {
  * Also contains influence conditions and a list of the actual results.
  */
 export interface MeasurementResultType {
-    name:                           chargyInterfaces.IMultilanguageText;
+    name:                           chargyLib.I18NString;
     description?:                   RichContentType;
     usedMethods?:                   Array<UsedMethodType>;
     usedSoftware?:                  Array<SoftwareType>;
@@ -262,7 +263,7 @@ export interface MeasurementResultType {
  * @interface ByteDataType
  */
 export interface ByteDataType {
-    name?:                          chargyInterfaces.IMultilanguageText;
+    name?:                          chargyLib.I18NString;
     description?:                   RichContentType;
     fileName:                       string;
     mimeType:                       string;
@@ -280,7 +281,7 @@ export interface XMLType {
 }
 
 export interface QuantityType {
-    name?:                          chargyInterfaces.IMultilanguageText;
+    name?:                          chargyLib.I18NString;
     description?:                   RichContentType;
     noQuantity?:                    RichContentType;
     charsXMLList?:                  Array<string>;
@@ -295,7 +296,7 @@ export interface QuantityType {
 }
 
 export interface ListType {
-    name?:                          chargyInterfaces.IMultilanguageText;
+    name?:                          chargyLib.I18NString;
     description?:                   RichContentType;
     dateTime?:                      Date;
     dateTimeXMLList?:               Array<Date>;
@@ -318,7 +319,7 @@ export interface DataType {
 }
 
 export interface InfluenceConditionType {
-    name:                           chargyInterfaces.IMultilanguageText;
+    name:                           chargyLib.I18NString;
     description?:                   RichContentType;
     status?:                        'beforeAdjustment' | 'afterAdjustment' | 'beforeRepair' | 'afterRepair';
     certificate?:                   HashType;
@@ -328,7 +329,7 @@ export interface InfluenceConditionType {
 }
 
 export interface StatementMetaDataType {
-    name?:                          chargyInterfaces.IMultilanguageText;
+    name?:                          chargyLib.I18NString;
     description?:                   RichContentType;
     countryCodeISO3166_1?:          Array<string>;
     convention?:                    string;
@@ -353,7 +354,7 @@ export interface StatementMetaDataType {
 }
 
 export interface ContactType {
-    name:                           chargyInterfaces.IMultilanguageText;
+    name:                           chargyLib.I18NString;
     eMail?:                         string;
     phone?:                         string;
     fax?:                           string;
@@ -364,7 +365,7 @@ export interface ContactType {
 
 
 export interface ItemType {
-    name:                           chargyInterfaces.IMultilanguageText;
+    name:                           chargyLib.I18NString;
     equipmentClass?:                EquipmentClassType[];
     description?:                   RichContentType;
     installedSoftwares?:            Array<SoftwareType>;
@@ -420,7 +421,7 @@ export interface CoreDataType {
 }
 
 export interface StatementMetaDataType {
-    name?:                          chargyInterfaces.IMultilanguageText;
+    name?:                          chargyLib.I18NString;
     description?:                   RichContentType;
     countryCodeISO3166_1?:          Array<string>;
     convention?:                    string;

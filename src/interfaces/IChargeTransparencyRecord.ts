@@ -1,6 +1,6 @@
 ﻿/*
  * Copyright (c) 2018-2026 GraphDefined GmbH <achim.friedland@graphdefined.com>
- * This file is part of Chargy Core <https://github.com/OpenChargingCloud/ChargyCore.TS>
+ * This file is part of ChargyCore <https://github.com/OpenChargingCloud/ChargyCore.TS>
  *
  * Licensed under the Affero GPL license, Version 3.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,14 +15,17 @@
  * limitations under the License.
  */
 
-import Decimal                          from 'decimal.js';
 import type { ACrypt }                       from '../ACrypt'
-import type { ISignatureRS }            from './chargyInterfaces';
+import type { ISignatureRS }                 from './chargyInterfaces';
 import type * as chargyInterfaces            from './chargyInterfaces'
-import * as chargyLib                   from '../chargyLib'
 import type * as chargeTransparencyLiveLink  from './IChargeTransparencyLiveLink'
 import type * as publicKeyInfo               from './IPublicKeyInfo';
-
+import      * as chargyLib                   from './chargyLib'
+import Decimal                               from 'decimal.js';
+import {
+    isISessionCryptoResult1,
+    SessionVerificationResult
+} from './chargyInterfaces';
 
 export function IsAChargeTransparencyRecord(data: unknown): data is IChargeTransparencyRecord
 {
@@ -43,31 +46,31 @@ export interface IChargeTransparencyRecord extends chargyLib.JSONObject
 {
 
     "@id":                       string;
-    "@context":                  string | Array<string>;
-    begin?:                      string | undefined;
-    end?:                        string | undefined;
-    description?:                chargyInterfaces.IMultilanguageText | undefined;
-    contract?:                   chargyInterfaces.IContract | undefined;
+    "@context":                  string | Array<string>                           | undefined;
+    begin?:                      string                                           | undefined;
+    end?:                        string                                           | undefined;
+    description?:                chargyLib.I18NString                             | undefined;
+    contracts?:                  Array<chargyInterfaces.IContract>                | undefined;
     chargingStationOperators?:   Array<chargyInterfaces.IChargingStationOperator> | undefined;
-    chargingPools?:              Array<chargyInterfaces.IChargingPool> | undefined;
-    chargingStations?:           Array<chargyInterfaces.IChargingStation> | undefined;
-    chargingTariffs?:            Array<chargyInterfaces.IChargingTariff> | undefined;
-    publicKeys?:                 Array<publicKeyInfo.   IPublicKeyInfo> | undefined;
-    chargingSessions?:           Array<IChargingSession> | undefined;
-    eMobilityProviders?:         Array<chargyInterfaces.IEMobilityProvider> | undefined;
-    mediationServices?:          Array<chargyInterfaces.IMediationService> | undefined;
-    verificationResult?:         chargyInterfaces.ISessionCryptoResult | undefined;
-    invalidDataSets?:            Array<IExtendedFileInfo> | undefined;
+    chargingPools?:              Array<chargyInterfaces.IChargingPool>            | undefined;
+    chargingStations?:           Array<chargyInterfaces.IChargingStation>         | undefined;
+    chargingTariffs?:            Array<chargyInterfaces.IChargingTariff>          | undefined;
+    publicKeys?:                 Array<publicKeyInfo.   IPublicKey>               | undefined;
+    chargingSessions?:           Array<IChargingSession>                          | undefined;
+    eMobilityProviders?:         Array<chargyInterfaces.IEMobilityProvider>       | undefined;
+    mediationServices?:          Array<chargyInterfaces.IMediationService>        | undefined;
+    verificationResult?:         chargyInterfaces.ISessionCryptoResult            | undefined;
+    invalidDataSets?:            Array<IExtendedFileInfo>                         | undefined;
+
+    warnings?:                   Array<chargyInterfaces.IWarning>                 | undefined;
+    errors?:                     Array<chargyInterfaces.IError>                   | undefined;
+    status?:                     chargyInterfaces.SessionVerificationResult       | undefined;
 
     // How sure we are that this result is correct!
     // (JSON) transparency records might not always include an unambiguously
     // format identifier. So multiple chargy parsers might be candidates, but
     // hopefully one will be the best matching parser.
     certainty:                   number;
-
-    warnings?:                   Array<chargyInterfaces.IWarning> | undefined;
-    errors?:                     Array<chargyInterfaces.IError> | undefined;
-    status?:                     chargyInterfaces.SessionVerificationResult | undefined;
 
 }
 
@@ -95,64 +98,77 @@ export function IsASessionCryptoResult(data: unknown): data is chargyInterfaces.
 export interface IChargingSession
 {
     "@id":                        string;
-    "@context"?:                  string | undefined;
-    ctr?:                         IChargeTransparencyRecord | undefined;
-    GUI?:                         HTMLDivElement | undefined;
-    begin:                        string;
-    end?:                         string | undefined;     // to allow still running sessions!
-    internalSessionId?:           string | undefined;
+    "@context"?:                  string | Array<string>                     | undefined;
+    ctr?:                         IChargeTransparencyRecord                  | undefined;
+    GUI?:                         HTMLDivElement                             | undefined;
+    begin?:                       string                                     | undefined;
+    end?:                         string                                     | undefined;
+    internalSessionId?:           string                                     | undefined;
     chargingProductRelevance?:    chargyInterfaces.IChargingProductRelevance | undefined,
-    description?:                 chargyInterfaces.IMultilanguageText | undefined;
-    chargingStationOperatorId?:   string | undefined;
-    chargingStationOperator?:     chargyInterfaces.IChargingStationOperator | undefined;
-    chargingPoolId?:              string | undefined;
-    chargingPool?:                chargyInterfaces.IChargingPool | undefined;
-    chargingStationId?:           string | undefined;
-    chargingStation?:             chargyInterfaces.IChargingStation | undefined;
-    EVSEId:                       string;
-    EVSE?:                        chargyInterfaces.IEVSE | undefined;
-    meterId?:                     string | undefined;
-    meter?:                       chargyInterfaces.IMeter | undefined;
-    publicKey?:                   publicKeyInfo.IPublicKeyInfo | undefined;
-    tariffId?:                    string | undefined;
-    chargingTariffs?:             Array<chargyInterfaces.IChargingTariff> | undefined;
-    chargingPeriods?:             Array<chargyInterfaces.IChargingPeriod> | undefined;
-    totalCosts?:                  chargyInterfaces.IChargingCosts | undefined;
-    authorizationStart:           chargyInterfaces.IAuthorization;
-    authorizationStop?:           chargyInterfaces.IAuthorization | undefined;
-    product?:                     chargyInterfaces.IChargingProduct | undefined;
-    measurements:                 Array<IMeasurement>;
-    parking?:                     Array<chargyInterfaces.IParking> | undefined;
-    transparencyInfos?:           chargyInterfaces.ITransparencyInfos | undefined;
-    method?:                      ACrypt | undefined;
-    original?:                    string | undefined;
-    signature?:                   string|chargyInterfaces.ISignatureRS | undefined;
-    hashValue?:                   string | undefined;
-    verificationResult?:          chargyInterfaces.ISessionCryptoResult | undefined;
+    description?:                 chargyLib.       I18NString                | undefined;
+    chargingStationOperatorId?:   string                                     | undefined;
+    chargingStationOperator?:     chargyInterfaces.IChargingStationOperator  | undefined;
+    chargingPoolId?:              string                                     | undefined;
+    chargingPool?:                chargyInterfaces.IChargingPool             | undefined;
+    chargingStationId?:           string                                     | undefined;
+    chargingStation?:             chargyInterfaces.IChargingStation          | undefined;
+    EVSEId?:                      string                                     | undefined;
+    EVSE?:                        chargyInterfaces.IEVSE                     | undefined;
+    meterId?:                     string                                     | undefined;
+    meter?:                       chargyInterfaces.IEnergyMeter              | undefined;
+    publicKey?:                   publicKeyInfo.IPublicKey                   | undefined;
+    tariffId?:                    string                                     | undefined;
+    chargingTariffs?:             Array<chargyInterfaces.IChargingTariff>    | undefined;
+    chargingPeriods?:             Array<chargyInterfaces.IChargingPeriod>    | undefined;
+    totalCosts?:                  chargyInterfaces.IChargingCosts            | undefined;
+    authorizationStart?:          chargyInterfaces.IAuthorization            | undefined;
+    authorizationStop?:           chargyInterfaces.IAuthorization            | undefined;
+    product?:                     chargyInterfaces.IChargingProduct          | undefined;
+    measurements?:                Array<IMeasurement>                        | undefined;
+    legallyRelevantLogMessages?:  Array<ILegallyRelevantLogMessage>          | undefined;
+    parking?:                     Array<chargyInterfaces.IParking>           | undefined;
+    transparencyInfos?:           chargyInterfaces.ITransparencyInfos        | undefined;
+    method?:                      ACrypt                                     | undefined;
+    original?:                    string                                     | undefined;
+    signature?:                   chargyInterfaces.ISignatureRS | string     | undefined;
+    hashValue?:                   string                                     | undefined;
+    verificationResult?:          chargyInterfaces.ISessionCryptoResult      | undefined;
+}
+
+
+export interface ILegallyRelevantLogMessage
+{
+    "@context"?:                  string | Array<string>                          | undefined;
+    chargingSession?:             IChargingSession                                | undefined;
+    timestamp:                    string;
+    code?:                        string                                          | undefined;
+    data?:                        chargyLib.JSONObject                            | undefined;
+    text?:                        chargyLib.I18NString                            | undefined;
+    signatures?:                  Array<chargyInterfaces.ISignature|ISignatureRS> | undefined;
 }
 
 
 export interface IMeasurement
 {
-    "@context"?:                  string | undefined;
-    chargingSession?:             IChargingSession | undefined;
+    "@context"?:                  string| Array<string>            | undefined;
+    chargingSession?:             IChargingSession                 | undefined;
     energyMeterId:                string;
-    phenomena?:                   unknown[] | undefined;
+    phenomena?:                   unknown[]                        | undefined;
     name:                         string;
     obis:                         string;
-    unit?:                        string | undefined;
-    unitEncoded?:                 number | undefined;
-    valueType?:                   string | undefined;
+    unit?:                        string                           | undefined;
+    unitEncoded?:                 number                           | undefined;
+    valueType?:                   string                           | undefined;
     scale:                        number;
-    verifyChain?:                 boolean | undefined;
+    verifyChain?:                 boolean                          | undefined;
     signatureInfos?:              chargyInterfaces.ISignatureInfos | undefined;
     values:                       Array<IMeasurementValue>;
-    verificationResult?:          chargyInterfaces.ICryptoResult | undefined;
+    verificationResult?:          chargyInterfaces.ICryptoResult   | undefined;
 }
 
 export interface IMeasurements
 {
-    "@context"?:                  string | undefined;
+    "@context"?:                  string | Array<string>         | undefined;
     values:                       Array<IMeasurement>;
     verificationResult?:          chargyInterfaces.ICryptoResult | undefined;
 }
@@ -160,25 +176,25 @@ export interface IMeasurements
 export interface IMeasurementValue
 {
 
-    measurement?:                 IMeasurement | undefined;
-    method?:                      ACrypt | undefined;
-    previousValue?:               IMeasurementValue | undefined;
+    measurement?:                 IMeasurement                                    | undefined;
+    method?:                      ACrypt                                          | undefined;
+    previousValue?:               IMeasurementValue                               | undefined;
 
     timestamp:                    string;
     value:                        Decimal;
-    value_displayPrefix?:         chargyInterfaces.DisplayPrefixes | undefined;
-    value_displayPrecision?:      number | undefined;
-    statusMeter?:                 string | undefined;
-    secondsIndex?:                number | undefined;
-    paginationId?:                number | string | undefined;
-    logBookIndex?:                string | undefined;
-    statusAdapter?:               string | undefined;
+    value_displayPrefix?:         chargyInterfaces.DisplayPrefixes                | undefined;
+    value_displayPrecision?:      number                                          | undefined;
+    statusMeter?:                 string                                          | undefined;
+    secondsIndex?:                number                                          | undefined;
+    paginationId?:                number | string                                 | undefined;
+    logBookIndex?:                string                                          | undefined;
+    statusAdapter?:               string                                          | undefined;
 
-    errors?:                      Array<chargyInterfaces.IError> | undefined;
-    warnings?:                    Array<chargyInterfaces.IWarning> | undefined;
+    errors?:                      Array<chargyInterfaces.IError>                  | undefined;
+    warnings?:                    Array<chargyInterfaces.IWarning>                | undefined;
 
     signatures?:                  Array<chargyInterfaces.ISignature|ISignatureRS> | undefined;
-    result?:                      chargyInterfaces.ICryptoResult | undefined;
+    result?:                      chargyInterfaces.ICryptoResult                  | undefined;
 
 }
 
@@ -186,7 +202,7 @@ export interface IExtendedFileInfo extends chargyInterfaces.IFileInfo {
 
     result:  IChargeTransparencyRecord                              |
              chargeTransparencyLiveLink.IChargeTransparencyLiveLink |
-             publicKeyInfo.IPublicKeyInfo                           |
+             publicKeyInfo.IPublicKey                               |
              publicKeyInfo.IPublicKeyLookup                         |
              chargyInterfaces.ISessionCryptoResult
 
@@ -205,7 +221,7 @@ export function CloneCTR(CTR: IChargeTransparencyRecord): IChargeTransparencyRec
     if (clonedCTR.chargingSessions)
     {
         for (const session of clonedCTR.chargingSessions) {
-            for (const measurement of session.measurements) {
+            for (const measurement of session.measurements ?? []) {
                 for (const value of measurement.values) {
                     if (typeof value.value === 'string' || typeof value.value === 'number')
                         value.value = new Decimal(value.value);
@@ -215,5 +231,40 @@ export function CloneCTR(CTR: IChargeTransparencyRecord): IChargeTransparencyRec
     }
 
     return clonedCTR;
+
+}
+
+/**
+ * Extracts the per-session verification results from a verified Charge Transparency
+ * Record. When the record carries no usable session results, a single "no charge
+ * transparency records found" result is returned instead.
+ *
+ * This is exactly the payload the renderer hands to the main process (and, in
+ * --nogui / HTTP mode, to the CLI verification service) after a verification. It
+ * is kept here as a pure, DOM-free function so the renderer (ChargyApp), the main
+ * process and the tests can all share the very same logic instead of mirroring it.
+ *
+ * The "no records found" message is passed in so the renderer can localize it,
+ * while non-UI callers (CLI service, tests) get a sensible English default.
+ */
+export function toSessionVerificationResults(CTR:               IChargeTransparencyRecord,
+                                             noRecordsMessage:  chargyLib.I18NString = {"en": "No charge transparency records found!" })
+
+    : chargyInterfaces.ISessionCryptoResult[] | chargyInterfaces.ISessionCryptoResult
+
+{
+
+    const verificationResults = (CTR.chargingSessions ?? [])
+                                    .map(session => session.verificationResult)
+                                    .filter(isISessionCryptoResult1);
+
+    if (verificationResults.length > 0)
+        return verificationResults;
+
+    return {
+        status:     SessionVerificationResult.Unvalidated,
+        message:    noRecordsMessage,
+        certainty:  0
+    };
 
 }

@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2018-2026 GraphDefined GmbH <achim.friedland@graphdefined.com>
- This file is part of Chargy Core <https://github.com/OpenChargingCloud/ChargyCore.TS>
+ This file is part of ChargyCore <https://github.com/OpenChargingCloud/ChargyCore.TS>
  *
  * Licensed under the Affero GPL license, Version 3.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,7 +19,7 @@ import type { Chargy }                     from './chargy'
 import { ACrypt }                     from './ACrypt'
 import * as chargyInterfaces          from './interfaces/chargyInterfaces'
 import type * as chargeTransparencyRecord  from './interfaces/IChargeTransparencyRecord'
-import * as chargyLib                 from './chargyLib'
+import * as chargyLib                 from './interfaces/chargyLib'
 import Decimal                        from 'decimal.js'
 
 
@@ -295,12 +295,18 @@ export class ChargePoint {
                             "address":                  chargyLib.asJSONObject(SomeJSON["address"])     as chargyInterfaces.IAddress     | undefined,
                             "EVSEs": [{
                                 "@id":                      evseId,
-                                "meters": [{
+                                "energyMeters": [{
                                     "@id":                 meterSerial,
-                                    "manufacturer":       "Carlo Gavazzi",
-                                    "manufacturerURL":    "https://www.gavazziautomation.com",
-                                    "model":              "EM340-DIN.AV2.3.X.S1.X",
-                                    "modelURL":           "https://www.gavazziautomation.com/fileadmin/images/PIM/DATASHEET/ENG/EM340_DS_ENG.pdf"
+                                    "manufacturer": {
+                                        "name":           "Carlo Gavazzi",
+                                        "contact": {
+                                            "web":        "https://www.gavazziautomation.com"
+                                        }
+                                    },
+                                    "model": {
+                                        "name":           "EM340-DIN.AV2.3.X.S1.X",
+                                        "url":            "https://www.gavazziautomation.com/fileadmin/images/PIM/DATASHEET/ENG/EM340_DS_ENG.pdf"
+                                    },
                                     // "signatureFormat":          "https://open.charging.cloud/contexts/EnergyMeterSignatureFormats/EMHCrypt01",
                                     // "publicKeys": [
                                     //     {
@@ -558,24 +564,31 @@ export class ChargePoint {
                             "address":                  chargyLib.asJSONObject(SomeJSON["address"])     as chargyInterfaces.IAddress     | undefined,
                             "EVSEs": [{
                                 "@id":                  evseId,
-                                "meters": [{
+                                "energyMeters": [{
                                     "@id":                meterSerial,
-                                    "manufacturer":       "Carlo Gavazzi",
-                                    "manufacturerURL":    "https://www.gavazziautomation.com",
-                                    "model":              "EM340-DIN.AV2.3.X.S1.X",
-                                    "modelURL":           "https://www.gavazziautomation.com/fileadmin/images/PIM/DATASHEET/ENG/EM340_DS_ENG.pdf",
+                                    "manufacturer": {
+                                        "name":           "Carlo Gavazzi",
+                                        "contact": {
+                                            "web":        "https://www.gavazziautomation.com"
+                                        }
+                                    },
+                                    "model": {
+                                        "name":           "EM340-DIN.AV2.3.X.S1.X",
+                                        "url":            "https://www.gavazziautomation.com/fileadmin/images/PIM/DATASHEET/ENG/EM340_DS_ENG.pdf"
+                                    },
                                     "signatureFormat":    "https://open.charging.cloud/contexts/EnergyMeterSignatureFormats/EMHCrypt01",
                                     "signatureInfos": {
-                                            "hash":             "SHA256",
-                                            "hashTruncation":    24,
-                                            "algorithm":        "ECDSA",
-                                            "curve":            "secp224k1",
-                                            "format":           "rs"
+                                        "hash":             "SHA256",
+                                        "hashTruncation":    24,
+                                        "algorithm":        "ECDSA",
+                                        "curve":            "secp224k1",
+                                        "format":           "rs"
                                     },
                                     "publicKeys": [{
-                                            "algorithm":        "secp224k1",
-                                            "format":           "DER",
-                                            "encoding":         "hex"
+                                        "algorithm":        "secp224k1",
+                                        "format":           "DER",
+                                        "encoding":         "hex",
+                                        "value":            "..."
                                     }]
                                 }]
                             }]
@@ -680,7 +693,7 @@ export interface IChargePointCrypt01Result extends chargyInterfaces.ICryptoResul
 {
     sha256value?:                  string,
     meterId?:                      string,
-    meter?:                        chargyInterfaces.IMeter,
+    meter?:                        chargyInterfaces.IEnergyMeter,
     timestamp?:                    string,
     infoStatus?:                   string,
     secondsIndex?:                 string,
@@ -759,7 +772,7 @@ export class ChargePointCrypt01 extends ACrypt {
 
             //#region Find public key, or use all available public keys
 
-            const publicKeyId  = chargingSession.EVSEId.replace(/:/g, "").replace(/-/g, "_");
+            const publicKeyId  = chargingSession.EVSEId?.replace(/:/g, "").replace(/-/g, "_");
             const publicKeys   = [];
 
             if (chargingSession.ctr.publicKeys != null)
@@ -816,8 +829,8 @@ export class ChargePointCrypt01 extends ACrypt {
 
                             sha225Value          = sha225Value ?? (BigInt("0x" + (await chargyLib.sha256(plainText))) >> BigInt(31)).toString(16);
                             sessionResult        = this.curve224k1.validate(BigInt("0x" + sha225Value),
-                                                                            BigInt("0x" + (chargingSession.signature.r ?? "00")),
-                                                                            BigInt("0x" + (chargingSession.signature.s ?? "00")),
+                                                                            BigInt("0x" + (chargingSession.signature.r)),
+                                                                            BigInt("0x" + (chargingSession.signature.s)),
                                                                           [ BigInt("0x" + publicKey.value.slice( 2,  58)),
                                                                             BigInt("0x" + publicKey.value.slice(58, 114)) ])
                                                        ? chargyInterfaces.SessionVerificationResult.ValidSignature
@@ -889,7 +902,7 @@ export class ChargePointCrypt01 extends ACrypt {
 
             //#region Validate measurements
 
-            for (const measurement of chargingSession.measurements)
+            for (const measurement of chargingSession.measurements ?? [])
             {
 
                 measurement.chargingSession = chargingSession;
@@ -1194,11 +1207,13 @@ export class ChargePointCrypt01 extends ACrypt {
                         const signatureDiv = publicKeySignatureContainer?.appendChild(document.createElement('div'));
 
                         if (signatureDiv != null)
-                            signatureDiv.innerHTML = await this.chargy.CheckMeterPublicKeySignature(measurementValue.measurement.chargingSession.chargingStation,
-                                                                                                    measurementValue.measurement.chargingSession.EVSE,
-                                                                                                    measurementValue.measurement.chargingSession.EVSE?.meters[0],
-                                                                                                    measurementValue.measurement.chargingSession.EVSE?.meters[0]?.publicKeys?.[0],
-                                                                                                    signature);
+                            signatureDiv.innerHTML = await this.chargy.CheckMeterPublicKeySignature(
+                                                               measurementValue.measurement.chargingSession.chargingStation,
+                                                               measurementValue.measurement.chargingSession.EVSE,
+                                                               measurementValue.measurement.chargingSession.EVSE?.energyMeters?.[0],
+                                                               measurementValue.measurement.chargingSession.EVSE?.energyMeters?.[0]?.publicKeys?.[0],
+                                                               signature
+                                                           );
 
                     }
                     catch
@@ -1227,8 +1242,8 @@ export class ChargePointCrypt01 extends ACrypt {
             }
 
             if (typeof chargingSession.signature != 'string')
-                SignatureExpectedDiv.innerHTML                            = "r: " + (chargingSession.signature.r?.toLowerCase().padStart(56, '0').match(/.{1,8}/g)?.join(" ") ?? "") + "<br />" +
-                                                                            "s: " + (chargingSession.signature.s?.toLowerCase().padStart(56, '0').match(/.{1,8}/g)?.join(" ") ?? "");
+                SignatureExpectedDiv.innerHTML                            = "r: " + (chargingSession.signature.r.toLowerCase().padStart(56, '0').match(/.{1,8}/g)?.join(" ") ?? "") + "<br />" +
+                                                                            "s: " + (chargingSession.signature.s.toLowerCase().padStart(56, '0').match(/.{1,8}/g)?.join(" ") ?? "");
 
             else if (chargingSession.signature)
                 SignatureExpectedDiv.innerHTML                            = chargingSession.signature.toLowerCase().match(/.{1,8}/g)?.join(" ") ?? "-";

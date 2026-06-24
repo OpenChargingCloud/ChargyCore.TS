@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2018-2026 GraphDefined GmbH <achim.friedland@graphdefined.com>
- * This file is part of Chargy Core <https://github.com/OpenChargingCloud/ChargyCore.TS>
+ * This file is part of ChargyCore <https://github.com/OpenChargingCloud/ChargyCore.TS>
  *
  * Licensed under the Affero GPL license, Version 3.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,12 +15,12 @@
  * limitations under the License.
  */
 
-import type { Chargy }                from './chargy'
-import { ACrypt }                     from './ACrypt'
-import * as chargyInterfaces          from './interfaces/chargyInterfaces'
+import type { Chargy }                     from './chargy'
+import { ACrypt }                          from './ACrypt'
+import * as chargyInterfaces               from './interfaces/chargyInterfaces'
 import type * as chargeTransparencyRecord  from './interfaces/IChargeTransparencyRecord'
-import * as chargyLib                 from './chargyLib'
-import Decimal                        from 'decimal.js';
+import * as chargyLib                      from './interfaces/chargyLib'
+import Decimal                             from 'decimal.js';
 
 
 // A single decoded 82-byte Alfen adapter data set.
@@ -60,7 +60,7 @@ export class Alfen  {
     //#region TryToParseALFENFormat(Content)
 
     public TryToParseALFENFormat(Content:         string|string[],
-                                 ContainerInfos:  unknown)
+                                 ContainerInfos:  chargyInterfaces.IContainerInfos)
 
         : chargeTransparencyRecord.IChargeTransparencyRecord |
           chargyInterfaces.        ISessionCryptoResult
@@ -284,8 +284,8 @@ export class Alfen  {
 
             }
 
-            const evseId             = chargyLib.asString(containerInfos["EVSEId"])            ?? "DE*GEF*EVSE*CHARGY*1";
-            const chargingStationId  = chargyLib.asString(containerInfos["ChargingStationId"]) ?? "DE*GEF*STATION*CHARGY*1";
+            const evseId             = ContainerInfos.chargingStations?.[0]?.EVSEs?.[0]?.["@id"] ?? "DE*GEF*EVSE*CHARGY*1";
+            const chargingStationId  = ContainerInfos.chargingStations?.[0]?.["@id"]             ?? "DE*GEF*STATION*CHARGY*1";
             const chargingSessionId  = chargyLib.asString(chargingSession?.["@id"]);
 
             const firstDataSet       = chargyLib.getFirstArrayElement(common.dataSets, "Missing first Alfen data set");
@@ -317,32 +317,51 @@ export class Alfen  {
                              {
                                  "@id":                      chargingStationId,
                                  // ToDo: The container infos are not validated yet!
-                                 "description":              chargyLib.asJSONObject(chargingStation?.["description"])     as chargyInterfaces.IMultilanguageText | undefined,
-                                 "manufacturer":             chargyLib.asString    (chargingStation?.["manufacturer"]),
-                                 "model":                    chargyLib.asString    (chargingStation?.["type"]),
-                                 "serialNumber":             chargyLib.asString    (chargingStation?.["serialNumber"]),
-                                 "firmwareVersion":          chargyLib.asString    (chargingStation?.["softwareVersion"]),
+                                 "description":              chargyLib.asJSONObject(chargingStation?.["description"])     as chargyLib.I18NString | undefined,
+                                 "manufacturer": {
+                                     "name":                 chargyLib.asString    (chargingStation?.["manufacturer"])
+                                 },
+                                 "model": {
+                                     "name":                 chargyLib.asString    (chargingStation?.["type"])
+                                 },
+                                 "hardware": {
+                                     "serialNumber":         chargyLib.asString    (chargingStation?.["serialNumber"])
+                                 },
+                                 "firmware": {
+                                    "version":               chargyLib.asString    (chargingStation?.["softwareVersion"])
+                                 },
                                  "legalCompliance":          chargyLib.asJSONObject(chargingStation?.["legalCompliance"]) as chargyInterfaces.ILegalCompliance   | undefined,
                                  "geoLocation":              chargyLib.asJSONObject(chargingStation?.["geoLocation"])     as chargyInterfaces.IGeoLocation       | undefined,
                                  "address":                  chargyLib.asJSONObject(chargingStation?.["address"])         as chargyInterfaces.IAddress           | undefined,
                                  "EVSEs": [
                                      {
                                          "@id":                      evseId,
-                                         "description":              chargyLib.asJSONObject(evse?.["description"])        as chargyInterfaces.IMultilanguageText | undefined,
+                                         "description":              chargyLib.asJSONObject(evse?.["description"])        as chargyLib.I18NString | undefined,
                                          "connectors": [ {
-                                                 "type":                     chargyLib.asString(connector?.["type"])   ?? "",
-                                                 "looses":                   chargyLib.asNumber(connector?.["looses"]) ?? 0
+                                             "type":                     chargyLib.asString(connector?.["type"])   ?? "",
+                                             "cable": {
+                                                "length":                   chargyLib.asNumber(connector?.["cableLength"]) ?? 0,
+                                                "looses":                   chargyLib.asNumber(connector?.["cableLooses"]) ?? 0
+                                             }
                                           } ],
-                                         "meters": [
+                                         "energyMeters": [
                                              {
                                                  "@id":                      common.MeterId,
-                                                 "manufacturer":             chargyLib.asString(energyMeter?.["manufacturer"]),
-                                                 "manufacturerURL":          chargyLib.asString(energyMeter?.["manufacturerURL"]),
-                                                 "model":                    chargyLib.asString(energyMeter?.["model"]),
-                                                 "modelURL":                 chargyLib.asString(energyMeter?.["modelURL"]),
-                                                 "hardwareVersion":          chargyLib.asString(energyMeter?.["hardwareVersion"]),
-                                                 "firmwareVersion":          common.AdapterFWVersion,
-                                                 "firmwareChecksum":         common.AdapterFWChecksum,
+                                                 "manufacturer": {
+                                                    "name":                  chargyLib.asString(energyMeter?.["manufacturer"]),
+                                                    "contact":               { "web": chargyLib.asString(energyMeter?.["manufacturerURL"]) }
+                                                 },
+                                                 "model": {
+                                                    "name":                  chargyLib.asString(energyMeter?.["model"]),
+                                                    "url":                   chargyLib.asString(energyMeter?.["modelURL"])
+                                                 },
+                                                 "hardware": {
+                                                    "revision":              chargyLib.asString(energyMeter?.["hardwareVersion"])
+                                                 },
+                                                 "firmware": {
+                                                    "version":               common.AdapterFWVersion,
+                                                    "checksum":              common.AdapterFWChecksum
+                                                 },
                                                  "signatureFormat":          "https://open.charging.cloud/contexts/EnergyMeterSignatureFormats/AlfenCrypt01",
                                                  "publicKeys": [
                                                      {
@@ -485,7 +504,7 @@ export interface IAlfenCrypt01Result extends chargyInterfaces.ICryptoResult
     adapterFWVersion?:             string
     adapterFWChecksum?:            string
     meterId?:                      string,
-    meter?:                        chargyInterfaces.IMeter,
+    meter?:                        chargyInterfaces.IEnergyMeter,
     statusMeter?:                  string,
     statusAdapter?:                string,
     secondsIndex?:                 string,
@@ -498,10 +517,10 @@ export interface IAlfenCrypt01Result extends chargyInterfaces.ICryptoResult
     sessionId?:                    string,
     paging?:                       string,
 
-    hashValue?:                    string | bigint,
-    publicKey?:                    string | undefined,
-    publicKeyFormat?:              string | undefined,
-    publicKeySignatures?:          Array<unknown> | undefined,
+    hashValue?:                    string                        | bigint,
+    publicKey?:                    string                        | undefined,
+    publicKeyFormat?:              string                        | undefined,
+    publicKeySignatures?:          Array<unknown>                | undefined,
     signature?:                    chargyInterfaces.ISignatureRS | undefined
 }
 
@@ -509,7 +528,7 @@ export interface IAlfenCrypt01Result extends chargyInterfaces.ICryptoResult
 export interface IAlfenChargingSession extends chargeTransparencyRecord.IChargingSession
 {
     internalSessionId?:         string;
-    meter?:                     chargyInterfaces.IMeter;
+    meter?:                     chargyInterfaces.IEnergyMeter;
     measurements:               Array<IAlfenMeasurement>;
 }
 
@@ -534,42 +553,40 @@ export class AlfenCrypt01 extends ACrypt {
 
         let sessionResult = chargyInterfaces.SessionVerificationResult.UnknownSessionFormat;
 
+        for (const measurement of chargingSession.measurements ?? [])
         {
-            for (const measurement of chargingSession.measurements)
+
+            measurement.chargingSession = chargingSession;
+
+            // Must include at least two measurements (start & stop)
+            if (measurement.values.length > 1)
             {
 
-                measurement.chargingSession = chargingSession;
-
-                // Must include at least two measurements (start & stop)
-                if (measurement.values.length > 1)
+                // Validate...
+                for (const measurementValue of measurement.values)
                 {
-
-                    // Validate...
-                    for (const measurementValue of measurement.values)
-                    {
-                        measurementValue.measurement = measurement;
-                        await this.VerifyMeasurement(measurementValue as IAlfenMeasurementValue);
-                    }
-
-
-                    // Find an overall result...
-                    sessionResult = chargyInterfaces.SessionVerificationResult.ValidSignature;
-
-                    for (const measurementValue of measurement.values)
-                    {
-                        if (sessionResult                   == chargyInterfaces.SessionVerificationResult.ValidSignature &&
-                            measurementValue.result?.status != chargyInterfaces.VerificationResult.ValidSignature)
-                        {
-                            sessionResult = chargyInterfaces.SessionVerificationResult.InvalidSignature;
-                        }
-                    }
-
+                    measurementValue.measurement = measurement;
+                    await this.VerifyMeasurement(measurementValue as IAlfenMeasurementValue);
                 }
 
-                else
-                    sessionResult = chargyInterfaces.SessionVerificationResult.AtLeastTwoMeasurementsRequired;
+
+                // Find an overall result...
+                sessionResult = chargyInterfaces.SessionVerificationResult.ValidSignature;
+
+                for (const measurementValue of measurement.values)
+                {
+                    if (sessionResult                   == chargyInterfaces.SessionVerificationResult.ValidSignature &&
+                        measurementValue.result?.status != chargyInterfaces.VerificationResult.ValidSignature)
+                    {
+                        sessionResult = chargyInterfaces.SessionVerificationResult.InvalidSignature;
+                    }
+                }
 
             }
+
+            else
+                sessionResult = chargyInterfaces.SessionVerificationResult.AtLeastTwoMeasurementsRequired;
+
         }
 
         return {
@@ -596,21 +613,21 @@ export class AlfenCrypt01 extends ACrypt {
 
         const cryptoResult:IAlfenCrypt01Result = {
             status:             chargyInterfaces.VerificationResult.InvalidSignature,
-            adapterId:          chargyLib.SetHex         (cryptoBuffer, measurementValue.measurement.adapterId,                                           0),
-            adapterFWVersion:   chargyLib.SetText        (cryptoBuffer, measurementValue.measurement.adapterFWVersion,                                    10),
-            adapterFWChecksum:  chargyLib.SetHex         (cryptoBuffer, measurementValue.measurement.adapterFWChecksum,                                   14),
-            meterId:            chargyLib.SetHex         (cryptoBuffer, measurementValue.measurement.energyMeterId,                                       16),
-            statusMeter:        chargyLib.SetHex         (cryptoBuffer, measurementValue.statusMeter,                                                     26, true),
-            statusAdapter:      chargyLib.SetHex         (cryptoBuffer, measurementValue.statusAdapter,                                                   28, true),
-            secondsIndex:       chargyLib.SetUInt32      (cryptoBuffer, measurementValue.secondsIndex,                                                    30, true),
-            timestamp:          chargyLib.SetTimestamp32 (cryptoBuffer, measurementValue.timestamp,                                                       34, false),
-            obisId:             chargyLib.SetHex         (cryptoBuffer, chargyLib.OBIS2Hex(measurementValue.measurement.obis),                            38, false),
-            unitEncoded:        chargyLib.SetInt8        (cryptoBuffer, measurementValue.measurement.unitEncoded ?? 0,                                    44),
-            scalar:             chargyLib.SetInt8        (cryptoBuffer, measurementValue.measurement.scale,                                               45),
-            value:              chargyLib.SetUInt64D     (cryptoBuffer, measurementValue.value,                                                           46, true),
-            uid:                chargyLib.SetText        (cryptoBuffer, (measurementValue.measurement.chargingSession?.authorizationStart["@id"] ?? ""),  54),
-            sessionId:          chargyLib.SetUInt32      (cryptoBuffer, parseInt(measurementValue.measurement.chargingSession?.internalSessionId ?? ""),  74, true),
-            paging:             chargyLib.SetUInt32      (cryptoBuffer, measurementValue.paginationId,                                                    78, true)
+            adapterId:          chargyLib.SetHex         (cryptoBuffer, measurementValue.measurement.adapterId,                                             0),
+            adapterFWVersion:   chargyLib.SetText        (cryptoBuffer, measurementValue.measurement.adapterFWVersion,                                      10),
+            adapterFWChecksum:  chargyLib.SetHex         (cryptoBuffer, measurementValue.measurement.adapterFWChecksum,                                     14),
+            meterId:            chargyLib.SetHex         (cryptoBuffer, measurementValue.measurement.energyMeterId,                                         16),
+            statusMeter:        chargyLib.SetHex         (cryptoBuffer, measurementValue.statusMeter,                                                       26,  true),
+            statusAdapter:      chargyLib.SetHex         (cryptoBuffer, measurementValue.statusAdapter,                                                     28,  true),
+            secondsIndex:       chargyLib.SetUInt32      (cryptoBuffer, measurementValue.secondsIndex,                                                      30,  true),
+            timestamp:          chargyLib.SetTimestamp32 (cryptoBuffer, measurementValue.timestamp,                                                         34, false),
+            obisId:             chargyLib.SetHex         (cryptoBuffer, chargyLib.OBIS2Hex(measurementValue.measurement.obis),                              38, false),
+            unitEncoded:        chargyLib.SetInt8        (cryptoBuffer, measurementValue.measurement.unitEncoded ?? 0,                                      44),
+            scalar:             chargyLib.SetInt8        (cryptoBuffer, measurementValue.measurement.scale,                                                 45),
+            value:              chargyLib.SetUInt64D     (cryptoBuffer, measurementValue.value,                                                             46,  true),
+            uid:                chargyLib.SetText        (cryptoBuffer, (measurementValue.measurement.chargingSession?.authorizationStart?.["@id"] ?? ""),  54),
+            sessionId:          chargyLib.SetUInt32      (cryptoBuffer, parseInt(measurementValue.measurement.chargingSession?.internalSessionId ?? ""),    74,  true),
+            paging:             chargyLib.SetUInt32      (cryptoBuffer, measurementValue.paginationId,                                                      78,  true)
         };
 
 
@@ -668,8 +685,8 @@ export class AlfenCrypt01 extends ACrypt {
                                         cryptoResult.hashValue  = hashValue224k1;
                                         result                  = this.curve224k1.validate(
                                                                       hashValue224k1,
-                                                                      BigInt(signatureExpected.r !== undefined ? "0x" + signatureExpected.r : "0x0"),
-                                                                      BigInt(signatureExpected.s !== undefined ? "0x" + signatureExpected.s : "0x0"),
+                                                                      BigInt("0x" + signatureExpected.r),
+                                                                      BigInt("0x" + signatureExpected.s),
                                                                       [ BigInt("0x" + publicKey.substring(2, 58)),
                                                                         BigInt("0x" + publicKey.substring(58)) ]
                                                                   )
@@ -778,25 +795,25 @@ export class AlfenCrypt01 extends ACrypt {
             PlainTextDiv.style.maxHeight   = "";
             PlainTextDiv.style.overflowY   = "";
 
-            this.CreateLocalizedLine("Adapter Id",                 measurementValue.measurement.adapterId,                                                    result.adapterId              ?? "",  infoDiv, PlainTextDiv);
-            this.CreateLocalizedLine("Adapter Firmware Version",   measurementValue.measurement.adapterFWVersion,                                             result.adapterFWVersion       ?? "",  infoDiv, PlainTextDiv);
-            this.CreateLocalizedLine("Adapter Firmware Checksum",  measurementValue.measurement.adapterFWChecksum,                                            result.adapterFWChecksum      ?? "",  infoDiv, PlainTextDiv);
-            this.CreateLocalizedLine("Meter number",               measurementValue.measurement.energyMeterId,                                                result.meterId                ?? "",  infoDiv, PlainTextDiv);
+            this.CreateLocalizedLine("Adapter Id",                 measurementValue.measurement.adapterId,                                                     result.adapterId              ?? "",  infoDiv, PlainTextDiv);
+            this.CreateLocalizedLine("Adapter Firmware Version",   measurementValue.measurement.adapterFWVersion,                                              result.adapterFWVersion       ?? "",  infoDiv, PlainTextDiv);
+            this.CreateLocalizedLine("Adapter Firmware Checksum",  measurementValue.measurement.adapterFWChecksum,                                             result.adapterFWChecksum      ?? "",  infoDiv, PlainTextDiv);
+            this.CreateLocalizedLine("Meter number",               measurementValue.measurement.energyMeterId,                                                 result.meterId                ?? "",  infoDiv, PlainTextDiv);
             this.CreateLocalizedLine("Meter status",               chargyLib.hex2bin(measurementValue.statusMeter, true) + " (" + measurementValue.statusMeter + " hex)<br /><span class=\"statusInfos\">" +
                                                                    this.DecodeMeterStatus(measurementValue.statusMeter).join("<br />") + "</span>",
-                                                                                                                                                              result.statusMeter            ?? "",  infoDiv, PlainTextDiv);
+                                                                                                                                                               result.statusMeter            ?? "",  infoDiv, PlainTextDiv);
             this.CreateLocalizedLine("Adapter status",             chargyLib.hex2bin(measurementValue.statusAdapter, true) + " (" + measurementValue.statusAdapter + " hex)<br /><span class=\"statusInfos\">" +
-                                                                   this.DecodeAdapterStatus(measurementValue.statusAdapter).join("<br />") + "</span>",    
-                                                                                                                                                              result.statusAdapter          ?? "",  infoDiv, PlainTextDiv);
-            this.CreateLocalizedLine("Seconds index",               measurementValue.secondsIndex,                                                            result.secondsIndex           ?? "",  infoDiv, PlainTextDiv);
-            this.CreateLocalizedLine("Timestamp",                   chargyLib.UTC2human(measurementValue.timestamp),                                          result.timestamp              ?? "",  infoDiv, PlainTextDiv);
-            this.CreateLocalizedLine("OBIS code",                   measurementValue.measurement.obis,                                                        result.obisId                 ?? "",  infoDiv, PlainTextDiv);
-            this.CreateLocalizedLine("Unit (encoded)",              measurementValue.measurement.unitEncoded ?? 0,                                            result.unitEncoded            ?? "",  infoDiv, PlainTextDiv);
-            this.CreateLocalizedLine("Scaling",                     measurementValue.measurement.scale,                                                       result.scalar                 ?? "",  infoDiv, PlainTextDiv);
-            this.CreateLocalizedLine("Measurement Value",           measurementValue.value.toString() + " Wh",                                                result.value                  ?? "",  infoDiv, PlainTextDiv);
-            this.CreateLocalizedLine("Authorization",              (measurementValue.measurement.chargingSession?.authorizationStart["@id"] ?? "") + " hex",  chargyLib.pad(result.uid, 20),       infoDiv, PlainTextDiv);
-            this.CreateLocalizedLine("SessionId",                  (measurementValue.measurement.chargingSession?.["@id"] ?? ""),                             result.sessionId              ?? "",  infoDiv, PlainTextDiv);
-            this.CreateLocalizedLine("Pagination counter",          measurementValue.paginationId,                                                            result.paging                 ?? "",  infoDiv, PlainTextDiv);
+                                                                   this.DecodeAdapterStatus(measurementValue.statusAdapter).join("<br />") + "</span>",
+                                                                                                                                                               result.statusAdapter          ?? "",  infoDiv, PlainTextDiv);
+            this.CreateLocalizedLine("Seconds index",               measurementValue.secondsIndex,                                                             result.secondsIndex           ?? "",  infoDiv, PlainTextDiv);
+            this.CreateLocalizedLine("Timestamp",                   chargyLib.UTC2human(measurementValue.timestamp),                                           result.timestamp              ?? "",  infoDiv, PlainTextDiv);
+            this.CreateLocalizedLine("OBIS code",                   measurementValue.measurement.obis,                                                         result.obisId                 ?? "",  infoDiv, PlainTextDiv);
+            this.CreateLocalizedLine("Unit (encoded)",              measurementValue.measurement.unitEncoded ?? 0,                                             result.unitEncoded            ?? "",  infoDiv, PlainTextDiv);
+            this.CreateLocalizedLine("Scaling",                     measurementValue.measurement.scale,                                                        result.scalar                 ?? "",  infoDiv, PlainTextDiv);
+            this.CreateLocalizedLine("Measurement Value",           measurementValue.value.toString() + " Wh",                                                 result.value                  ?? "",  infoDiv, PlainTextDiv);
+            this.CreateLocalizedLine("Authorization",              (measurementValue.measurement.chargingSession?.authorizationStart?.["@id"] ?? "") + " hex",  chargyLib.pad(result.uid, 20),       infoDiv, PlainTextDiv);
+            this.CreateLocalizedLine("SessionId",                  (measurementValue.measurement.chargingSession?.["@id"] ?? ""),                              result.sessionId              ?? "",  infoDiv, PlainTextDiv);
+            this.CreateLocalizedLine("Pagination counter",          measurementValue.paginationId,                                                             result.paging                 ?? "",  infoDiv, PlainTextDiv);
 
         }
 
@@ -859,12 +876,12 @@ export class AlfenCrypt01 extends ACrypt {
                         const signatureDiv = PublicKeyDiv.parentElement.children[3].appendChild(document.createElement('div'));
 
                         signatureDiv.innerHTML = await this.chargy.CheckMeterPublicKeySignature(
-                                                               measurementValue.measurement.chargingSession?.chargingStation,
-                                                               measurementValue.measurement.chargingSession?.EVSE,
-                                                               measurementValue.measurement.chargingSession?.EVSE?.meters[0],
-                                                               measurementValue.measurement.chargingSession?.EVSE?.meters[0]?.publicKeys?.[0],
-                                                               signature
-                                                           );
+                                                           measurementValue.measurement.chargingSession?.chargingStation,
+                                                           measurementValue.measurement.chargingSession?.EVSE,
+                                                           measurementValue.measurement.chargingSession?.EVSE?.energyMeters?.[0],
+                                                           measurementValue.measurement.chargingSession?.EVSE?.energyMeters?.[0]?.publicKeys?.[0],
+                                                           signature
+                                                       );
 
                     }
                     catch
@@ -890,9 +907,7 @@ export class AlfenCrypt01 extends ACrypt {
                 chargyLib.getArrayLikeElement(SignatureExpectedDiv.parentElement.children, 0, "Missing expected signature header").innerHTML = this.chargy.GetLocalizedMessage("Expected signature") + " (" + (result.signature.format ?? "") + ", hex)";
             }
 
-            if (result.signature.r != null &&
-                result.signature.r.length > 0 &&
-                result.signature.s != null &&
+            if (result.signature.r.length > 0 &&
                 result.signature.s.length > 0)
             {
                 const signatureR = result.signature.r.toLowerCase().match(/.{1,8}/g)?.join(" ") ?? "-";

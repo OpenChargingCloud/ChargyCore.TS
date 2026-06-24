@@ -1,0 +1,3 @@
+# GraphDefined Transparency Format
+
+...

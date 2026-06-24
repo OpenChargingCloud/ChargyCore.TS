@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2018-2026 GraphDefined GmbH <achim.friedland@graphdefined.com>
- * This file is part of Chargy Core <https://github.com/OpenChargingCloud/ChargyCore.TS>
+ * This file is part of ChargyCore <https://github.com/OpenChargingCloud/ChargyCore.TS>
  *
  * Licensed under the Affero GPL license, Version 3.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -33,7 +33,7 @@ import * as chargyInterfaces                from './interfaces/chargyInterfaces'
 import * as chargeTransparencyRecord        from './interfaces/IChargeTransparencyRecord'
 import * as chargeTransparencyLiveLink      from './interfaces/IChargeTransparencyLiveLink'
 import * as publicKeyInfo                   from './interfaces/IPublicKeyInfo'
-import * as chargyLib                       from './chargyLib'
+import * as chargyLib                       from './interfaces/chargyLib'
 import { readQRCodeTextFromImage }          from './qrCodeReader'
 import { importPdfJs }                      from '#pdfjs-runtime'
 import defaultValidationRules               from '../validationRules.json'
@@ -100,8 +100,8 @@ export class Chargy {
 
     //#region Data
 
-    public  readonly i18n:             chargyInterfaces.I18NDictionary;
-    public           uiLanguages:      chargyInterfaces.LanguageStrings;
+    public  readonly i18n:             chargyLib.I18NDictionary;
+    public           uiLanguages:      chargyLib.LanguageStrings;
     public  readonly elliptic:         EllipticModule;
     public  readonly moment:           MomentModule;
     public  readonly asn1:             Asn1Module;
@@ -113,7 +113,7 @@ export class Chargy {
     private chargingPools             = new Array<chargyInterfaces.IChargingPool>();
     private chargingStations          = new Array<chargyInterfaces.IChargingStation>();
     private EVSEs                     = new Array<chargyInterfaces.IEVSE>();
-    private meters                    = new Array<chargyInterfaces.IMeter>();
+    private meters                    = new Array<chargyInterfaces.IEnergyMeter>();
     private chargingSessions          = new Array<chargeTransparencyRecord.IChargingSession>();
 
     public  currentCTR                = {} as chargeTransparencyRecord.IChargeTransparencyRecord;
@@ -121,8 +121,8 @@ export class Chargy {
 
     //#endregion
 
-    constructor(i18n:             chargyInterfaces.I18NDictionary,
-                UILanguages:      chargyInterfaces.LanguageStrings,
+    constructor(i18n:             chargyLib.I18NDictionary,
+                UILanguages:      chargyLib.LanguageStrings,
                 elliptic:         EllipticModule,
                 moment:           MomentModule,
                 asn1:             Asn1Module,
@@ -454,16 +454,16 @@ export class Chargy {
 
     //#region i18n...
 
-    public SetUILanguages(UILanguages: chargyInterfaces.LanguageStrings): void {
+    public SetUILanguages(UILanguages: chargyLib.LanguageStrings): void {
 
         this.uiLanguages = this.NormalizeUILanguages(UILanguages);
 
     }
 
 
-    private NormalizeUILanguages(UILanguages: chargyInterfaces.LanguageStrings): chargyInterfaces.LanguageStrings {
+    private NormalizeUILanguages(UILanguages: chargyLib.LanguageStrings): chargyLib.LanguageStrings {
 
-        const languages = new Array<chargyInterfaces.LanguageString>();
+        const languages = new Array<chargyLib.LanguageString>();
 
         for (const language of UILanguages) {
 
@@ -484,7 +484,7 @@ export class Chargy {
     }
 
 
-    private FindBestMultilanguageText(Text: chargyInterfaces.IMultilanguageText): string | undefined {
+    private FindBestMultilanguageText(Text: chargyLib.I18NString): string | undefined {
 
         for (const language of this.uiLanguages) {
 
@@ -504,10 +504,10 @@ export class Chargy {
     }
 
 
-    private CompleteMultilanguageText(Text:         chargyInterfaces.IMultilanguageText | undefined,
-                                      fallbackText: string): chargyInterfaces.IMultilanguageText {
+    private CompleteMultilanguageText(Text:         chargyLib.I18NString | undefined,
+                                      fallbackText: string): chargyLib.I18NString {
 
-        const result: chargyInterfaces.IMultilanguageText = {
+        const result: chargyLib.I18NString = {
             ...(Text ?? {})
         };
 
@@ -538,7 +538,7 @@ export class Chargy {
 
     }
 
-    public GetMultilanguageText(Text: string): chargyInterfaces.IMultilanguageText
+    public GetMultilanguageText(Text: string): chargyLib.I18NString
     {
 
         const multiLanguage = this.i18n[Text];
@@ -567,12 +567,12 @@ export class Chargy {
     }
 
     public GetMultilanguageTextWithParameter(Text:       string,
-                                             Parameter:  string | number): chargyInterfaces.IMultilanguageText
+                                             Parameter:  string | number): chargyLib.I18NString
     {
 
         const multiLanguage = this.i18n[Text];
 
-        const parameterizedText: chargyInterfaces.IMultilanguageText = {};
+        const parameterizedText: chargyLib.I18NString = {};
 
         if (multiLanguage !== undefined)
         {
@@ -590,7 +590,7 @@ export class Chargy {
 
     }
 
-    public GetLocalizedText(data: chargyInterfaces.IMultilanguageText|undefined): string|undefined {
+    public GetLocalizedText(data: chargyLib.I18NString|undefined): string|undefined {
 
         if (data == null)
             return undefined;
@@ -658,8 +658,8 @@ export class Chargy {
 
     public async CheckMeterPublicKeySignature(chargingStation:  chargyInterfaces.IChargingStation | null | undefined,
                                               evse:             chargyInterfaces.IEVSE            | null | undefined,
-                                              meter:            chargyInterfaces.IMeter           | null | undefined,
-                                              publicKey:        chargyInterfaces.IPublicKey       | null | undefined,
+                                              meter:            chargyInterfaces.IEnergyMeter     | null | undefined,
+                                              publicKey:        publicKeyInfo.   IPublicKey       | null | undefined,
                                               signature:        unknown): Promise<string>
     {
 
@@ -691,11 +691,13 @@ export class Chargy {
                     "description":              evse.description,
                     "sockets":                  evseView["sockets"],
 
-                    "meter": {
+                    "energyMeter": {
                         "@id":                      meter["@id"],
                         "vendor":                   meterView["vendor"],
                         "model":                    meter.model,
-                        "firmwareVersion":          meter.firmwareVersion,
+                        "firmware": {
+                            "version":              meter.firmware?.version
+                        },
                         "signatureFormat":          meter.signatureFormat,
 
                         "publicKey": {
@@ -1226,16 +1228,17 @@ export class Chargy {
 
         : Promise<chargeTransparencyRecord.  IChargeTransparencyRecord   |
                   chargeTransparencyLiveLink.IChargeTransparencyLiveLink |
-                  publicKeyInfo.             IPublicKeyInfo              |
+                  publicKeyInfo.             IPublicKey                  |
                   chargyInterfaces.          ISessionCryptoResult> {
 
         //#region Initial checks
 
-        if (FileInfos.length == 0) return {
-            status:    chargyInterfaces.SessionVerificationResult.NoChargeTransparencyRecordsFound,
-            message:   this.GetMultilanguageText("No charge transparency records found!"),
-            certainty: 0
-        }
+        if (FileInfos.length == 0)
+            return {
+                status:    chargyInterfaces.SessionVerificationResult.NoChargeTransparencyRecordsFound,
+                message:   this.GetMultilanguageText("No charge transparency records found!"),
+                certainty: 0
+            }
 
         let expandedFiles    = new Array<chargyInterfaces.IFileInfo>();
         const processedFiles = new Array<chargeTransparencyRecord.IExtendedFileInfo>();
@@ -1487,26 +1490,34 @@ export class Chargy {
 
             else if (textContent.startsWith("OCMF"))
             {
-                const publicKeyHEX = publicKeyHEXLookup.get(this.PublicKeyIdFromFileName(processedFile.name)) ??
-                                     (publicKeyHEXLookup.size === 1 ? publicKeyHEXLookup.values().next().value : undefined);
+
+                const publicKeyHEX = publicKeyHEXLookup.get(this.PublicKeyIdFromFileName(processedFile.name))
+                                         ?? (publicKeyHEXLookup.size === 1
+                                                 ? publicKeyHEXLookup.values().next().value
+                                                 : undefined);
 
                 processedFile.result = await new OCMF(this).TryToParseOCMFDocument(
-                    textContent,
-                    publicKeyHEX,
-                    publicKeyHEX != null ? "hex" : undefined
-                );
+                                                 textContent,
+                                                 publicKeyHEX,
+                                                 publicKeyHEX != null ? "hex" : undefined
+                                             );
+
             }
 
             else if (textContent.startsWith("\"OCMF") && textContent.endsWith("\""))
             {
-                const publicKeyHEX = publicKeyHEXLookup.get(this.PublicKeyIdFromFileName(processedFile.name)) ??
-                                     (publicKeyHEXLookup.size === 1 ? publicKeyHEXLookup.values().next().value : undefined);
+
+                const publicKeyHEX = publicKeyHEXLookup.get(this.PublicKeyIdFromFileName(processedFile.name))
+                                         ?? (publicKeyHEXLookup.size === 1
+                                                 ? publicKeyHEXLookup.values().next().value
+                                                 : undefined);
 
                 processedFile.result = await new OCMF(this).TryToParseOCMFDocument(
-                    textContent.substring(1, textContent.length - 1),
-                    publicKeyHEX,
-                    publicKeyHEX != null ? "hex" : undefined
-                );
+                                                 textContent.substring(1, textContent.length - 1),
+                                                 publicKeyHEX,
+                                                 publicKeyHEX != null ? "hex" : undefined
+                                             );
+
             }
 
             //#endregion
@@ -1516,13 +1527,15 @@ export class Chargy {
             else if (isPCDFText(textContent))
             {
 
-                const publicKeyHEX = publicKeyHEXLookup.get(this.PublicKeyIdFromFileName(processedFile.name)) ??
-                                     (publicKeyHEXLookup.size === 1 ? publicKeyHEXLookup.values().next().value : undefined);
+                const publicKeyHEX = publicKeyHEXLookup.get(this.PublicKeyIdFromFileName(processedFile.name))
+                                         ?? (publicKeyHEXLookup.size === 1
+                                                 ? publicKeyHEXLookup.values().next().value
+                                                 : undefined);
 
                 processedFile.result = await new PCDF(this).TryToParsePCDFDocument(
-                    textContent,
-                    publicKeyHEX
-                );
+                                                 textContent,
+                                                 publicKeyHEX
+                                             );
 
             }
 
@@ -1613,82 +1626,78 @@ export class Chargy {
 
                     const JSONContent: unknown = JSON.parse(textContent);
 
-                    if (typeof JSONContent !== "object" || JSONContent === null)
-                        throw new Error("Parsed JSON content is not an object or array!");
+                    if (JSONContent === null || typeof JSONContent !== "object" || !chargyLib.isMandatoryJSONObject(JSONContent))
+                        throw new Error("Parsed JSON content is not a JSON object!");
 
-                    if (chargyLib.isMandatoryJSONObject(JSONContent))
+
+                    const JSONContext = JSONContent["@context"];//?.trim().toString() ?? "";
+
+                    if (chargeTransparencyLiveLink.IsAChargeTransparencyLiveLink(JSONContent))
                     {
 
-                        const JSONContext = JSONContent["@context"];//?.trim().toString() ?? "";
+                        JSONContent.timestamp ??= new Date().toISOString();
 
-                        if      (chargeTransparencyLiveLink.IsAChargeTransparencyLiveLink(JSONContent))
+                        processedFile.result = JSONContent;
+
+                    }
+
+                    else if (chargyLib.isMandatoryString(JSONContext))
+                    {
+
+                        if (JSONContext.startsWith("https://open.charging.cloud/contexts/CTR+json"))
+                            processedFile.result = JSONContent as chargeTransparencyRecord.IChargeTransparencyRecord;
+
+                        else if (JSONContext.startsWith("https://open.charging.cloud/contexts/publicKey+json"))
+                            processedFile.result = JSONContent as publicKeyInfo.IPublicKey;
+
+                        else if (JSONContext.startsWith("https://www.lichtblick.de/contexts/charging-station-json") ||
+                                 JSONContext.startsWith("https://www.eneco.com/contexts/charging-station-json")     ||
+                                 JSONContext.startsWith("https://www.chargeit-mobility.com/contexts/charging-station-json"))
                         {
-
-                            JSONContent.timestamp ??= new Date().toISOString();
-
-                            processedFile.result = JSONContent;
-
+                            processedFile.result = new ChargeIT(this).TryToParseChargeITContainerFormat(JSONContent);
                         }
 
-                        else if (chargyLib.isMandatoryString(JSONContext))
-                        {
+                    }
 
-                            if (JSONContext.startsWith("https://open.charging.cloud/contexts/CTR+json"))
-                                processedFile.result = JSONContent as chargeTransparencyRecord.IChargeTransparencyRecord;
+                    // Some formats do not provide any context or format identifiers...
+                    else
+                    {
 
-                            else if (JSONContext.startsWith("https://open.charging.cloud/contexts/publicKey+json"))
-                                processedFile.result = JSONContent as publicKeyInfo.IPublicKeyInfo;
+                        const results = [
+                            new ChargeIT(this).   TryToParseChargeITContainerFormat(JSONContent),
+                            new ChargePoint(this).TryToParseChargepointFormat      (JSONContent),
+                            await new OCPI(this). tryToParseOCPIFormat             (JSONContent)
+                        ];
 
-                            else if (JSONContext.startsWith("https://www.lichtblick.de/contexts/charging-station-json") ||
-                                     JSONContext.startsWith("https://www.eneco.com/contexts/charging-station-json")     ||
-                                     JSONContext.startsWith("https://www.chargeit-mobility.com/contexts/charging-station-json"))
-                            {
-                                processedFile.result = new ChargeIT(this).TryToParseChargeITContainerFormat(JSONContent);
+                        //#region Filter and sort results
+
+                        const filteredResults = results.filter((ctr) => {
+
+                            // At this point we currently only know whether the CTR data format is correct,
+                            // but NOT whether the crypto signatures are correct!
+                            return chargyInterfaces.isISessionCryptoResult1(ctr);// &&
+                                //ctr.status === chargyInterfaces.SessionVerificationResult.Unvalidated;
+
+                        });
+
+                        const sortedResults = filteredResults.sort((ctr1, ctr2) => {
+
+                            if (ctr1.certainty > ctr2.certainty) {
+                                return -1;
                             }
 
-                        }
+                            if (ctr1.certainty < ctr2.certainty) {
+                                return 1;
+                            }
 
-                        // Some formats do not provide any context or format identifiers...
-                        else
-                        {
+                            return 0;
 
-                            const results = [
-                                new ChargeIT(this).   TryToParseChargeITContainerFormat(JSONContent),
-                                new ChargePoint(this).TryToParseChargepointFormat      (JSONContent),
-                                await new OCPI(this).       tryToParseOCPIFormat             (JSONContent)
-                            ];
+                        });
 
-                            //#region Filter and sort results
+                        if (sortedResults.length >= 1 && sortedResults[0])
+                            processedFile.result = sortedResults[0];
 
-                            const filteredResults = results.filter((ctr) => {
-
-                                // At this point we currently only know whether the CTR data format is correct,
-                                // but NOT whether the crypto signatures are correct!
-                                return chargyInterfaces.isISessionCryptoResult1(ctr);// &&
-                                    //ctr.status === chargyInterfaces.SessionVerificationResult.Unvalidated;
-
-                            });
-
-                            const sortedResults = filteredResults.sort((ctr1, ctr2) => {
-
-                                if (ctr1.certainty > ctr2.certainty) {
-                                    return -1;
-                                }
-
-                                if (ctr1.certainty < ctr2.certainty) {
-                                    return 1;
-                                }
-
-                                return 0;
-
-                            });
-
-                            if (sortedResults.length >= 1 && sortedResults[0])
-                                processedFile.result = sortedResults[0];
-
-                            //#endregion
-
-                        }
+                        //#endregion
 
                     }
 
@@ -1786,7 +1795,7 @@ export class Chargy {
                     mergedCTR.description ??= processedFileResult.description;
 
                     //ToDo: Is this a really good idea? Or should we fail, whenever this information is different?
-                    mergedCTR.contract ??= processedFileResult.contract;
+                    mergedCTR.contracts ??= processedFileResult.contracts;
 
 
                     if (!mergedCTR.chargingStationOperators)
@@ -1829,10 +1838,10 @@ export class Chargy {
 
                 }
 
-                else if (publicKeyInfo.IsAPublicKeyInfo(processedFileResult))
+                else if (publicKeyInfo.IsAPublicKey(processedFileResult))
                 {
 
-                    mergedCTR.publicKeys ??= new Array<publicKeyInfo.IPublicKeyInfo>();
+                    mergedCTR.publicKeys ??= new Array<publicKeyInfo.IPublicKey>();
 
                     mergedCTR.publicKeys.push(processedFileResult);
 
@@ -1841,7 +1850,7 @@ export class Chargy {
                 else if (publicKeyInfo.IsAPublicKeyLookup(processedFileResult))
                 {
 
-                    mergedCTR.publicKeys ??= new Array<publicKeyInfo.IPublicKeyInfo>();
+                    mergedCTR.publicKeys ??= new Array<publicKeyInfo.IPublicKey>();
 
                     for (const publicKey of processedFileResult.publicKeys)
                         mergedCTR.publicKeys.push(publicKey);
@@ -1937,7 +1946,7 @@ export class Chargy {
 
                                     this.chargingStations.push(chargingStation);
 
-                                    for (const EVSE of chargingStation.EVSEs)
+                                    for (const EVSE of chargingStation.EVSEs ?? [])
                                     {
 
                                         EVSE.chargingStation    = chargingStation;
@@ -1945,7 +1954,7 @@ export class Chargy {
 
                                         this.EVSEs.push(EVSE);
 
-                                        for (const meter of EVSE.meters)
+                                        for (const meter of EVSE.energyMeters ?? [])
                                         {
 
                                             meter.EVSE               = EVSE;
@@ -1976,7 +1985,7 @@ export class Chargy {
 
                             this.chargingStations.push(chargingStation);
 
-                            for (const EVSE of chargingStation.EVSEs)
+                            for (const EVSE of chargingStation.EVSEs ?? [])
                             {
 
                                 EVSE.chargingStation    = chargingStation;
@@ -1984,7 +1993,7 @@ export class Chargy {
 
                                 this.EVSEs.push(EVSE);
 
-                                for (const meter of EVSE.meters)
+                                for (const meter of EVSE.energyMeters ?? [])
                                 {
 
                                     meter.EVSE               = EVSE;
@@ -2013,7 +2022,7 @@ export class Chargy {
 
                             this.EVSEs.push(EVSE);
 
-                            for (const meter of EVSE.meters)
+                            for (const meter of EVSE.energyMeters ?? [])
                             {
 
                                 meter.EVSE               = EVSE;
@@ -2053,7 +2062,7 @@ export class Chargy {
 
                             this.chargingStations.push(chargingStation);
 
-                            for (const EVSE of chargingStation.EVSEs)
+                            for (const EVSE of chargingStation.EVSEs ?? [])
                             {
 
                                 EVSE.chargingStation    = chargingStation;
@@ -2061,7 +2070,7 @@ export class Chargy {
 
                                 this.EVSEs.push(EVSE);
 
-                                for (const meter of EVSE.meters)
+                                for (const meter of EVSE.energyMeters ?? [])
                                 {
 
                                     meter.EVSE               = EVSE;
@@ -2095,7 +2104,7 @@ export class Chargy {
 
                     this.chargingStations.push(chargingStation);
 
-                    for (const EVSE of chargingStation.EVSEs)
+                    for (const EVSE of chargingStation.EVSEs ?? [])
                     {
 
                         EVSE.chargingStation    = chargingStation;
@@ -2103,7 +2112,7 @@ export class Chargy {
 
                         this.EVSEs.push(EVSE);
 
-                        for (const meter of EVSE.meters)
+                        for (const meter of EVSE.energyMeters ?? [])
                         {
 
                             meter.EVSE               = EVSE;
@@ -2118,9 +2127,9 @@ export class Chargy {
 
                     }
 
-                    if (chargingStation.meters) {
+                    if (chargingStation.energyMeters) {
 
-                        for (const meter of chargingStation.meters)
+                        for (const meter of chargingStation.energyMeters ?? [])
                         {
 
                             meter.chargingStation    = chargingStation;
@@ -2169,7 +2178,7 @@ export class Chargy {
     private hasInplausibleChargingSessionTotalEnergyMeasurement(chargingSession: chargeTransparencyRecord.IChargingSession): boolean
     {
 
-        for (const measurement of chargingSession.measurements)
+        for (const measurement of chargingSession.measurements ?? [])
         {
 
             if (measurement.name !== "ENERGY_TOTAL" ||
@@ -2450,20 +2459,20 @@ export class Chargy {
             if (mergedCTR["@context"] === "")
                 mergedCTR["@context"] = ctr["@context"];
 
-            if (ctr.begin != null &&
-                ctr.begin.length > 0 &&
+            if (ctr.begin        != null &&
+                ctr.begin.length  > 0 &&
                 (mergedCTR.begin == null || mergedCTR.begin.length === 0 || mergedCTR.begin > ctr.begin))
-                mergedCTR.begin = ctr.begin;
+                 mergedCTR.begin  = ctr.begin;
 
-            if (ctr.end != null &&
-                ctr.end.length > 0 &&
-                (mergedCTR.end == null || mergedCTR.end.length === 0 || mergedCTR.end < ctr.end))
-                mergedCTR.end = ctr.end;
+            if (ctr.end          != null &&
+                ctr.end.  length  > 0 &&
+                (mergedCTR.end   == null || mergedCTR.end.  length === 0 || mergedCTR.end   < ctr.end))
+                 mergedCTR.end    = ctr.end;
 
             mergedCTR.description ??= ctr.description;
 
             //ToDo: Is this a really good idea? Or should we fail, whenever this information is different?
-            mergedCTR.contract ??= ctr.contract;
+            mergedCTR.contracts ??= ctr.contracts;
 
 
             if (!mergedCTR.chargingStationOperators)

@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2018-2026 GraphDefined GmbH <achim.friedland@graphdefined.com>
- This file is part of Chargy Core <https://github.com/OpenChargingCloud/ChargyCore.TS>
+ This file is part of ChargyCore <https://github.com/OpenChargingCloud/ChargyCore.TS>
  *
  * Licensed under the Affero GPL license, Version 3.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,15 +16,16 @@
  */
 
 import type { Chargy }                     from './chargy'
-import { Alfen }                      from './Alfen'
-import { BSMCrypt01 }                 from './BSMCrypt01'
-import * as chargyInterfaces          from './interfaces/chargyInterfaces'
+import { Alfen }                           from './Alfen'
+import { BSMCrypt01 }                      from './BSMCrypt01'
+import      * as chargyInterfaces          from './interfaces/chargyInterfaces'
 import type * as chargeTransparencyRecord  from './interfaces/IChargeTransparencyRecord'
-import * as chargyLib                 from './chargyLib'
-import { OCMF }                       from './OCMF'
+import      * as chargyLib                 from './interfaces/chargyLib'
+import { OCMF }                            from './OCMF'
 
 
-export class OCPI {
+export class OCPI
+{
 
     private readonly chargy: Chargy;
 
@@ -35,7 +36,11 @@ export class OCPI {
     //#region tryToParseChargeITContainerFormat(SomeJSON)
 
     // The chargeIT mobility data format does not always provide context information or format identifiers!
-    public async tryToParseOCPIFormat(SomeJSON: unknown) : Promise<chargeTransparencyRecord.IChargeTransparencyRecord|chargyInterfaces.ISessionCryptoResult>
+    public async tryToParseOCPIFormat(SomeJSON: chargyLib.JSONObject)
+
+        : Promise<chargeTransparencyRecord.IChargeTransparencyRecord |
+                  chargyInterfaces.        ISessionCryptoResult>
+
     {
 
         const errors    = new Array<chargyInterfaces.IError>();
@@ -98,7 +103,10 @@ export class OCPI {
                     // the OCMF parser can merge it into the resulting charge
                     // transparency record.
 
+
                     const placeInfo    = chargyLib.asJSONObject(SomeJSON["placeInfo"]);
+                    const evseId       = chargyLib.asString(placeInfo?.["evseId"]);
+                    const evseIdStr    = chargyLib.asString(evseId) ?? "";
                     const geoLocation  = chargyLib.asJSONObject(placeInfo?.["geoLocation"]);
                     const address      = chargyLib.asJSONObject(placeInfo?.["address"]);
 
@@ -107,9 +115,10 @@ export class OCPI {
 
                     const containerInfos = {
 
-                        EVSEId:           chargyLib.asString(placeInfo?.["evseId"]),
+                        EVSEIds:          [ evseId ],
 
-                        chargingStation:  {
+                        chargingStations:  [{
+                            "@id":        evseIdStr.substring(0, evseIdStr.lastIndexOf("*")),
                             geoLocation:  geoLat !== undefined && geoLon !== undefined
                                               ? { lat: geoLat, lng: geoLon }
                                               : undefined,
@@ -121,18 +130,20 @@ export class OCPI {
                                                     country:     chargyLib.asString(address["country"]) ?? ""
                                                 }
                                               : undefined
-                        },
+                        }]
 
-                        energyMeter:      chargyLib.asJSONObject(SomeJSON["meterInfo"])
+                        //energyMeter:      chargyLib.asJSONObject(SomeJSON["meterInfo"])
 
                     };
 
                     //#endregion
 
-                    return new OCMF(this.chargy).TryToParseOCMFDocument(firstSignedData,
-                                                                        chargyLib.asString(public_key),
-                                                                        encoding_method,
-                                                                        containerInfos);
+                    return new OCMF(this.chargy).TryToParseOCMFDocument(
+                               firstSignedData,
+                               chargyLib.asString(public_key),
+                               encoding_method,
+                               containerInfos
+                           );
 
                 }
 
@@ -153,17 +164,17 @@ export class OCPI {
             try
             {
 
-                const chargingSessionId                          = SomeJSON["@id"];
+                const chargingSessionId                          = chargyLib.asString    (SomeJSON["@id"]);
 
                 const chargePointInfo                            = chargyLib.asJSONObject(SomeJSON["chargePointInfo"]);
                 const evseId                                     = chargePointInfo?.["evseId"];
 
                 const placeInfo                                  = chargyLib.asJSONObject(chargePointInfo?.["placeInfo"]);
-                const geoLocation                                = chargyLib.asJSONObject(placeInfo?.["geoLocation"]);
+                const geoLocation                                = chargyLib.asJSONObject(placeInfo?.      ["geoLocation"]);
                 const geoLocation_lat                            = geoLocation?.["lat"];
                 const geoLocation_lon                            = geoLocation?.["lon"];
 
-                const address                                    = chargyLib.asJSONObject(placeInfo?.["address"]);
+                const address                                    = chargyLib.asJSONObject(placeInfo?.      ["address"]);
                 const address_street                             = address?.["street"];
                 const address_zipCode                            = address?.["zipCode"];
                 const address_town                               = address?.["town"];
@@ -550,7 +561,7 @@ export class OCPI {
                                             "value":            "042313b9e469612b4ca06981bfdecb226e234632b01d84b6a814f63a114b7762c34ddce2e6853395b7a0f87275f63ffe3c",
                                             "signatures": [
                                                 {
-                                                    "keyId":      "...",
+                                                    "@id":        "...",
                                                     "algorithm":  "secp192r1",
                                                     "format":     "DER",
                                                     "value":      "????"
@@ -607,7 +618,7 @@ export class OCPI {
                                             //"@context":             "",
                                             "street":               chargyLib.asString(address_street),
                                             "postalCode":           chargyLib.asString(address_zipCode) ?? "",
-                                            "city":                 chargyLib.asString(address_town) ?? "",
+                                            "city":                 chargyLib.asString(address_town)    ?? "",
                                             "country":              chargyLib.asString(address_country) ?? ""
                                         },
                                         "EVSEs": [
@@ -618,7 +629,7 @@ export class OCPI {
                                                 //     "de":                   "GraphDefined EVSE - CI-Tests Pool 3 / Station A / EVSE 1"
                                                 // },
                                                 //"connectors":               [  ],
-                                                "meters":                   [ ]
+                                                "energyMeters":                   [ ]
                                             }
                                         ]
                                     }
@@ -640,30 +651,30 @@ export class OCPI {
                         return new Alfen(this.chargy).TryToParseALFENFormat(
                                    signedMeterValues.map(value => chargyLib.asString(chargyLib.asJSONObject(value)?.["payload"]) ?? ""),
                                    {
-                                       chargingSession: {
-                                          "@id":            chargingSessionId
-                                       },
-                                       EVSEId:              evseId,
-                                       chargingStation: {
-                                          manufacturer:     chargingStation_manufacturer,
-                                          type:             chargingStation_type,
-                                          serialNumber:     chargingStation_serialNumber,
-                                          firmwareVersion:  chargingStation_controllerSoftwareVersion,
-                                          legalCompliance:  {
-                                              conformity: [{
+                                    //    chargingSessions: [{
+                                    //       "@id":            chargingSessionId ?? ""
+                                    //    }],
+                                    //  //  EVSEId:              evseId,
+                                    //    chargingStations: [{
+                                    //       manufacturer:     chargingStation_manufacturer,
+                                    //       type:             chargingStation_type,
+                                    //       serialNumber:     chargingStation_serialNumber,
+                                    //       firmwareVersion:  chargingStation_controllerSoftwareVersion,
+                                    //       legalCompliance:  {
+                                    //           conformity: [{
 
-                                                  freeText:  chargingStation_compliance
-                                              }],
-                                              calibration: [{
-                                                  freeText:  chargingStation_calibration
-                                              }]
-                                          },
-                                          geoLocation:      { "lat":    geoLocation_lat, "lng":        geoLocation_lon },
-                                          address:          { "street": address_street,  "postalCode": address_zipCode, "city": address_town, "country": address_country }
-                                       },
-                                      energyMeter:          meterInfo,
-                                      connector:            connectorInfo,
-                                      chargingCosts:        chargingCostsInfo
+                                    //               freeText:  chargingStation_compliance
+                                    //           }],
+                                    //           calibration: [{
+                                    //               freeText:  chargingStation_calibration
+                                    //           }]
+                                    //       },
+                                    //       geoLocation:      { "lat":    geoLocation_lat, "lng":        geoLocation_lon },
+                                    //       address:          { "street": address_street,  "postalCode": address_zipCode, "city": address_town, "country": address_country }
+                                    //   }],
+                                    //   energyMeter:          meterInfo,
+                                    //   connector:            connectorInfo,
+                                    //   chargingCosts:        chargingCostsInfo
                                    });
 
                 }

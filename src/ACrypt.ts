@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2018-2026 GraphDefined GmbH <achim.friedland@graphdefined.com>
- * This file is part of Chargy Core <https://github.com/OpenChargingCloud/ChargyCore.TS>
+ * This file is part of ChargyCore <https://github.com/OpenChargingCloud/ChargyCore.TS>
  *
  * Licensed under the Affero GPL license, Version 3.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,11 +15,12 @@
  * limitations under the License.
  */
 
-import type { Chargy, EllipticCurve } from './chargy'
-import { secp224k1 }                  from './secp224k1'
+import      * as chargyLib                 from './interfaces/chargyLib'
 import type * as chargyInterfaces          from './interfaces/chargyInterfaces'
 import type * as chargeTransparencyRecord  from './interfaces/IChargeTransparencyRecord'
-import * as chargyLib                 from './chargyLib'
+import type { Chargy, EllipticCurve }      from './chargy'
+import      { secp224k1 }                  from './interfaces/secp224k1'
+
 
 export abstract class ACrypt {
 

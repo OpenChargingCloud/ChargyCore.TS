@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2018-2026 GraphDefined GmbH <achim.friedland@graphdefined.com>
- This file is part of Chargy Core <https://github.com/OpenChargingCloud/ChargyCore.TS>
+ This file is part of ChargyCore <https://github.com/OpenChargingCloud/ChargyCore.TS>
  *
  * Licensed under the Affero GPL license, Version 3.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,36 +16,39 @@
  */
 
 import type { Chargy }                     from './chargy'
-import { Alfen }                      from './Alfen'
-import { OCMF }                       from './OCMF'
-import * as chargyInterfaces          from './interfaces/chargyInterfaces'
+import { Alfen }                           from './Alfen'
+import { OCMF }                            from './OCMF'
+import * as chargyInterfaces               from './interfaces/chargyInterfaces'
 import type * as chargeTransparencyRecord  from './interfaces/IChargeTransparencyRecord'
-import * as chargyLib                 from './chargyLib'
+import * as chargyLib                      from './interfaces/chargyLib'
 
 
-export interface ISAFEXMLEVSEContext {
-    "@id":         string;
-    description?: chargyInterfaces.IMultilanguageText | undefined;
-    meters:       Array<chargyInterfaces.IMeter>;
-    connector?:   chargyInterfaces.IConnector & { "@id"?: string | undefined } | undefined;
-}
+// export interface ISAFEXMLConnectorContext {
+//     "@id"?:              string;
+//     type?:               string;
+// }
 
-export interface ISAFEXMLChargingStationInfo {
-    "@id":             string;
-    description?:      chargyInterfaces.IMultilanguageText | undefined;
-    firmwareVersion?:  string | undefined;
-    softwareVersion?:  string | undefined;
-    geoLocation?:      chargyInterfaces.IGeoLocation | undefined;
-    EVSE?:             ISAFEXMLEVSEContext | undefined;
-}
+// export interface ISAFEXMLEVSEContext {
+//     "@id":               string;
+//     description?:        chargyInterfaces.I18NString | undefined;
+//     meters:              Array<chargyInterfaces.IEnergyMeter>;
+//     connectors?:         Array<chargyInterfaces.IConnector> | undefined;
+// }
 
-export interface ISAFEXMLChargingStationContext {
-    ChargingStationId?: string | undefined;
-    EVSEId?:            string | undefined;
-    chargingStation?:   ISAFEXMLChargingStationInfo | undefined;
-    EVSE?:              ISAFEXMLEVSEContext | undefined;
-    connector?:         chargyInterfaces.IConnector & { "@id"?: string | undefined } | undefined;
-}
+// export interface ISAFEXMLChargingStationInfo {
+//     "@id":               string;
+//     description?:        chargyInterfaces.I18NString        | undefined;
+//     firmware?:           chargyInterfaces.IFirmware;
+//     geoLocation?:        chargyInterfaces.IGeoLocation      | undefined;
+//     EVSEs?:              Array<ISAFEXMLEVSEContext>         | undefined;
+// }
+
+// export interface ISAFEXMLChargingStationContext {
+//     chargingStation?:    ISAFEXMLChargingStationInfo;
+//     EVSE?:               ISAFEXMLEVSEContext;
+//     connector?:          chargyInterfaces.IConnector;
+// }
+
 
 // https://github.com/SAFE-eV/transparenzsoftware/blob/archive/XML_Format.md
 export class SAFEXML {
@@ -57,86 +60,212 @@ export class SAFEXML {
     }
 
 
-    public static ParseChargingStationContext(XMLDocument: Document): ISAFEXMLChargingStationContext {
+    public static ParseContainerInfos(XMLDocument:  Document,
+                                      chargy:       Chargy)
 
-        const chargingStationElement = chargyLib.getElementsByLocalName(XMLDocument, "chargingStation").at(0);
+        : chargyInterfaces.IContainerInfos |
+          chargyInterfaces.ISessionCryptoResult
 
-        if (chargingStationElement === undefined)
-            return {};
+    {
 
-        const chargingStationAttributeId = chargingStationElement.getAttribute("id")?.trim();
-        const chargingStationId          = chargingStationAttributeId != null && chargingStationAttributeId.length > 0
-                                               ? chargingStationAttributeId
-                                               : chargyLib.getTrimmedTextContent(chargyLib.getDirectChildByLocalName(chargingStationElement, "id"));
-        const softwareVersion     = chargyLib.getTrimmedTextContent(chargyLib.getDirectChildByLocalName(chargingStationElement, "softwareVersion"));
-        const geoLocationElement  = chargyLib.getDirectChildByLocalName(chargingStationElement, "geoLocation");
+        const containerInfos:chargyInterfaces.IContainerInfos = {};
 
-        const latitude            = Number.parseFloat(chargyLib.getTrimmedTextContent(chargyLib.getDirectChildByLocalName(geoLocationElement ?? chargingStationElement, "latitude"))  ?? "");
-        const longitude           = Number.parseFloat(chargyLib.getTrimmedTextContent(chargyLib.getDirectChildByLocalName(geoLocationElement ?? chargingStationElement, "longitude")) ?? "");
+        const chargingStationElements = chargyLib.getElementsByLocalName(XMLDocument, "chargingStation");
 
-        const geoLocation         = Number.isFinite(latitude) && Number.isFinite(longitude)
+        if (chargingStationElements.length == 0)
+            return containerInfos;
+
+        if (chargingStationElements.length > 1)
+        {
+            return {
+                status:    chargyInterfaces.SessionVerificationResult.InvalidSessionFormat,
+                message:   chargy.GetMultilanguageText("Only one chargingStation element is allowed within the given SAFE XML container!"),
+                certainty: 0
+            }
+        }
+
+        if (chargingStationElements[0] === undefined)
+        {
+            return {
+                status:    chargyInterfaces.SessionVerificationResult.InvalidSessionFormat,
+                message:   chargy.GetMultilanguageText("The chargingStation element within the given SAFE XML container is invalid!"),
+                certainty: 0
+            }
+        }
+
+        const chargingStationElement  = chargingStationElements[0];
+
+        //#region chargingStationId
+
+        const chargingStationId       = chargingStationElement.getAttribute("id")?.trim();
+
+        if (chargingStationId === undefined ||
+            chargingStationId.length == 0)
+        {
+            return {
+                status:    chargyInterfaces.SessionVerificationResult.InvalidSessionFormat,
+                message:   chargy.GetMultilanguageText("The chargingStation identifier within the given SAFE XML container is invalid!"),
+                certainty: 0
+            }
+        }
+
+        //#endregion
+
+        const chargingStation:  chargyInterfaces.IChargingStation = {
+                                    "@id":  chargingStationId
+                                };
+
+        containerInfos.chargingStations  = [ chargingStation ];
+
+        //#region description
+
+        const description = chargyLib.parseDescription(chargingStationElement);
+        if (description !== undefined)
+            chargingStation.description = description;
+
+        //#endregion
+
+        //#region firmware
+
+        const firmware = chargyLib.getDirectChildByLocalName(chargingStationElement, "firmware");
+        if (firmware !== undefined)
+        {
+
+            chargingStation.firmware = {};
+
+            const firmwareVersion         = chargyLib.getTrimmedTextContent(chargyLib.getDirectChildByLocalName(firmware, "version"));
+            if (firmwareVersion !== undefined)
+                chargingStation.firmware.version  = firmwareVersion;
+
+            const firmwareChecksum        = chargyLib.getTrimmedTextContent(chargyLib.getDirectChildByLocalName(firmware, "checksum"));
+            if (firmwareChecksum !== undefined)
+                chargingStation.firmware.checksum = firmwareChecksum;
+
+            if (Object.keys(chargingStation.firmware).length === 0)
+                delete chargingStation.firmware;
+
+        }
+
+        //#endregion
+
+        //#region geoLocation
+
+        const geoLocationElement = chargyLib.getDirectChildByLocalName(chargingStationElement, "geoLocation");
+        if (geoLocationElement !== undefined)
+        {
+
+            const latitude     = Number.parseFloat(chargyLib.getTrimmedTextContent(chargyLib.getDirectChildByLocalName(geoLocationElement, "latitude"))  ?? "");
+            const longitude    = Number.parseFloat(chargyLib.getTrimmedTextContent(chargyLib.getDirectChildByLocalName(geoLocationElement, "longitude")) ?? "");
+
+            const geoLocation  = Number.isFinite(latitude) && Number.isFinite(longitude)
                                         ? { lat: latitude, lng: longitude }
                                         : undefined;
 
-        if (chargyLib.getDirectChildByLocalName(chargingStationElement, "EVSEs") !== undefined)
-            throw new Error("The SAFE chargingStation XML element must contain EVSE directly and no EVSEs container element!");
+            if (geoLocation !== undefined)
+                chargingStation.geoLocation  = geoLocation;
 
-        const evseElements = chargyLib.getDirectChildrenByLocalName(chargingStationElement, "EVSE");
+        }
+
+        //#endregion
+
+
+        //#region EVSE
+
+        const evseElements  = chargyLib.getElementsByLocalName(chargingStationElement, "EVSE");
 
         if (evseElements.length > 1)
-            throw new Error("The SAFE chargingStation XML element must not contain more than one EVSE element!");
+        {
+            return {
+                status:    chargyInterfaces.SessionVerificationResult.InvalidSessionFormat,
+                message:   chargy.GetMultilanguageText("Only one EVSE element is allowed within the given SAFE XML chargingStation element!"),
+                certainty: 0
+            }
+        }
 
-        const evseElement       = evseElements.at(0);
-        const evseAttributeId   = evseElement?.getAttribute("id")?.trim();
-        const evseTextId        = chargyLib.getTrimmedTextContent(chargyLib.getDirectChildByLocalName(evseElement ?? chargingStationElement, "id"));
-        const evseId            = evseAttributeId != null && evseAttributeId.length > 0
-                                      ? evseAttributeId
-                                      : evseTextId ?? "";
-        const connectorElements = evseElement !== undefined
-                                      ? chargyLib.getDirectChildrenByLocalName(evseElement, "connector")
-                                      : [];
+        if (evseElements[0] === undefined)
+        {
+            return {
+                status:    chargyInterfaces.SessionVerificationResult.InvalidSessionFormat,
+                message:   chargy.GetMultilanguageText("The EVSE element within the given SAFE XML chargingStation element is invalid!"),
+                certainty: 0
+            }
+        }
 
-        if (connectorElements.length > 1)
-            throw new Error("The SAFE EVSE XML element must not contain more than one connector element!");
+        const evseElement  = evseElements[0];
+        const evseId       = evseElement.getAttribute("id")?.trim();
 
-        const connectorElement = connectorElements.at(0);
-        const connectorId      = connectorElement?.getAttribute("id")?.trim();
-        const connectorType    = chargyLib.getTrimmedTextContent(chargyLib.getDirectChildByLocalName(connectorElement ?? evseElement ?? chargingStationElement, "type"));
-        const connector        = connectorType != null && connectorType.length > 0
-                                     ? { "@id": connectorId, type: connectorType, looses: 0 }
-                                     : undefined;
+        if (evseId      !== undefined &&
+            evseId.length > 0)
+        {
 
-        const parsedEVSE: ISAFEXMLEVSEContext | undefined = evseElement !== undefined
-                                                                ? {
-                                                                      "@id":         evseId,
-                                                                      "description": chargyLib.parseDescription(evseElement),
-                                                                      "meters":      [],
-                                                                      "connector":   connector
-                                                                  }
-                                                                : undefined;
+            const evse:  chargyInterfaces.IEVSE =  {
+                                "@id":  evseId
+                            };
 
-        const chargingStation: ISAFEXMLChargingStationInfo = {
-            "@id":              chargingStationId ?? "",
-            "description":      chargyLib.parseDescription(chargingStationElement),
-            "firmwareVersion":  softwareVersion,
-            "softwareVersion":  softwareVersion,
-            "geoLocation":      geoLocation,
-            "EVSE":             parsedEVSE
-        };
+            chargingStation.EVSEs = [ evse ];
 
-        return {
-            "ChargingStationId":  chargingStationId,
-            "EVSEId":             parsedEVSE?.["@id"],
-            "chargingStation":    chargingStation,
-            "EVSE":               parsedEVSE,
-            "connector":          parsedEVSE?.connector
-        };
+
+            const evseDescription = chargyLib.parseDescription(evseElement);
+            if (evseDescription     !== undefined)
+                evse.description  = evseDescription;
+
+
+            //#region connector
+
+            const connectorElements  = chargyLib.getElementsByLocalName(evseElement, "connector");
+
+            if (connectorElements.length > 1)
+            {
+                return {
+                    status:    chargyInterfaces.SessionVerificationResult.InvalidSessionFormat,
+                    message:   chargy.GetMultilanguageText("Only one connector element is allowed within the given SAFE XML EVSE element!"),
+                    certainty: 0
+                }
+            }
+
+            if (connectorElements[0] === undefined)
+            {
+                return {
+                    status:    chargyInterfaces.SessionVerificationResult.InvalidSessionFormat,
+                    message:   chargy.GetMultilanguageText("The connector element within the given SAFE XML EVSE element is invalid!"),
+                    certainty: 0
+                }
+            }
+
+            const connectorElement = connectorElements[0];
+
+            const connector: chargyInterfaces.IConnector | undefined  = {};
+
+            const connectorId    = connectorElement.getAttribute("id")?.trim();
+            if (connectorId != null && connectorId.length > 0)
+                connector["@id"] = connectorId;
+
+
+            const connectorType  = chargyLib.getTrimmedTextContent(chargyLib.getDirectChildByLocalName(connectorElement, "type"));
+            if (connectorType !== undefined && connectorType.length > 0)
+                connector.type   = connectorType;
+
+            if (Object.keys(connector).length > 0)
+                evse.connectors = [ connector ];
+
+            //#endregion
+
+        }
+
+        //#endregion
+
+
+        return containerInfos;
 
     }
 
     //#region tryToParseSAFEXML(XMLDocument)
 
-    public async tryToParseSAFEXML(XMLDocument: Document) : Promise<chargeTransparencyRecord.IChargeTransparencyRecord|chargyInterfaces.ISessionCryptoResult>
+    public async tryToParseSAFEXML(XMLDocument: Document)
+
+        : Promise<chargeTransparencyRecord.IChargeTransparencyRecord |
+                  chargyInterfaces.        ISessionCryptoResult>
+
     {
 
         // The SAFE transparency software v1.0 does not understand its own
@@ -153,7 +282,7 @@ export class SAFEXML {
             //         <description language="en">
             //            GraphDefined Charging Station - CI-Tests Pool 1 / Station A
             //         </description>
-            //         <softwareVersion>3.0.25.2089</softwareVersion>
+            //         <firmwareVersion>3.0.25.2089</firmwareVersion>
             //
             //         <geoLocation>
             //            <latitude>50.387945</latitude>
@@ -187,7 +316,14 @@ export class SAFEXML {
                 XMLDocument.documentElement.localName === "values")
             {
 
-                const safeXMLContext = SAFEXML.ParseChargingStationContext(XMLDocument);
+                const safeXMLContext  = SAFEXML.ParseContainerInfos(
+                                            XMLDocument,
+                                            this.chargy
+                                        );
+
+                if (chargyInterfaces.isISessionCryptoResult1(safeXMLContext))
+                    return safeXMLContext;
+
 
                 const signedDataValues          = new Array<string>();
 
@@ -207,7 +343,7 @@ export class SAFEXML {
                         return {
                             status:    chargyInterfaces.SessionVerificationResult.InvalidSessionFormat,
                             message:   this.chargy.GetMultilanguageText("Each value within the given XML container must contain signed data!"),
-                            certainty:  0
+                            certainty: 0
                         }
 
                     const signedDataFormat = signedData.attributes.getNamedItem("format")?.  value.trim().toLowerCase() ?? "";
@@ -218,7 +354,7 @@ export class SAFEXML {
                         return {
                             status:    chargyInterfaces.SessionVerificationResult.InvalidSessionFormat,
                             message:   this.chargy.GetMultilanguageText("Invalid mixture of different signed data formats within the given XML container!"),
-                            certainty:  0
+                            certainty: 0
                         }
 
 
@@ -230,7 +366,7 @@ export class SAFEXML {
                         return {
                             status:    chargyInterfaces.SessionVerificationResult.InvalidSessionFormat,
                             message:   this.chargy.GetMultilanguageText("Invalid mixture of different signed data encodings within the given XML container!"),
-                            certainty:  0
+                            certainty: 0
                         }
 
 
@@ -240,7 +376,7 @@ export class SAFEXML {
                         return {
                             status:    chargyInterfaces.SessionVerificationResult.InvalidSessionFormat,
                             message:   this.chargy.GetMultilanguageText("The signed data value within the given XML container must not be empty!"),
-                            certainty:  0
+                            certainty: 0
                         }
 
 
@@ -252,7 +388,7 @@ export class SAFEXML {
                         return {
                             status:    chargyInterfaces.SessionVerificationResult.InvalidSessionFormat,
                             message:   this.chargy.GetMultilanguageText("Invalid mixture of different public key encodings within the given XML container!"),
-                            certainty:  0
+                            certainty: 0
                         }
 
                     // if (commonPublicKeyEncoding !== ""    &&
@@ -273,7 +409,7 @@ export class SAFEXML {
                         return {
                             status:    chargyInterfaces.SessionVerificationResult.InvalidSessionFormat,
                             message:   this.chargy.GetMultilanguageText("Invalid mixture of different public keys within the given XML container!"),
-                            certainty:  0
+                            certainty: 0
                         }
 
                     switch (commonSignedDataEncoding)
@@ -300,7 +436,7 @@ export class SAFEXML {
                             return {
                                 status:    chargyInterfaces.SessionVerificationResult.InvalidSessionFormat,
                                 message:   this.chargy.GetMultilanguageText("Unkown signed data encoding within the given SAFE XML!"),
-                                certainty:  0
+                                certainty: 0
                             }
 
                     }
@@ -331,9 +467,9 @@ export class SAFEXML {
 
                         default:
                             return {
-                                status:     chargyInterfaces.SessionVerificationResult.InvalidSessionFormat,
-                                message:    this.chargy.GetMultilanguageText("UnknownOrInvalidChargingSessionFormat"),
-                                certainty:  0
+                                status:    chargyInterfaces.SessionVerificationResult.InvalidSessionFormat,
+                                message:   this.chargy.GetMultilanguageText("UnknownOrInvalidChargingSessionFormat"),
+                                certainty: 0
                             }
 
                     }
@@ -347,14 +483,14 @@ export class SAFEXML {
             return {
                 status:    chargyInterfaces.SessionVerificationResult.InvalidSessionFormat,
                 message:   this.chargy.GetMultilanguageText("Exception occured: " + (exception instanceof Error ? exception.message : String(exception))),
-                certainty:  0
+                certainty: 0
             }
         }
 
         return {
-            status:     chargyInterfaces.SessionVerificationResult.InvalidSessionFormat,
-            message:    this.chargy.GetMultilanguageText("UnknownOrInvalidChargingSessionFormat"),
-            certainty:  0
+            status:    chargyInterfaces.SessionVerificationResult.InvalidSessionFormat,
+            message:   this.chargy.GetMultilanguageText("UnknownOrInvalidChargingSessionFormat"),
+            certainty: 0
         }
 
     }

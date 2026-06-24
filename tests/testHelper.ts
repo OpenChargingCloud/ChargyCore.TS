@@ -13,15 +13,15 @@ import {
 } from '@open-charging-cloud/chargy-core';
 import type {
     IChargeTransparencyRecord,
+    IChargeTransparencyLiveLink,
     IMeasurement,
     IMeasurementValue,
-    IMultilanguageText,
+    I18NString,
     ICryptoResult,
     IFileInfo,
     ISessionCryptoResult,
     IValidationRules,
-    IPublicKeyInfo,
-    IChargeTransparencyLiveLink
+    IPublicKey
 } from '@open-charging-cloud/chargy-core';
 
 export {
@@ -183,42 +183,49 @@ async function expectArchiveVerificationReport(archiveFixture: string, expectedF
 
 }
 
-async function expectMultiArchiveVerificationReport(inputFixtures: string[], expectedFixture: string): Promise<void> {
+async function expectMultiArchiveVerificationReport(inputFixtures:    string[],
+                                                    expectedFixture:  string): Promise<void>
+{
 
-    const expected = readFixture(expectedFixture);
+    const expected  = readFixture(expectedFixture);
 
-    const report   = await verifyChargeDataFiles(
-        inputFixtures.map(inputFixture => ({
-            name:  inputFixture,
-            type:  archiveMimeType(inputFixture),
-            data:  readBinaryFixture(inputFixture)
-        }))
-    );
+    const report    = await verifyChargeDataFiles(
+                                inputFixtures.map(inputFixture => ({
+                                    name:  inputFixture,
+                                    type:  archiveMimeType(inputFixture),
+                                    data:  readBinaryFixture(inputFixture)
+                                }))
+                            );
 
-    const summary  = formatChargeDataVerificationReport(report);
-
-    expectReportLines(summary, expected);
-
-}
-
-async function expectBinaryVerificationReport(inputFixture: string, expectedFixture: string): Promise<void> {
-
-    const input    = readBinaryFixture(inputFixture);
-    const expected = readFixture(expectedFixture);
-
-    const report   = await verifyChargeData(
-                               inputFixture,
-                               input,
-                               archiveMimeType(inputFixture)
-                           );
-
-    const summary  = formatChargeDataVerificationReport(report);
+    const summary   = formatChargeDataVerificationReport(report);
 
     expectReportLines(summary, expected);
 
 }
 
-async function expectVerificationReportWithPublicKey(inputFixture: string, publicKeyFixture: string, expectedFixture: string): Promise<void> {
+async function expectBinaryVerificationReport(inputFixture:     string,
+                                              expectedFixture:  string): Promise<void>
+{
+
+    const input     = readBinaryFixture(inputFixture);
+    const expected  = readFixture(expectedFixture);
+
+    const report    = await verifyChargeData(
+                                inputFixture,
+                                input,
+                                archiveMimeType(inputFixture)
+                            );
+
+    const summary   = formatChargeDataVerificationReport(report);
+
+    expectReportLines(summary, expected);
+
+}
+
+async function expectVerificationReportWithPublicKey(inputFixture:      string,
+                                                     publicKeyFixture:  string,
+                                                     expectedFixture:   string): Promise<void>
+{
 
     const input    = readBinaryFixture(inputFixture);
     const expected = readFixture(expectedFixture);
@@ -242,14 +249,14 @@ async function expectVerificationReportWithPublicKey(inputFixture: string, publi
 
 }
 
-async function verifyChargeData(fileName:  string,
-                                input:     string | Uint8Array,
-                                type?:     string,
-                                validationRules?: IValidationRules)
+async function verifyChargeData(fileName:          string,
+                                input:             string | Uint8Array,
+                                type?:             string,
+                                validationRules?:  IValidationRules)
 
     : Promise<IChargeTransparencyRecord   |
               IChargeTransparencyLiveLink |
-              IPublicKeyInfo              |
+              IPublicKey                  |
               ISessionCryptoResult>
 
 {
@@ -266,19 +273,20 @@ async function verifyChargeData(fileName:  string,
 
 }
 
-async function verifyChargeDataFiles(fileInfos: IFileInfo[],
-                                     validationRules?: IValidationRules)
+async function verifyChargeDataFiles(fileInfos:         IFileInfo[],
+                                     validationRules?:  IValidationRules)
 
     : Promise<IChargeTransparencyRecord   |
               IChargeTransparencyLiveLink |
-              IPublicKeyInfo              |
+              IPublicKey                  |
               ISessionCryptoResult>
 
 {
     return createVerificationChargy(validationRules).DetectAndConvertContentFormat(fileInfos);
 }
 
-function formatChargeDataVerificationReport(report: IChargeTransparencyRecord | IChargeTransparencyLiveLink | IPublicKeyInfo | ISessionCryptoResult): string {
+function formatChargeDataVerificationReport(report: IChargeTransparencyRecord | IChargeTransparencyLiveLink | IPublicKey | ISessionCryptoResult): string
+{
 
     if (IsAChargeTransparencyLiveLink(report))
         return [
@@ -314,16 +322,16 @@ function formatChargeDataVerificationReport(report: IChargeTransparencyRecord | 
 
         const measurements = session.measurements;
         const meterId      = session.meterId
-                                ?? measurements[0]?.energyMeterId
+                                ?? measurements?.[0]?.energyMeterId
                                 ?? "";
 
         lines.push("session " + ((sessionIndex + 1).toString()) + ": " + session["@id"]);
-        lines.push("session " + ((sessionIndex + 1).toString()) + " evseId: " + session.EVSEId);
-        lines.push("session " + ((sessionIndex + 1).toString()) + " meterId: " + meterId);
-        lines.push("session " + ((sessionIndex + 1).toString()) + " status: " + (session.verificationResult?.status ?? "unknown"));
-        lines.push("session " + ((sessionIndex + 1).toString()) + " measurements: " + measurements.length.toString());
+        lines.push("session " + ((sessionIndex + 1).toString()) + " evseId: "       + (session.EVSEId                     ?? "unknown"));
+        lines.push("session " + ((sessionIndex + 1).toString()) + " meterId: "      +  meterId);
+        lines.push("session " + ((sessionIndex + 1).toString()) + " status: "       + (session.verificationResult?.status ?? "unknown"));
+        lines.push("session " + ((sessionIndex + 1).toString()) + " measurements: " + (measurements?.length.toString()    ?? "0"));
 
-        for (const [measurementIndex, measurement] of measurements.entries())
+        for (const [measurementIndex, measurement] of (measurements?.entries() ?? []))
             appendMeasurementLines(lines, sessionIndex + 1, measurementIndex + 1, measurement);
 
     }
@@ -335,7 +343,8 @@ function formatChargeDataVerificationReport(report: IChargeTransparencyRecord | 
 function appendMeasurementLines(lines:              string[],
                                 sessionNumber:      number,
                                 measurementNumber:  number,
-                                measurement:        IMeasurement): void {
+                                measurement:        IMeasurement): void
+{
 
     lines.push("measurement " + sessionNumber.toString() + "." + measurementNumber.toString() + " name: " + measurement.name);
     lines.push("measurement " + sessionNumber.toString() + "." + measurementNumber.toString() + " obis: " + measurement.obis);
@@ -351,7 +360,8 @@ function appendMeasurementValueLines(lines:              string[],
                                      sessionNumber:      number,
                                      measurementNumber:  number,
                                      valueNumber:        number,
-                                     value:              IMeasurementValue): void {
+                                     value:              IMeasurementValue): void
+{
 
     const prefix = "value " + sessionNumber.toString() + "." + measurementNumber.toString() + "." + valueNumber.toString();
 
@@ -362,23 +372,23 @@ function appendMeasurementValueLines(lines:              string[],
 
 }
 
-function formatCryptoResult(result: ICryptoResult | undefined): string {
+function formatCryptoResult(result: ICryptoResult | undefined): string
+{
     return result?.status ?? "unknown";
 }
 
-function formatWarning(warning: { level: string; message: IMultilanguageText }): string {
-
+function formatWarning(warning: { level: string; message: I18NString }): string
+{
     return warning.level + ": " + formatMultilanguageText(warning.message);
-
 }
 
-function formatMultilanguageText(text: IMultilanguageText): string {
-
+function formatMultilanguageText(text: I18NString): string
+{
     return text['en'] ?? Object.values(text)[0] ?? "";
-
 }
 
-function formatOptionalMultilanguageText(text: IMultilanguageText | undefined): string {
+function formatOptionalMultilanguageText(text: I18NString | undefined): string
+{
 
     if (text == null)
         return "";

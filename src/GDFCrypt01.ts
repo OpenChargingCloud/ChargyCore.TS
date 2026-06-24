@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2018-2026 GraphDefined GmbH <achim.friedland@graphdefined.com>
- This file is part of Chargy Core <https://github.com/OpenChargingCloud/ChargyCore.TS>
+ This file is part of ChargyCore <https://github.com/OpenChargingCloud/ChargyCore.TS>
  *
  * Licensed under the Affero GPL license, Version 3.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,7 +20,7 @@ import type { Chargy,
 import { ACrypt }                     from './ACrypt'
 import * as chargyInterfaces          from './interfaces/chargyInterfaces'
 import type * as chargeTransparencyRecord  from './interfaces/IChargeTransparencyRecord'
-import * as chargyLib                 from './chargyLib'
+import * as chargyLib                 from './interfaces/chargyLib'
 
 
 export interface IGDFMeasurementValue extends chargeTransparencyRecord.IMeasurementValue
@@ -32,7 +32,7 @@ export interface IGDFCrypt01Result extends chargyInterfaces.ICryptoResult
 {
     sha256value?:                  string,
     meterId?:                      string,
-    meter?:                        chargyInterfaces.IMeter,
+    meter?:                        chargyInterfaces.IEnergyMeter,
     timestamp?:                    string,
     obis?:                         string,
     unitEncoded?:                  string,
@@ -61,7 +61,7 @@ export class GDFCrypt01 extends ACrypt {
         let sessionResult = chargyInterfaces.SessionVerificationResult.UnknownSessionFormat;
 
         {
-            for (const measurement of chargingSession.measurements)
+            for (const measurement of chargingSession.measurements ?? [])
             {
 
                 measurement.chargingSession = chargingSession;
@@ -129,14 +129,14 @@ export class GDFCrypt01 extends ACrypt {
 
         const cryptoResult:IGDFCrypt01Result = {
             status:                       chargyInterfaces.VerificationResult.InvalidSignature,
-            meterId:                      chargyLib.SetText     (cryptoBuffer, measurementValue.measurement.energyMeterId,                                   0),
-            timestamp:                    chargyLib.SetTimestamp(cryptoBuffer, measurementValue.timestamp,                                                  10),
-            obis:                         chargyLib.SetHex      (cryptoBuffer, measurementValue.measurement.obis,                                           23, false),
-            unitEncoded:                  chargyLib.SetInt8     (cryptoBuffer, measurementValue.measurement.unitEncoded ?? 0,                               29),
-            scale:                        chargyLib.SetInt8     (cryptoBuffer, measurementValue.measurement.scale,                                          30),
-            value:                        chargyLib.SetUInt64D  (cryptoBuffer, measurementValue.value,                                                      31, true),
-            authorizationStart:           chargyLib.SetHex      (cryptoBuffer, measurementValue.measurement.chargingSession.authorizationStart["@id"],      41),
-            authorizationStartTimestamp:  chargyLib.SetTimestamp(cryptoBuffer, measurementValue.measurement.chargingSession.authorizationStart.timestamp,  169)
+            meterId:                      chargyLib.SetText     (cryptoBuffer, measurementValue.measurement.energyMeterId,                                       0),
+            timestamp:                    chargyLib.SetTimestamp(cryptoBuffer, measurementValue.timestamp,                                                      10),
+            obis:                         chargyLib.SetHex      (cryptoBuffer, measurementValue.measurement.obis,                                               23, false),
+            unitEncoded:                  chargyLib.SetInt8     (cryptoBuffer, measurementValue.measurement.unitEncoded ?? 0,                                   29),
+            scale:                        chargyLib.SetInt8     (cryptoBuffer, measurementValue.measurement.scale,                                              30),
+            value:                        chargyLib.SetUInt64D  (cryptoBuffer, measurementValue.value,                                                          31,  true),
+            authorizationStart:           chargyLib.SetHex      (cryptoBuffer, measurementValue.measurement.chargingSession.authorizationStart?.["@id"] ?? "",  41),
+            authorizationStartTimestamp:  chargyLib.SetTimestamp(cryptoBuffer, measurementValue.measurement.chargingSession.authorizationStart?.timestamp,     169)
         };
 
         const firstSignature = measurementValue.signatures?.[0];
@@ -171,7 +171,7 @@ export class GDFCrypt01 extends ACrypt {
                         {
 
                             const publicKey                   = meter.publicKeys.at(0);
-                            cryptoResult.publicKey            = publicKey?.value?.toLowerCase();
+                            cryptoResult.publicKey            = publicKey?.value.toLowerCase();
                             cryptoResult.publicKeyFormat      = publicKey?.format;
                             cryptoResult.publicKeySignatures  = publicKey?.signatures;
 
@@ -232,7 +232,7 @@ export class GDFCrypt01 extends ACrypt {
                           SignatureCheckDiv:     HTMLDivElement) : Promise<Error | undefined>
     {
 
-        if (measurementValue.measurement?.chargingSession?.authorizationStart.timestamp === undefined)
+        if (measurementValue.measurement?.chargingSession?.authorizationStart?.timestamp === undefined)
         {
             return new Error("Invalid measurement!");
         }
@@ -340,8 +340,8 @@ export class GDFCrypt01 extends ACrypt {
                         if (signatureDiv != null)
                             signatureDiv.innerHTML = await this.chargy.CheckMeterPublicKeySignature(measurementValue.measurement.chargingSession.chargingStation,
                                                                                                     measurementValue.measurement.chargingSession.EVSE,
-                                                                                                    measurementValue.measurement.chargingSession.EVSE?.meters.at(0),
-                                                                                                    measurementValue.measurement.chargingSession.EVSE?.meters.at(0)?.publicKeys?.at(0),
+                                                                                                    measurementValue.measurement.chargingSession.EVSE?.energyMeters?.at(0),
+                                                                                                    measurementValue.measurement.chargingSession.EVSE?.energyMeters?.at(0)?.publicKeys?.at(0),
                                                                                                     signature);
 
                     }
@@ -370,9 +370,7 @@ export class GDFCrypt01 extends ACrypt {
                 chargyLib.getArrayLikeElement(SignatureExpectedDiv.parentElement.children, 0, "Missing expected signature header").innerHTML  = "Erwartete Signatur (" + (result.signature.format ?? "") + ", hex)";
             }
 
-            if (result.signature.r != null &&
-                result.signature.r.length > 0 &&
-                result.signature.s != null &&
+            if (result.signature.r.length > 0 &&
                 result.signature.s.length > 0)
                 SignatureExpectedDiv.innerHTML                            = "r: " + (result.signature.r.toLowerCase().match(/.{1,8}/g)?.join(" ") ?? "") + "<br />" +
                                                                             "s: " + (result.signature.s.toLowerCase().match(/.{1,8}/g)?.join(" ") ?? "");

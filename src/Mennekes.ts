@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2018-2026 GraphDefined GmbH <achim.friedland@graphdefined.com>
- * This file is part of Chargy Core <https://github.com/OpenChargingCloud/ChargyCore.TS>
+ * This file is part of ChargyCore <https://github.com/OpenChargingCloud/ChargyCore.TS>
  *
  * Licensed under the Affero GPL license, Version 3.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,12 +15,13 @@
  * limitations under the License.
  */
 
-import type { Chargy }                from './chargy'
-import { ACrypt }                     from './ACrypt'
-import * as chargyInterfaces          from './interfaces/chargyInterfaces'
+import type { Chargy }                     from './chargy'
+import { ACrypt }                          from './ACrypt'
+import * as chargyInterfaces               from './interfaces/chargyInterfaces'
 import type * as chargeTransparencyRecord  from './interfaces/IChargeTransparencyRecord'
-import * as chargyLib                 from './chargyLib'
-import Decimal                        from 'decimal.js';
+import * as publicKeyInfo                  from './interfaces/IPublicKeyInfo'
+import * as chargyLib                      from './interfaces/chargyLib'
+import Decimal                             from 'decimal.js';
 
 
 export const MENNEKES_EDL40_XMLNS = "http://www.mennekes.de/Mennekes.EdlVerification.xsd";
@@ -171,22 +172,22 @@ export class Mennekes {
 
         return {
             "@id":          chargingStationId,
-            "description":  { "en": "Mennekes EDL40 charging station" },
-            "manufacturer": "MENNEKES",
+            "description":  { "en":   "Mennekes EDL40 charging station" },
+            "manufacturer": { "name": "MENNEKES" }, 
             "address":      chargingProcess.siteAddress,
             "EVSEs": [
                 {
                     "@id":        evseId,
-                    "meters": [
+                    "energyMeters": [
                         {
                             "@id":             meterId,
-                            "manufacturer":    "MENNEKES",
+                            "manufacturer":    { "name": "MENNEKES" },
                             "signatureFormat": "https://open.charging.cloud/contexts/EnergyMeterSignatureFormats/MennekesCrypt01",
                             "publicKeys": [
                                 {
                                     "value":     chargingProcess.publicKey,
                                     "algorithm": chargyInterfaces.IECCurves.secp192r1,
-                                    "format":    chargyInterfaces.PublicKeyFormats.XY,
+                                    "format":    publicKeyInfo.   PublicKeyFormats.XY,
                                     "encoding":  chargyInterfaces.IEncoding.hex
                                 }
                             ]
@@ -276,7 +277,7 @@ export class MennekesCrypt01 extends ACrypt {
 
         let sessionResult = chargyInterfaces.SessionVerificationResult.UnknownSessionFormat;
 
-        for (const measurement of chargingSession.measurements)
+        for (const measurement of chargingSession.measurements ?? [])
         {
 
             measurement.chargingSession = chargingSession;
@@ -350,8 +351,8 @@ export class MennekesCrypt01 extends ACrypt {
                   status:                chargyInterfaces.VerificationResult.InvalidSignature,
                   serverId:              measurement.serverId,
                   publicKey:             measurement.publicKey,
-                  publicKeyFormat:       chargyInterfaces.PublicKeyFormats.XY,
-                  signature:             measurementValue.signatures?.[0],
+                  publicKeyFormat:       publicKeyInfo.PublicKeyFormats.XY,
+                  signature:             measurementValue.signatures?.[0] as chargyInterfaces.ISignatureRS | undefined,
                   timestamp:             measurementValue.timestamp,
                   meterStatus:           String(measurementValue.meterStatusNumber),
                   secondsIndex:          String(measurementValue.secondsIndex ?? ""),
@@ -375,8 +376,8 @@ export class MennekesCrypt01 extends ACrypt {
                 return setResult(chargyInterfaces.VerificationResult.PublicKeyNotFound);
 
             const signatureExpected = measurementValue.signatures?.[0] as chargyInterfaces.ISignatureRS;
-            if (signatureExpected.r == null || signatureExpected.s == null)
-                return setResult(chargyInterfaces.VerificationResult.InvalidSignature);
+            // if (signatureExpected.r == null || signatureExpected.s == null)
+            //     return setResult(chargyInterfaces.VerificationResult.InvalidSignature);
 
             const signedData = buildMennekesSignatureData(
                                    {
@@ -400,7 +401,7 @@ export class MennekesCrypt01 extends ACrypt {
                                    }
                                );
 
-            cryptoResult.signedData = bytesToHex(signedData);
+            cryptoResult.signedData = chargyLib.bytesToHex(signedData);
             cryptoResult.logBytes   = cryptoResult.signedData.substring(78, 82);
 
             const signedDataBuffer = signedData.buffer.slice(
@@ -410,7 +411,7 @@ export class MennekesCrypt01 extends ACrypt {
 
             cryptoResult.hashValue = (await chargyLib.sha256(new DataView(signedDataBuffer))).substring(0, 48);
 
-            const publicKey = cleanHex(meter.publicKeys.at(0)?.value ?? measurement.publicKey);
+            const publicKey = chargyLib.cleanHex(meter.publicKeys.at(0)?.value ?? measurement.publicKey);
 
             if (publicKey.length !== 96)
                 return setResult(chargyInterfaces.VerificationResult.InvalidPublicKey);
@@ -475,10 +476,9 @@ export class MennekesCrypt01 extends ACrypt {
         if (SignatureExpectedDiv.parentElement?.children[0])
             SignatureExpectedDiv.parentElement.children[0].innerHTML = this.chargy.GetLocalizedMessage("Expected signature") + " (rs, hex)";
 
-        SignatureExpectedDiv.innerHTML = result.signature?.r != null &&
-                                         result.signature.r.length > 0 &&
-                                         result.signature.s != null &&
-                                         result.signature.s.length > 0
+        SignatureExpectedDiv.innerHTML = result.signature          != null &&
+                                         result.signature.r.length  > 0 &&
+                                         result.signature.s.length  > 0
                                              ? "r: " + (result.signature.r.toLowerCase().match(/.{1,8}/g)?.join(" ") ?? "") + "<br />" +
                                                "s: " + (result.signature.s.toLowerCase().match(/.{1,8}/g)?.join(" ") ?? "")
                                              : "";
@@ -534,14 +534,14 @@ export function parseMennekesXMLDocument(XMLDocument: Document): IMennekesBillin
 export function buildMennekesSignatureData(chargingProcess:  IMennekesChargingProcess,
                                            measurement:      IMennekesMeasurement): Uint8Array {
 
-    const signatureBytes = hexToBytes(measurement.signature);
+    const signatureBytes = chargyLib.hexToBytes(measurement.signature);
 
     if (signatureBytes.length !== 48 && signatureBytes.length !== 50)
         throw new Error("Mennekes signatures must contain 48 or 50 bytes!");
 
     const signedData = new Uint8Array(320);
 
-    setBytes(signedData, 0,   hexToBytes(chargingProcess.serverId), 10);
+    setBytes(signedData, 0,   chargyLib.hexToBytes(chargingProcess.serverId), 10);
     setBytes(signedData, 10,  timestampToMennekesBytes(measurement.timestamp), 4);
     signedData[14] = measurement.meterStatus & 0xFF;
     setBytes(signedData, 15,  numberToReversedBytes(measurement.secondIndex, 4), 4);
@@ -556,7 +556,7 @@ export function buildMennekesSignatureData(chargingProcess:  IMennekesChargingPr
     else
         setBytes(signedData, 39, numberToBytesBE(measurement.eventCounter, 2), 2);
 
-    const customerIdentBytes = hexToBytes(chargingProcess.customerIdent);
+    const customerIdentBytes = chargyLib.hexToBytes(chargingProcess.customerIdent);
     if (customerIdentBytes.length > 128)
         throw new Error("Mennekes CustomerIdent must not exceed 128 bytes!");
 
@@ -586,40 +586,15 @@ export function dateToMennekesLocalEpochSeconds(isoTimestamp: string): number {
 
 }
 
-export function cleanHex(hex: string): string {
-    return hex.replace(/\s+/g, "");
-}
 
-export function hexToBytes(hex: string): Uint8Array {
-
-    const cleanedHex = cleanHex(hex);
-
-    if (cleanedHex.length % 2 !== 0)
-        throw new Error("Hex strings must have even length!");
-
-    if (!/^[0-9a-fA-F]*$/.test(cleanedHex))
-        throw new Error("Invalid hexadecimal string!");
-
-    const bytes = new Uint8Array(cleanedHex.length / 2);
-
-    for (let index = 0; index < cleanedHex.length; index += 2)
-        bytes[index / 2] = Number.parseInt(cleanedHex.substring(index, index + 2), 16);
-
-    return bytes;
-
-}
-
-export function bytesToHex(bytes: Uint8Array): string {
-    return Array.from(bytes, byte => byte.toString(16).padStart(2, "0")).join("");
-}
-
+    
 function parseChargingProcessElement(chargingProcessElement: Element): IMennekesChargingProcess {
 
     const siteAddressElement = child(chargingProcessElement, "SiteAddress");
 
     return {
-        serverId:                cleanHex(requiredText(chargingProcessElement, "ServerId")),
-        publicKey:               cleanHex(requiredText(chargingProcessElement, "PublicKey")),
+        serverId:                chargyLib.cleanHex(requiredText(chargingProcessElement, "ServerId")),
+        publicKey:               chargyLib.cleanHex(requiredText(chargingProcessElement, "PublicKey")),
         meteringPoint:           optionalText(chargingProcessElement, "MeteringPoint"),
         siteAddress:             siteAddressElement != null
                                      ? {
@@ -630,7 +605,7 @@ function parseChargingProcessElement(chargingProcessElement: Element): IMennekes
                                            "city":       optionalText(siteAddressElement, "Town") ?? ""
                                        }
                                      : undefined,
-        customerIdent:           cleanHex(requiredText(chargingProcessElement, "CustomerIdent")),
+        customerIdent:           chargyLib.cleanHex(requiredText(chargingProcessElement, "CustomerIdent")),
         timestampCustomerIdent:  requiredText(chargingProcessElement, "TimestampCustomerIdent"),
         measurementStart:        parseMeasurementElement(requiredChild(chargingProcessElement, "MeasurementStart")),
         measurementEnd:          parseMeasurementElement(requiredChild(chargingProcessElement, "MeasurementEnd"))
@@ -643,7 +618,7 @@ function parseMeasurementElement(measurementElement: Element): IMennekesMeasurem
     return {
         timestampCustomerIdent:  optionalText(measurementElement, "TimestampCustomerIdent"),
         timestamp:               requiredText(measurementElement, "Timestamp"),
-        signature:               cleanHex(requiredText(measurementElement, "Signature")),
+        signature:               chargyLib.cleanHex(requiredText(measurementElement, "Signature")),
         eventCounter:            requiredNumber(measurementElement, "EventCounter"),
         meterStatus:             requiredNumber(measurementElement, "MeterStatus"),
         value:                   requiredNumber(measurementElement, "Value"),
@@ -656,7 +631,7 @@ function parseMeasurementElement(measurementElement: Element): IMennekesMeasurem
 
 function toMennekesMeasurementValue(measurement: IMennekesMeasurement): IMennekesMeasurementValue {
 
-    const signature = cleanHex(measurement.signature);
+    const signature = chargyLib.cleanHex(measurement.signature);
     const signatureForVerification = signature.length === 100
                                          ? signature.substring(0, 96)
                                          : signature;

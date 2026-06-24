@@ -1,6 +1,6 @@
 ﻿/*
  * Copyright (c) 2018-2026 GraphDefined GmbH <achim.friedland@graphdefined.com>
- * This file is part of Chargy Core <https://github.com/OpenChargingCloud/ChargyCore.TS>
+ * This file is part of ChargyCore <https://github.com/OpenChargingCloud/ChargyCore.TS>
  *
  * Licensed under the Affero GPL license, Version 3.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,21 +15,14 @@
  * limitations under the License.
  */
 
-import type Decimal         from 'decimal.js';
-import * as chargyLib  from '../chargyLib'
+import type Decimal               from 'decimal.js';
+import * as chargyLib             from './chargyLib'
+import type { IPublicKey }        from './IPublicKeyInfo';
+import type { IChargingSession }  from './IChargeTransparencyRecord';
 
-
-export function isObject(data: unknown): data is Record<string, unknown> {
-    return typeof data === "object" && data !== null;
-}
-
-export function isMultilanguageText(data: unknown): data is IMultilanguageText {
-    return isObject(data) &&
-           Object.values(data).every(value => typeof value === "string");
-}
 
 export function isGeoLocation(data: unknown): data is IGeoLocation {
-    if (!isObject(data))
+    if (!chargyLib.isObject(data))
         return false;
 
     const latitude  = data["lat"];
@@ -39,18 +32,18 @@ export function isGeoLocation(data: unknown): data is IGeoLocation {
            (longitude === undefined || typeof longitude === "number");
 }
 
-export type GetChargingPoolFunc = (Id: string) => IChargingPool|null;
+export type GetChargingPoolFunc    = (Id: string) => IChargingPool|null;
 
 export type GetChargingStationFunc = (Id: string) => IChargingStation|null;
 
-export type GetEVSEFunc = (Id: string) => IEVSE|null;
+export type GetEVSEFunc            = (Id: string) => IEVSE|null;
 
-export type GetMeterFunc = (Id: string) => IMeter|null;
+export type GetMeterFunc           = (Id: string) => IEnergyMeter|null;
 
 export type CheckMeterPublicKeySignatureFunc = (
     chargingStation:  IChargingStation | null | undefined,
     evse:             IEVSE            | null | undefined,
-    meter:            IMeter           | null | undefined,
+    energyMeter:      IEnergyMeter     | null | undefined,
     publicKey:        IPublicKey       | null | undefined,
     signature:        unknown
 ) => Promise<string>;
@@ -60,48 +53,14 @@ export type CheckMeterPublicKeySignatureFunc = (
 export interface IContract
 {
     "@id":                      string;
-    "@context"?:                string | undefined;
-    description?:               IMultilanguageText | undefined;
-    type?:                      string | undefined;
-    username?:                  string | undefined;
-    email?:                     string | undefined;
+    "@context"?:                string               | undefined;
+    description?:               chargyLib.I18NString | undefined;
+    type?:                      string               | undefined;
+    username?:                  string               | undefined;
+    email?:                     string               | undefined;
 }
 
-export function isString(value: unknown): value is string {
-    return typeof value === "string";
-}
 
-export function isStringArray(value: unknown): value is string[] {
-    return Array.isArray(value) &&
-           value.every(item => typeof item === "string");
-}
-
-export function isStringOrStringArray(value: unknown): value is string | string[] {
-    return typeof value === "string" ||
-           isStringArray(value);
-}
-
-export interface IOIDInfo
-{
-    oid:                        string;
-    name:                       string;
-}
-
-export function isOIDInfo(data: unknown): data is IOIDInfo
-{
-
-    if (!isObject(data))
-        return false;
-
-    return typeof data["oid"]  === "string" &&
-           typeof data["name"] === "string";
-
-}
-
-export function isStringOrOIDInfo(value: unknown): value is string | IOIDInfo {
-    return typeof value === "string" ||
-           isOIDInfo(value);
-}
 
 
 export interface IKeyInfo
@@ -115,78 +74,56 @@ export interface IKeyInfo
 export interface IChargingStationOperator
 {
     "@id":                      string;
-    "@context"?:                string | undefined;
-    subCSOIds?:                 Array<string> | undefined;
-    description?:               IMultilanguageText | undefined;
+    "@context"?:                string                   | undefined;
+    subCSOIds?:                 Array<string>            | undefined;
+    description?:               chargyLib.I18NString     | undefined;
     contact:                    IContact;
     support:                    ISupport;
-    privacy:                    IPrivacy;
-    geoLocation?:               IGeoLocation | undefined;
-    chargingPools?:             Array<IChargingPool> | undefined;
-    chargingStations?:          Array<IChargingStation> | undefined;
-    EVSEs?:                     Array<IEVSE> | undefined;
-    publicKeys?:                Array<IPublicKey> | undefined;
+    privacy:                    IPrivacyContact;
+    geoLocation?:               IGeoLocation             | undefined;
+    chargingPools?:             Array<IChargingPool>     | undefined;
+    chargingStations?:          Array<IChargingStation>  | undefined;
+    EVSEs?:                     Array<IEVSE>             | undefined;
+    publicKeys?:                Array<IPublicKey>        | undefined;
 
-    chargingTariffs?:           Array<IChargingTariff> | undefined;
-    parkingTariffs?:            Array<IParkingTariff> | undefined;
+    chargingTariffs?:           Array<IChargingTariff>   | undefined;
+    parkingTariffs?:            Array<IParkingTariff>    | undefined;
 
 }
 
 export interface IContact {
-    email:                      string;
-    web:                        string;
-    logoUrl?:                   string | undefined;
-    address?:                   IAddress | undefined;
-    publicKeys?:                Array<IPublicKey> | undefined
+    email?:                     string                   | undefined;
+    web?:                       string                   | undefined;
+    logoUrl?:                   string                   | undefined;
+    address?:                   IAddress                 | undefined;
+    publicKeys?:                Array<IPublicKey>        | undefined;
 }
 
 export interface ISupport {
-    hotline:                    string;
+    hotline?:                   string;
     email:                      string;
-    web?:                       string | undefined;
-    mediationServices?:         Array<string> | undefined;
-    publicKeys?:                Array<IPublicKey> | undefined
+    web?:                       string                   | undefined;
+    mediationServices?:         Array<IMediationService> | undefined;
+    publicKeys?:                Array<IPublicKey>        | undefined;
 }
 
-export interface IPrivacy {
+export interface IPrivacyContact {
     contact:                    string;
     email:                      string;
     web:                        string;
-    publicKeys?:                Array<IPublicKey> | undefined
-}
-
-export interface IPublicKey
-{
-    algorithm:                  string;
-    format:                     string;            // e.g. "DER" | "rs"
-    encoding:                   IEncoding|string;  // e.g. "hex" | "base64"
-    value?:                     string | undefined;
-    previousValue?:             string | undefined;
-    signatures?:                Array<unknown> | undefined;
-}
-
-export function isIPublicKeyXY(obj: unknown): obj is IPublicKeyXY {
-    return typeof obj === 'object' && obj !== null   &&
-           typeof (obj as IPublicKeyXY).x === "string" &&
-           typeof (obj as IPublicKeyXY).y === "string";
-}
-
-export interface IPublicKeyXY extends IPublicKey
-{
-    x:                          string;
-    y:                          string;
+    publicKeys?:                Array<IPublicKey>        | undefined;
 }
 
 export interface ISignature
 {
-    algorithm?:                 CryptoAlgorithms|string | undefined;
-    format?:                    SignatureFormats|string | undefined;
-    previousValue?:             string | undefined;
-    value?:                     string | undefined;
+    algorithm?:                 CryptoAlgorithms | string | undefined;
+    format?:                    SignatureFormats | string | undefined;
+    previousValue?:             string                    | undefined;
+    value?:                     string                    | undefined;
 }
 
 // export interface IECCSignature extends ISignature
-// {
+// {s
 //     //algorithm:                  CryptoAlgorithms|string;
 //     //format:                     SignatureFormats|string;
 //     //previousValue?:             string;
@@ -198,87 +135,89 @@ export interface ISignature
 
 export interface ISignatureRS extends ISignature
 {
-    r?:                         string | undefined;
-    s?:                         string | undefined;
+    r:                          string;
+    s:                          string;
 }
 
 export interface IChargingPool
 {
     "@id":                      string;
-    "@context"?:                string | undefined;
-    description?:               IMultilanguageText | undefined;
-    address?:                   IAddress | undefined;
-    geoLocation?:               IGeoLocation | undefined;
+    "@context"?:                string                   | undefined;
+    description?:               chargyLib.I18NString     | undefined;
+    address?:                   IAddress                 | undefined;
+    geoLocation?:               IGeoLocation             | undefined;
     chargingStationOperator?:   IChargingStationOperator | undefined;
-    chargingStations?:          Array<IChargingStation> | undefined;
-    chargingTariffs?:           Array<IChargingTariff> | undefined;
-    publicKeys?:                Array<IPublicKey> | undefined;
+    chargingStations?:          Array<IChargingStation>  | undefined;
+    chargingTariffs?:           Array<IChargingTariff>   | undefined;
+    publicKeys?:                Array<IPublicKey>        | undefined;
 }
 
 export interface IChargingStation
 {
     "@id":                      string;
-    "@context"?:                string | undefined;
-    description?:               IMultilanguageText | undefined;
-    manufacturer?:              string | undefined;
-    manufacturerURL?:           string | undefined;
-    model?:                     string | undefined;
-    modelURL?:                  string | undefined;
-    firmwareVersion?:           string | undefined;
-    firmwareChecksum?:          string | undefined;
-    hardwareVersion?:           string | undefined;
-    serialNumber?:              string | undefined;
-    legalCompliance?:           ILegalCompliance | undefined;
-    address?:                   IAddress | undefined;
-    geoLocation?:               IGeoLocation | undefined;
+    "@context"?:                string                   | undefined;
+    description?:               chargyLib.I18NString     | undefined;
+    manufacturer?:              IManufacturer            | undefined;
+    model?:                     IDeviceModel             | undefined;
+    hardware?:                  IHardware                | undefined;
+    firmware?:                  IFirmware                | undefined;
+    legalCompliance?:           ILegalCompliance         | undefined;
+    address?:                   IAddress                 | undefined;
+    geoLocation?:               IGeoLocation             | undefined;
     chargingStationOperator?:   IChargingStationOperator | undefined;
-    chargingPoolId?:            string | undefined;
-    chargingPool?:              IChargingPool | undefined;
-    EVSEs:                      Array<IEVSE>;
-    EVSEIds?:                   Array<string> | undefined;
-    meters?:                    Array<IMeter> | undefined;
-    chargingTariffs?:           Array<IChargingTariff> | undefined;
-    publicKeys?:                Array<IPublicKey> | undefined;
+    chargingPool?:              IChargingPool            | undefined;
+    chargingPoolId?:            string                   | undefined;
+    EVSEs?:                     Array<IEVSE>             | undefined;
+    EVSEIds?:                   Array<string>            | undefined;
+    energyMeters?:              Array<IEnergyMeter>      | undefined;
+    chargingTariffs?:           Array<IChargingTariff>   | undefined;
+    publicKeys?:                Array<IPublicKey>        | undefined;
 }
 
 export interface IEVSE
 {
     "@id":                      string;
-    "@context"?:                string | undefined;
-    description?:               IMultilanguageText | undefined;
-    chargingStation?:           IChargingStation | undefined;
-    chargingStationId?:         string | undefined;
-    meters:                     Array<IMeter>;
-    chargingTariffs?:           Array<IChargingTariff> | undefined;
-    publicKeys?:                Array<IPublicKey> | undefined;
-    connectors?:                Array<IConnector> | undefined;
+    "@context"?:                string                   | undefined;
+    description?:               chargyLib.I18NString     | undefined;
+    chargingPoolId?:            string                   | undefined;
+    chargingStation?:           IChargingStation         | undefined;
+    chargingStationId?:         string                   | undefined;
+    energyMeters?:              Array<IEnergyMeter>      | undefined;
+    connectors?:                Array<IConnector>        | undefined;
+    publicKeys?:                Array<IPublicKey>        | undefined;
+    chargingTariffs?:           Array<IChargingTariff>   | undefined;
 }
 
-export interface IMeter
+export interface IEnergyMeter
 {
     "@id":                      string;
-    "@context"?:                string | undefined;
-    description?:               IMultilanguageText | undefined;
-    manufacturer?:              string | undefined;
-    manufacturerURL?:           string | undefined;
-    model?:                     string | undefined;
-    modelURL?:                  string | undefined;
-    firmwareVersion?:           string | undefined;
-    firmwareChecksum?:          string | undefined;
-    hardwareVersion?:           string | undefined;
-    legalCompliance?:           ILegalCompliance | undefined;
-    chargingStation?:           IChargingStation | undefined;
-    chargingStationId?:         string | undefined;
-    EVSE?:                      IEVSE | undefined;
-    EVSEId?:                    string | undefined;
-    signatureInfos?:            ISignatureInfos | undefined;
-    signatureFormat?:           string | undefined;
-    publicKeys?:                Array<IPublicKey> | undefined;
+    "@context"?:                string                   | undefined;
+    description?:               chargyLib.I18NString     | undefined;
+    manufacturer?:              IManufacturer            | undefined;
+    model?:                     IDeviceModel             | undefined;
+    firmware?:                  IFirmware                | undefined;
+    hardware?:                  IHardware                | undefined;
+    legalCompliance?:           ILegalCompliance         | undefined;
+    chargingPoolId?:            string                   | undefined;
+    chargingPool?:              IChargingPool            | undefined;
+    chargingStationId?:         string                   | undefined;
+    chargingStation?:           IChargingStation         | undefined;
+    EVSEId?:                    string                   | undefined;
+    EVSE?:                      IEVSE                    | undefined;
+    signatureInfos?:            ISignatureInfos          | undefined;
+    signatureFormat?:           string                   | undefined;
+    publicKeys?:                Array<IPublicKey>        | undefined;
 }
 
 export interface IConnector {
-    type:                       string;
-    looses:                     number;
+    "@id"?:                     string | undefined;
+    type?:                      string | undefined;
+    cable?:                     ICable | undefined;
+}
+
+export interface ICable {
+    length:                     number;
+    looses?:                    number | undefined;
 }
 
 export interface IConformity {
@@ -310,7 +249,7 @@ export interface IEMobilityProvider
 {
     "@id":                      string;
     "@context"?:                string;
-    description:                IMultilanguageText;
+    description:                chargyLib.I18NString;
     chargingTariffs:            Array<IChargingTariff>;
     publicKeys?:                Array<IPublicKey>;
 }
@@ -319,7 +258,7 @@ export interface ITaxes
 {
     "@id":                      string;
     "@context"?:                string;
-    description?:               IMultilanguageText;
+    description?:               chargyLib.I18NString;
     percentage:                 number;
 }
 
@@ -327,7 +266,7 @@ export interface IMediationService
 {
     "@id":                      string;
     "@context"?:                string;
-    description:                IMultilanguageText;
+    description:                chargyLib.I18NString;
     publicKeys?:                Array<IPublicKey>;
 }
 
@@ -416,11 +355,6 @@ export enum IEncoding {
     base64      = "base64"
 }
 
-export enum PublicKeyFormats {
-    DER         = "DER",
-    XY          = "XY"
-}
-
 export enum SignatureFormats {
     DER         = "DER",
     RS          = "RS"
@@ -458,15 +392,15 @@ export enum ErrorLevel {
 
 export interface IWarning {
     level:       WarningLevel;
-    message:     IMultilanguageText;
+    message:     chargyLib.I18NString;
 }
 
 export interface IError {
     level:       ErrorLevel;
-    message:     IMultilanguageText;
+    message:     chargyLib.I18NString;
 }
 
-export function CreateError(message: IMultilanguageText,
+export function CreateError(message: chargyLib.I18NString,
                             level:   ErrorLevel = ErrorLevel.high): IError {
 
     return {
@@ -480,7 +414,7 @@ export interface ISessionCryptoResult extends chargyLib.JSONObject
 {
 
     status:                     SessionVerificationResult;
-    message?:                   IMultilanguageText;
+    message?:                   chargyLib.I18NString;
     exception?:                 unknown;
 
     // How sure we are that this result is correct!
@@ -495,12 +429,12 @@ export interface ISessionCryptoResult extends chargyLib.JSONObject
 }
 
 export function isISessionCryptoResult1(obj: unknown): obj is ISessionCryptoResult {
-    return isObject(obj) &&
+    return chargyLib.isObject(obj) &&
            obj["status"] !== undefined
 }
 
 export function isISessionCryptoResult2(obj: unknown): obj is ISessionCryptoResult {
-    return isObject(obj) &&
+    return chargyLib.isObject(obj) &&
            obj["status"] !== undefined &&
            obj["status"] !== SessionVerificationResult.InvalidSessionFormat
 }
@@ -513,19 +447,19 @@ export interface ICryptoResult
 }
 
 export function isICryptoResult(obj: unknown): obj is ICryptoResult {
-    return isObject(obj) &&
+    return chargyLib.isObject(obj) &&
            obj["status"] !== undefined
 }
 
 export interface IAddress {
     "@context"?:                string;
-    city:                       string;
-    street?:                    string | undefined;
-    houseNumber?:               string | undefined;
-    floorLevel?:                string | undefined;
-    postalCode:                 string;
-    country:                    string;
-    comment?:                   string | IMultilanguageText;
+    city:                       string               | undefined;
+    street?:                    string               | undefined;
+    houseNumber?:               string               | undefined;
+    floorLevel?:                string               | undefined;
+    postalCode:                 string               | undefined;
+    country:                    string               | undefined;
+    comment?:                   chargyLib.I18NString | undefined;
 }
 
 export interface IGeoLocation {
@@ -535,10 +469,10 @@ export interface IGeoLocation {
 
 export interface IChargingProductRelevance
 {
-    time?:                      InformationRelevance|string;
-    energy?:                    InformationRelevance|string;
-    parking?:                   InformationRelevance|string;
-    sessionFee?:                InformationRelevance|string;
+    time?:                      InformationRelevance | string;
+    energy?:                    InformationRelevance | string;
+    parking?:                   InformationRelevance | string;
+    sessionFee?:                InformationRelevance | string;
 }
 
 export enum InformationRelevance {
@@ -616,21 +550,21 @@ export enum VerificationResult {
 
 export interface IVersions {
     name:           string,
-    description:    IMultilanguageText,
+    description:    chargyLib.I18NString,
     versions:       Array<IVersion>
 }
 
 export interface IVersion {
     version:        string,
     releaseDate:    string,
-    description:    IMultilanguageText,
+    description:    chargyLib.I18NString,
     tags:           Array<string>,
     packages:       Array<IVersionPackage>
 }
 
 export interface IVersionPackage {
     name:           string,
-    description:    IMultilanguageText,
+    description:    chargyLib.I18NString,
     additionalInfo: unknown,
     cryptoHashes:   ICryptoHashes,
     signatures:     Array<IVersionSignature>,
@@ -651,17 +585,7 @@ export interface IVersionSignature {
     signature:      string
 }
 
-export type LanguageString  = string;
-export type LanguageStrings = Array<LanguageString>;
 
-export interface IMultilanguageText {
-    [key: LanguageString]: string | undefined;
-}
-
-// The i18n.json dictionary: message key => language => localized text
-export interface I18NDictionary {
-    [key: string]: IMultilanguageText | undefined;
-}
 
 export type ValidationRuleOperator = ">" | ">=" | "<" | "<=" | "=" | "==";
 
@@ -764,7 +688,7 @@ export interface IChargingTariffElement {
 }
 
 export interface IDisplayText {
-    language:                   LanguageString,
+    language:                   chargyLib.LanguageString,
     text:                       string
 }
 
@@ -775,8 +699,8 @@ export interface IChargingTariff {
     "@context"?:                string|Array<string>,
     country_code?:              string,
     party_id?:                  string,
-    shortName?:                 IMultilanguageText;
-    summary?:                   IMultilanguageText;
+    shortName?:                 chargyLib.I18NString;
+    summary?:                   chargyLib.I18NString;
     tariff_alt_url?:            string,
     currency?:                  string,
     taxes?:                     Array<ITaxes>;
@@ -799,7 +723,7 @@ export interface IParkingTariff {
     "@context"?:                string|Array<string>,
     country_code?:              string,
     party_id?:                  string,
-    description?:               IMultilanguageText;
+    description?:               chargyLib.I18NString;
     tariff_alt_text?:           Array<IDisplayText>,
     tariff_alt_url?:            string,
     currency?:                  string,
@@ -834,3 +758,70 @@ export type IssueReportPayload = {
     phone:                      string;
     eMail:                      string;
 };
+
+export interface IManufacturer
+{
+    "@context"?:                string;
+    name:                       string | undefined;
+    description?:               chargyLib.I18NString;
+    contact?:                   IContact;
+    support?:                   ISupport;
+    privacyContact?:            IPrivacyContact;
+    geoLocation?:               IGeoLocation;
+    publicKeys?:                Array<IPublicKey>;
+}
+
+export interface IDeviceModel {
+    "@context"?:                string;
+    name?:                      string     | undefined;
+    url?:                       string     | undefined;
+}
+
+export interface IHardware {
+    revision?:                  string     | undefined;
+    "@context"?:                string;
+    url?:                       string     | undefined;
+    serialNumber?:              string     | undefined;
+}
+
+export interface IFirmware {
+    version?:                   string               | undefined;
+    "@context"?:                string;
+    releaseDate?:               string               | undefined;
+    url?:                       string               | undefined;
+    components?:                Array<IFirmwareComponent>;
+    checksum?:                  string               | undefined;
+    description?:               chargyLib.I18NString | undefined;
+}
+
+export interface IFirmwareComponent {
+    "@id":                      string               | undefined;
+    "@context"?:                string;
+    description?:               chargyLib.I18NString | undefined;
+    version:                    string               | undefined;
+    releaseDate?:               string               | undefined;
+    checksum:                   string               | undefined;
+    url?:                       string               | undefined;
+}
+
+
+export function OIDInfo(data: string | chargyLib.IOIDInfo): string
+{
+
+    if (typeof data === "string")
+        return data;
+
+    if (chargyLib.isOIDInfo(data))
+        return data.name;
+
+    return "";
+
+}
+
+export interface IContainerInfos {
+    chargingPools?:         Array<IChargingPool>     | undefined;
+    chargingStations?:      Array<IChargingStation>  | undefined;
+    EVSEs?:                 Array<IEVSE>             | undefined;
+    connectors?:            Array<IConnector>        | undefined;
+    chargingSessions?:      Array<IChargingSession>  | undefined;
+}

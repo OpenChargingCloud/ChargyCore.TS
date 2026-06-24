@@ -1,6 +1,6 @@
 ﻿/*
  * Copyright (c) 2018-2026 GraphDefined GmbH <achim.friedland@graphdefined.com>
- This file is part of Chargy Core <https://github.com/OpenChargingCloud/ChargyCore.TS>
+ This file is part of ChargyCore <https://github.com/OpenChargingCloud/ChargyCore.TS>
  *
  * Licensed under the Affero GPL license, Version 3.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-import * as chargyInterfaces  from './interfaces/chargyInterfaces'
+import * as chargyInterfaces  from './chargyInterfaces'
 import Decimal                from 'decimal.js';
 import moment                 from 'moment';
 import type { Moment }        from 'moment';
@@ -33,7 +33,8 @@ export function isJSONLDObject(value: unknown): value is JSONLDObject {
 
     const obj = value as Record<string, unknown>;
 
-    return typeof obj["@context"] === "string";
+    return typeof obj["@context"] === "string" ||
+           Array.isArray(obj["@context"]);
 
 }
 
@@ -122,11 +123,11 @@ export function getTrimmedTextContent(element?: Element): string | undefined {
     return text != null && text.length > 0 ? text : undefined;
 }
 
-export function parseDescription(parent: Element): chargyInterfaces.IMultilanguageText | undefined {
+export function parseDescription(parent: Element): I18NString | undefined {
 
     const descriptions = getDirectChildrenByLocalName(parent, "description");
 
-    const textMap: chargyInterfaces.IMultilanguageText = {};
+    const textMap: I18NString = {};
 
     for (const description of descriptions)
     {
@@ -860,88 +861,6 @@ export function pad(text: string|undefined, paddingValue: number): string {
 
 };
 
-// export async function sha224(message: string|DataView) {
-
-//     let hashBuffer = null;
-//     const SHA224 = require("sha224");
-
-//     if (typeof message === 'string')
-//         hashBuffer = SHA224(Buffer.from(message, 'utf8'));
-//     else
-//         hashBuffer = SHA224(message);
-
-//   //  const hashArray  = Array.from(hashBuffer);                                       // convert hash to byte array
-//     const hashHex    = hashBuffer.toString("hex");
-
-//     return hashHex;
-
-// }
-
-
-/**
- * Calculate the SHA256 hash
- * @param message a text of data view
- * @returns true, when the given text exists and is a valid string
- */
-export async function sha256(message: string|DataView): Promise<string> {
-
-    let hashBuffer: ArrayBuffer | null;
-
-    if (typeof message === 'string')
-        hashBuffer = await crypto.subtle.digest('SHA-256', Buffer.from(message, 'utf8'));
-    else
-        hashBuffer = await crypto.subtle.digest('SHA-256', message as BufferSource);
-
-    const hashArray  = Array.from(new Uint8Array(hashBuffer));                                       // convert hash to byte array
-    const hashHex    = hashArray.map(b => ('00' + b.toString(16)).slice(-2)).join('').toLowerCase(); // convert bytes to hex string
-
-    return hashHex;
-
-}
-
-/**
- * Calculate the SHA384 hash
- * @param message a text of data view
- * @returns true, when the given text exists and is a valid string
- */
-export async function sha384(message: string|DataView): Promise<string> {
-
-    let hashBuffer: ArrayBuffer | null;
-
-    if (typeof message === 'string')
-        hashBuffer = await crypto.subtle.digest('SHA-384', Buffer.from(message, 'utf8'));
-    else
-        hashBuffer = await crypto.subtle.digest('SHA-384', message as BufferSource);
-
-    const hashArray  = Array.from(new Uint8Array(hashBuffer));                                       // convert hash to byte array
-    const hashHex    = hashArray.map(b => ('00' + b.toString(16)).slice(-2)).join('').toLowerCase(); // convert bytes to hex string
-
-    return hashHex;
-
-}
-
-/**
- * Calculate the SHA512 hash
- * @param message a text of data view
- * @returns true, when the given text exists and is a valid string
- */
-export async function sha512(message: string|DataView): Promise<string> {
-
-    let hashBuffer: ArrayBuffer | null;
-
-    if (typeof message === 'string')
-        hashBuffer = await crypto.subtle.digest('SHA-512', Buffer.from(message, 'utf8'));
-    else
-        hashBuffer = await crypto.subtle.digest('SHA-512', message as BufferSource);
-
-    const hashArray  = Array.from(new Uint8Array(hashBuffer));                                       // convert hash to byte array
-    const hashHex    = hashArray.map(b => ('00' + b.toString(16)).slice(-2)).join('').toLowerCase(); // convert bytes to hex string
-
-    return hashHex;
-
-}
-
-
 /**
  * A JSON object after runtime validation. Property values stay `unknown`
  * and have to be narrowed individually (e.g. via isMandatoryString).
@@ -1231,6 +1150,110 @@ export function parseNumber(value: string): number | null {
 
 
 
+
+
+
+export type LanguageString  = string;
+export type LanguageStrings = Array<LanguageString>;
+
+export interface I18NString {
+    [key: LanguageString]: string | undefined;
+}
+
+// The i18n.json dictionary: message key => language => localized text
+export interface I18NDictionary {
+    [key: string]: I18NString | undefined;
+}
+
+export function isObject(data: unknown): data is Record<string, unknown> {
+    return typeof data === "object" && data !== null;
+}
+
+export function isI18NString(data: unknown): data is I18NString {
+    return isObject(data) &&
+           Object.values(data).every(value => typeof value === "string");
+}
+
+export function isString(value: unknown): value is string {
+    return typeof value === "string";
+}
+
+export function isStringArray(value: unknown): value is string[] {
+    return Array.isArray(value) &&
+           value.every(item => typeof item === "string");
+}
+
+export function isStringOrStringArray(value: unknown): value is string | string[] {
+    return typeof value === "string" ||
+           isStringArray(value);
+}
+
+export interface IOIDInfo
+{
+    oid:                        string;
+    name:                       string;
+}
+
+export function isOIDInfo(data: unknown): data is IOIDInfo
+{
+
+    if (!isObject(data))
+        return false;
+
+    return typeof data["oid"]  === "string" &&
+           typeof data["name"] === "string";
+
+}
+
+export function isStringOrOIDInfo(value: unknown): value is string | IOIDInfo {
+    return typeof value === "string" ||
+           isOIDInfo(value);
+}
+
+
+
+export function isOptionalStringArray(data: unknown): boolean
+{
+
+    return data === undefined ||
+          (Array.isArray(data) &&
+           data.every(isString));
+
+}
+
+export function isOptionalStringOrOIDInfo(data: unknown): boolean
+{
+
+    return data === undefined ||
+           isStringOrOIDInfo(data);
+
+}
+
+export function isEncodedValue(data: unknown): boolean
+{
+
+    if (isString(data))
+        return true;
+
+    if (!isMandatoryJSONObject(data))
+        return false;
+
+    if (!isString(data["value"]))
+        return false;
+
+    if (!isOptionalString(data["format"]))
+        return false;
+
+    if (!isOptionalString(data["encoding"]))
+        return false;
+
+    return true;
+
+}
+
+
+
+
 export function InformationRelevanceToString(InfoRelevance: chargyInterfaces.InformationRelevance) : string
 {
     switch (InfoRelevance) {
@@ -1346,3 +1369,155 @@ function _jsonPrettyPrinter(value:        unknown,
 }
 
 //#endregion
+
+
+
+
+
+
+
+
+export function base64ToBytes(value: string): Uint8Array {
+
+    if (typeof Buffer !== "undefined")
+        return Uint8Array.from(Buffer.from(value, "base64"));
+
+    const binary = atob(value);
+    const bytes  = new Uint8Array(binary.length);
+
+    for (let i = 0; i < binary.length; i++)
+        bytes[i] = binary.charCodeAt(i);
+
+    return bytes;
+
+}
+
+export function bytesToBase64(bytes: Uint8Array): string {
+
+    if (typeof Buffer !== "undefined")
+        return Buffer.from(bytes).toString("base64");
+
+    let binary = "";
+    for (const byte of bytes)
+        binary += String.fromCharCode(byte);
+
+    return btoa(binary);
+
+}
+
+
+
+
+
+
+
+
+export function cleanHex(hex: string): string {
+    return hex.replace(/\s+/g, "");
+}
+
+export function hexToBytes(hex: string): Uint8Array {
+
+    const cleanedHex = cleanHex(hex);
+
+    if (cleanedHex.length % 2 !== 0)
+        throw new Error("Hex strings must have even length!");
+
+    if (!/^[0-9a-fA-F]*$/.test(cleanedHex))
+        throw new Error("Invalid hexadecimal string!");
+
+    const bytes = new Uint8Array(cleanedHex.length / 2);
+
+    for (let index = 0; index < cleanedHex.length; index += 2)
+        bytes[index / 2] = Number.parseInt(cleanedHex.substring(index, index + 2), 16);
+
+    return bytes;
+
+}
+
+export function bytesToHex(bytes: Uint8Array): string {
+    return Array.from(bytes, byte => byte.toString(16).padStart(2, "0")).join("");
+}
+
+
+
+export async function sha256(message: string|DataView|Uint8Array): Promise<string> {
+    return bytesToHex(await sha256____(message));
+}
+
+export async function sha384(message: string|DataView|Uint8Array): Promise<string> {
+    return bytesToHex(await sha384____(message));
+}
+
+export async function sha512(message: string|DataView|Uint8Array): Promise<string> {
+    return bytesToHex(await sha512____(message));
+}
+
+
+
+// export async function sha224(message: string|DataView|Uint8Array) {
+
+//     let hashBuffer = null;
+//     const SHA224 = require("sha224");
+
+//     if (typeof message === 'string')
+//         hashBuffer = SHA224(Buffer.from(message, 'utf8'));
+//     else
+//         hashBuffer = SHA224(message);
+
+//     return new Uint8Array(hashBuffer);
+
+// }
+
+/**
+ * Calculate the SHA256 hash
+ * @param message the message to hash, can be a string, DataView or Uint8Array
+ * @returns the SHA256 hash as a Uint8Array
+ */
+export async function sha256____(message: string|DataView|Uint8Array): Promise<Uint8Array> {
+
+    let hashBuffer: ArrayBuffer | null;
+
+    if (typeof message === 'string')
+        hashBuffer = await crypto.subtle.digest('SHA-256', Buffer.from(message, 'utf8'));
+    else
+        hashBuffer = await crypto.subtle.digest('SHA-256', message as BufferSource);
+
+    return new Uint8Array(hashBuffer);
+
+}
+
+/**
+ * Calculate the SHA384 hash
+ * @param message the message to hash, can be a string, DataView or Uint8Array
+ * @returns the SHA384 hash as a hex string
+ */
+export async function sha384____(message: string|DataView|Uint8Array): Promise<Uint8Array> {
+
+    let hashBuffer: ArrayBuffer | null;
+
+    if (typeof message === 'string')
+        hashBuffer = await crypto.subtle.digest('SHA-384', Buffer.from(message, 'utf8'));
+    else
+        hashBuffer = await crypto.subtle.digest('SHA-384', message as BufferSource);
+
+    return new Uint8Array(hashBuffer);
+}
+
+/**
+ * Calculate the SHA512 hash
+ * @param message the message to hash, can be a string, DataView or Uint8Array
+ * @returns the SHA512 hash as a hex string
+ */
+export async function sha512____(message: string|DataView|Uint8Array): Promise<Uint8Array> {
+
+    let hashBuffer: ArrayBuffer | null;
+
+    if (typeof message === 'string')
+        hashBuffer = await crypto.subtle.digest('SHA-512', Buffer.from(message, 'utf8'));
+    else
+        hashBuffer = await crypto.subtle.digest('SHA-512', message as BufferSource);
+
+    return new Uint8Array(hashBuffer);
+
+}

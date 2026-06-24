@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2018-2026 GraphDefined GmbH <achim.friedland@graphdefined.com>
- * This file is part of Chargy Core <https://github.com/OpenChargingCloud/ChargyCore.TS>
+ * This file is part of ChargyCore <https://github.com/OpenChargingCloud/ChargyCore.TS>
  *
  * Licensed under the Affero GPL license, Version 3.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,9 +19,9 @@ import type { Chargy }                from './chargy'
 import { Alfen }                      from './Alfen'
 import { BSMCrypt01 }                 from './BSMCrypt01'
 import type { IEMHMeasurementValue }  from './EMHCrypt01'
-import * as chargyInterfaces          from './interfaces/chargyInterfaces'
 import type * as chargeTransparencyRecord  from './interfaces/IChargeTransparencyRecord'
-import * as chargyLib                 from './chargyLib'
+import * as chargyLib                 from './interfaces/chargyLib'
+import * as chargyInterfaces          from './interfaces/chargyInterfaces'
 import Decimal                        from 'decimal.js'
 
 
@@ -279,10 +279,10 @@ export class ChargeIT {
         CTR.begin   = this.chargy.moment.unix(firstMeterValue["measuredValue"]["timestampLocal"]["timestamp"]).utc().format();
         CTR.end     = this.chargy.moment.unix(lastMeterValue["measuredValue"]["timestampLocal"]["timestamp"]).utc().format();
 
-        CTR.contract = {
+        CTR.contracts = [{
             "@id":       firstMeterValue["contract"]["id"],
             "@context":  firstMeterValue["contract"]["type"]
-        };
+        }];
 
         CTR.chargingStationOperators = [{
 
@@ -344,7 +344,9 @@ export class ChargeIT {
                     // "description": {
                     //     "de":                   "GraphDefined Charging Station - CI-Tests Pool 3 / Station A"
                     // },
-                    "firmwareVersion":          firstMeterValue["chargePoint"]["softwareVersion"],
+                    "firmware": {
+                        "version":              firstMeterValue["chargePoint"]["softwareVersion"]
+                    },
                     "geoLocation":              { "lat": chargyLib.asNumber(geoLocation["lat"]) ?? 0, "lng": chargyLib.asNumber(geoLocation["lon"]) ?? 0 },
                     "address": {
                         "street":               chargyLib.asString(address["street"]),
@@ -359,14 +361,24 @@ export class ChargeIT {
                             //     "de":                   "GraphDefined EVSE - CI-Tests Pool 3 / Station A / EVSE 1"
                             // },
                             // "connectors": [{ }],
-                            "meters": [
+                            "energyMeters": [
                                 {
                                     "@id":                      firstMeterValue["meterInfo"]["meterId"],
-                                    "manufacturer":             firstMeterValue["meterInfo"]["manufacturer"],
-                                    "manufacturerURL":          "https://www.emh-metering.de",
-                                    "model":                    firstMeterValue["meterInfo"]["type"],
-                                    "hardwareVersion":          "1.0",
-                                    "firmwareVersion":          firstMeterValue["meterInfo"]["firmwareVersion"],
+                                    "manufacturer": {
+                                        "name":                 firstMeterValue["meterInfo"]["manufacturer"],
+                                        "contact": {
+                                            "web":              "https://www.emh-metering.de"
+                                        }
+                                    },
+                                    "model": {
+                                        "name":                 firstMeterValue["meterInfo"]["type"]
+                                    },
+                                    "hardware": {
+                                        "revision":             "1.0"
+                                    },
+                                    "firmware": {
+                                        "version":              firstMeterValue["meterInfo"]["firmwareVersion"]
+                                    },
                                     "signatureFormat":          "https://open.charging.cloud/contexts/EnergyMeterSignatureFormats/EMHCrypt01",
                                     "publicKeys": [
                                         {
@@ -375,8 +387,8 @@ export class ChargeIT {
                                             "encoding":         "hex",
                                             "value":            firstMeterValue["meterInfo"]["publicKey"].startsWith("04")
                                                                     ?        firstMeterValue["meterInfo"]["publicKey"]
-                                                                    : "04" + firstMeterValue["meterInfo"]["publicKey"],
-                                            "signatures":       firstMeterValue["meterInfo"]["publicKeySignatures"]
+                                                                    : "04" + firstMeterValue["meterInfo"]["publicKey"]
+                                            //"signatures":       firstMeterValue["meterInfo"]["publicKeySignatures"]
                                         }
                                     ]
                                 }
@@ -973,10 +985,10 @@ export class ChargeIT {
                                                 "value":            "042313b9e469612b4ca06981bfdecb226e234632b01d84b6a814f63a114b7762c34ddce2e6853395b7a0f87275f63ffe3c",
                                                 "signatures": [
                                                     {
-                                                        "keyId":      "...",
+                                                        "@id":        "...",
                                                         "algorithm":  "secp192r1",
                                                         "format":     "DER",
-                                                        "value":      "????"
+                                                        "value":      "..."
                                                     }
                                                 ]
                                             },
@@ -1038,7 +1050,7 @@ export class ChargeIT {
                                                     //     "de":                   "GraphDefined EVSE - CI-Tests Pool 3 / Station A / EVSE 1"
                                                     // },
                                                     //"connectors":               [  ],
-                                                    "meters":                   [ ]
+                                                    "energyMeters":                   [ ]
                                                 }
                                             ]
                                         }
@@ -1078,11 +1090,15 @@ export class ChargeIT {
                             return new Alfen(this.chargy).TryToParseALFENFormat(
                                        signedMeterValues.map(value => chargyLib.asString(chargyLib.asJSONObject(value)?.["payload"]) ?? ""),
                                        {
-                                          EVSEId: evseId,
-                                          chargingStation: {
-                                             geoLocation: { "lat":    geoLocation_lat, "lng":        geoLocation_lon },
-                                             address:     { "street": address_street,  "postalCode": address_zipCode, "city": address_town, "country": address_country }
-                                          }
+                                            chargingStations: [{
+                                                "@id":        "?",
+                                                geoLocation:  { "lat":    geoLocation_lat, "lng":        geoLocation_lon },
+                                                address:      { "street": address_street,  "postalCode": address_zipCode, "city": address_town, "country": address_country },
+                                                EVSEs: [{
+                                                    "@id":         evseId,
+                                                    energyMeters:  []
+                                                }]
+                                            }]
                                        }
                                    );
                         }
@@ -1093,11 +1109,15 @@ export class ChargeIT {
                                 return new Alfen(this.chargy).TryToParseALFENFormat(
                                            signedMeterValues.map(value => chargyLib.asString(chargyLib.asJSONObject(value)?.["payload"]) ?? ""),
                                            {
-                                               EVSEId: evseId,
-                                               chargingStation: {
-                                                  geoLocation: { "lat":    geoLocation_lat, "lng":        geoLocation_lon },
-                                                  address:     { "street": address_street,  "postalCode": address_zipCode, "city": address_town, "country": address_country }
-                                               }
+                                                chargingStations: [{
+                                                    "@id":        "?",
+                                                    geoLocation:  { "lat":    geoLocation_lat, "lng":        geoLocation_lon },
+                                                    address:      { "street": address_street,  "postalCode": address_zipCode, "city": address_town, "country": address_country },
+                                                    EVSEs: [{
+                                                        "@id":         evseId,
+                                                        energyMeters:  []
+                                                    }]
+                                                }]
                                            }
                                        );
 
@@ -1210,7 +1230,7 @@ export class ChargeIT {
 
                 const chargingTariffs                            = SomeJSON["chargingTariffs"];
 
-                const chargingPeriods                            = SomeJSON["chargingPeriods"];
+                //const chargingPeriods                            = SomeJSON["chargingPeriods"];
 
                 const totalCosts                                 = chargyLib.asJSONObject(SomeJSON["totalCosts"]);
                 const totalCosts_total                           = totalCosts?.["total"];
@@ -1570,10 +1590,10 @@ export class ChargeIT {
                                             "value":            "042313b9e469612b4ca06981bfdecb226e234632b01d84b6a814f63a114b7762c34ddce2e6853395b7a0f87275f63ffe3c",
                                             "signatures": [
                                                 {
-                                                    "keyId":      "...",
+                                                    "@id":        "...",
                                                     "algorithm":  "secp192r1",
                                                     "format":     "DER",
-                                                    "value":      "????"
+                                                    "value":      "..."
                                                 }
                                             ]
                                         },
@@ -1638,7 +1658,7 @@ export class ChargeIT {
                                                 //     "de":                   "GraphDefined EVSE - CI-Tests Pool 3 / Station A / EVSE 1"
                                                 // },
                                                 //"connectors":               [  ],
-                                                "meters":                   [ ]
+                                                "energyMeters":                   [ ]
                                             }
                                         ]
                                     }
@@ -1663,31 +1683,31 @@ export class ChargeIT {
                         return new Alfen(this.chargy).TryToParseALFENFormat(
                                          signedMeterValues.map(value => chargyLib.asString(chargyLib.asJSONObject(value)?.["payload"]) ?? ""),
                                          {
-                                             chargingSession: {
-                                                "@id":            chargingSessionId
-                                             },
-                                             EVSEId:              evseId,
-                                             chargingStation: {
-                                                manufacturer:     chargingStation_manufacturer,
-                                                type:             chargingStation_type,
-                                                serialNumber:     chargingStation_serialNumber,
-                                                firmwareVersion:  chargingStation_controllerSoftwareVersion,
-                                                legalCompliance:  {
-                                                    conformity: [{
-                                                        freeText:  chargingStation_compliance
-                                                    }],
-                                                    calibration: [{
-                                                        freeText:  chargingStation_calibration
-                                                    }]
-                                                },
-                                                geoLocation:      { "lat":    geoLocation_lat, "lng":        geoLocation_lon },
-                                                address:          { "street": address_street,  "postalCode": address_zipCode, "city": address_town, "country": address_country }
-                                             },
-                                            energyMeter:          meterInfo,
-                                            connector:            connectorInfo,
-                                            chargingTariffs:      chargingTariffs,
-                                            chargingPeriods:      chargingPeriods,
-                                            totalCosts:           totalCosts
+                                            //  chargingSession: {
+                                            //     "@id":            chargingSessionId
+                                            //  },
+                                            //  EVSEId:              evseId,
+                                            //  chargingStation: {
+                                            //     manufacturer:     chargingStation_manufacturer,
+                                            //     type:             chargingStation_type,
+                                            //     serialNumber:     chargingStation_serialNumber,
+                                            //     firmwareVersion:  chargingStation_controllerSoftwareVersion,
+                                            //     legalCompliance:  {
+                                            //         conformity: [{
+                                            //             freeText:  chargingStation_compliance
+                                            //         }],
+                                            //         calibration: [{
+                                            //             freeText:  chargingStation_calibration
+                                            //         }]
+                                            //     },
+                                            //     geoLocation:      { "lat":    geoLocation_lat, "lng":        geoLocation_lon },
+                                            //     address:          { "street": address_street,  "postalCode": address_zipCode, "city": address_town, "country": address_country }
+                                            //  },
+                                            // energyMeter:          meterInfo,
+                                            // connector:            connectorInfo,
+                                            // chargingTariffs:      chargingTariffs,
+                                            // chargingPeriods:      chargingPeriods,
+                                            // totalCosts:           totalCosts
                                          });
 
                 }

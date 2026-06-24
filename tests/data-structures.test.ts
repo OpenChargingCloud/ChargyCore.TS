@@ -11,9 +11,12 @@ import {
     SignatureFormats,
     VerificationResult,
     isICryptoResult,
-    isIPublicKeyXY,
     isISessionCryptoResult1,
     isISessionCryptoResult2,
+    IsAPublicKeyXY,
+    IsAPublicKey
+} from '@open-charging-cloud/chargy-core';
+import {
     isIFileInfo
 } from '@open-charging-cloud/chargy-core';
 import {
@@ -21,8 +24,7 @@ import {
     IsASessionCryptoResult
 } from '@open-charging-cloud/chargy-core';
 import {
-    IsAPublicKeyLookup,
-    IsAPublicKeyInfo
+    IsAPublicKeyLookup
 } from '@open-charging-cloud/chargy-core';
 
 import {
@@ -67,8 +69,8 @@ describe("Chargy data structure guards", () => {
     });
 
     test("recognizes public key info and rejects incomplete keys", () => {
-      expect(IsAPublicKeyInfo(samplePublicKeyInfo())).toBe(true);
-      expect(IsAPublicKeyInfo(samplePublicKeyInfo({ value: undefined as unknown as string }))).toBe(false);
+      expect(IsAPublicKey(samplePublicKeyInfo())).toBe(true);
+      expect(IsAPublicKey(samplePublicKeyInfo({ value: undefined as unknown as string }))).toBe(false);
     });
 
     test("recognizes public key lookup containers", () => {
@@ -78,7 +80,7 @@ describe("Chargy data structure guards", () => {
     test("recognizes session and measurement crypto results", () => {
       const validSessionResult   = sampleSessionCryptoResult();
       const invalidSessionResult = sampleSessionCryptoResult({
-        status: SessionVerificationResult.InvalidSessionFormat
+          status: SessionVerificationResult.InvalidSessionFormat
       });
 
       expect(IsASessionCryptoResult(validSessionResult)).toBe(true);
@@ -88,17 +90,23 @@ describe("Chargy data structure guards", () => {
       expect(isICryptoResult(sampleCryptoResult())).toBe(true);
     });
 
-    test("recognizes OID, XY public keys and in-memory file infos", () => {
+    test("recognizes OIDs", () => {
       expect(isOIDInfo({ oid: "1.2.3.4", name: "Example OID" })).toBe(true);
       expect(isOIDInfo({ name: "Missing OID" })).toBe(false);
+    });
 
-      expect(isIPublicKeyXY({ x: "aa", y: "bb" })).toBe(true);
-      expect(isIPublicKeyXY({ x: "aa" })).toBe(false);
+    test("recognizes XY public keys", () => {
+      expect(IsAPublicKeyXY({ x: "aa", y: "bb" })).toBe(true);
+      expect(IsAPublicKeyXY({ x: "aa" })).toBe(false);
+      expect(IsAPublicKeyXY({ y: "bb" })).toBe(false);
+    });
 
+    test("recognizes in-memory file infos", () => {
       expect(isIFileInfo(sampleFileInfo(new Uint8Array([1, 2, 3])))).toBe(true);
       expect(isIFileInfo(sampleFileInfo(new Uint8Array([1, 2, 3]).buffer))).toBe(true);
       expect(isIFileInfo({ name: "missing-data.chargy" })).toBe(false);
     });
+
   });
 
 

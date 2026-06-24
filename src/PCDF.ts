@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2018-2026 GraphDefined GmbH <achim.friedland@graphdefined.com>
- * This file is part of Chargy Core <https://github.com/OpenChargingCloud/ChargyCore.TS>
+ * This file is part of ChargyCore <https://github.com/OpenChargingCloud/ChargyCore.TS>
  *
  * Licensed under the Affero GPL license, Version 3.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,12 +15,13 @@
  * limitations under the License.
  */
 
-import type { Chargy }                from './chargy'
-import { ACrypt }                     from './ACrypt'
-import * as chargyInterfaces          from './interfaces/chargyInterfaces'
+import { ACrypt }                          from './ACrypt'
+import type { Chargy }                     from './chargy'
 import type * as chargeTransparencyRecord  from './interfaces/IChargeTransparencyRecord'
-import * as chargyLib                 from './chargyLib'
-import Decimal                        from 'decimal.js';
+import type * as publicKeyInfo             from './interfaces/IPublicKeyInfo'
+import * as chargyLib                      from './interfaces/chargyLib'
+import * as chargyInterfaces               from './interfaces/chargyInterfaces'
+import Decimal                             from 'decimal.js';
 
 
 export const PCDF_PREFIX = "128.8.0";
@@ -85,7 +86,7 @@ export interface IPCDFValidatedData {
     softwareChecksum:       string;
     hardwareSerial:         string;
     dcMeterType:            number;
-    publicKey:              chargyInterfaces.IPublicKeyXY;
+    publicKey:              publicKeyInfo.   IPublicKeyXY;
     signature:              chargyInterfaces.ISignatureRS;
 }
 
@@ -287,7 +288,7 @@ export function validatePCDFFields(fields: IPCDFRawFields): IPCDFValidatedData {
     if (fields.HW.length !== 11)
         errors.push("HW must be exactly 11 characters");
 
-    let publicKey:    chargyInterfaces.IPublicKeyXY | undefined;
+    let publicKey:    publicKeyInfo.IPublicKeyXY | undefined;
     let publicKeyHex: string;
 
     try
@@ -368,7 +369,7 @@ export function normalizePCDFPublicKeyHex(publicKeyHex: string): string {
 
 }
 
-export function parsePCDFPublicKey(publicKeyHex: string): chargyInterfaces.IPublicKeyXY {
+export function parsePCDFPublicKey(publicKeyHex: string): publicKeyInfo.IPublicKeyXY {
 
     const normalized = normalizePCDFPublicKeyHex(publicKeyHex);
 
@@ -447,7 +448,7 @@ export class PCDFCrypt01 extends ACrypt {
         let sessionResult = chargyInterfaces.SessionVerificationResult.ValidSignature;
         let valueCount    = 0;
 
-        for (const measurement of chargingSession.measurements)
+        for (const measurement of chargingSession.measurements ?? [])
         {
             measurement.chargingSession = chargingSession;
 
@@ -616,10 +617,10 @@ export class PCDF {
                 "de": "Porsche Charging Data Format Ladevorgang",
                 "en": "Porsche Charging Data Format charging session"
             },
-            "contract": {
+            "contracts": [{
                 "@id":   data.session.idTag,
                 "type":  data.session.idTagType
-            },
+            }],
             "pcdf": {
                 "chargingSessionCounter": data.chargingSessionCounter,
                 "timeValid":              data.timeValid,
@@ -638,17 +639,23 @@ export class PCDF {
                     "EVSEs": [{
                         "@id":          virtualEVSEId,
                         "description":  { "en": "GraphDefined CHARGY Virtual EVSE 1" },
-                        "meters": [{
+                        "energyMeters": [{
                             "@id":              meterId,
-                            "manufacturer":     "Porsche",
-                            "model":            data.dcMeterType === 0 ? "PES DCMeter EU" : "Unknown DC Meter",
-                            "firmwareChecksum": data.softwareChecksum,
+                            "manufacturer": { 
+                                "name": "Porsche"
+                            },
+                            "model": {
+                                "name":      data.dcMeterType === 0 ? "PES DCMeter EU" : "Unknown DC Meter"
+                            },
+                            "firmware": {
+                                "checksum":  data.softwareChecksum
+                            },
                             "signatureFormat":  "https://open.charging.cloud/contexts/EnergyMeterSignatureFormats/PCDF+json",
                             "publicKeys": [{
                                 "algorithm": "secp256r1",
-                                "encoding":  chargyInterfaces.IEncoding.hex,
+                                "encoding":   chargyInterfaces.IEncoding.hex,
                                 "format":    "XY",
-                                "value":     document.publicKeyHex
+                                "value":      document.publicKeyHex
                             }]
                         }]
                     }]

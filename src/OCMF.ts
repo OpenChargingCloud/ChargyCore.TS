@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2018-2026 GraphDefined GmbH <achim.friedland@graphdefined.com>
- This file is part of Chargy Core <https://github.com/OpenChargingCloud/ChargyCore.TS>
+ This file is part of ChargyCore <https://github.com/OpenChargingCloud/ChargyCore.TS>
  *
  * Licensed under the Affero GPL license, Version 3.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,12 +20,15 @@
 
 import type { Chargy,
               EllipticCurve,
-              EllipticKeyPair }       from './chargy'
-import { ACrypt }                     from './ACrypt'
-import * as chargyInterfaces          from './interfaces/chargyInterfaces'
+              EllipticKeyPair }            from './chargy'
+import { ACrypt }                          from './ACrypt'
+import Decimal                             from 'decimal.js';
 import type * as chargeTransparencyRecord  from './interfaces/IChargeTransparencyRecord'
-import * as chargyLib                 from './chargyLib'
-import Decimal                        from 'decimal.js';
+import type * as publicKeyInfoType         from './interfaces/IPublicKeyInfo'
+import * as publicKeyInfo                  from './interfaces/IPublicKeyInfo'
+import * as chargyLib                      from './interfaces/chargyLib'
+import * as chargyInterfaces               from './interfaces/chargyInterfaces'
+
 
 type ASN1PublicKey = {
     algorithm: {
@@ -55,7 +58,7 @@ export interface IOCMFv1_0Result extends chargyInterfaces.ICryptoResult
 {
     sha256value?:                  string,
     meterId?:                      string,
-    meter?:                        chargyInterfaces.IMeter,
+    meter?:                        chargyInterfaces.IEnergyMeter,
     timestamp?:                    string,
     infoStatus?:                   string,
     secondsIndex?:                 string,
@@ -90,7 +93,7 @@ export class OCMFv1_x extends ACrypt {
         let sessionResult:chargyInterfaces.SessionVerificationResult = chargyInterfaces.SessionVerificationResult.Unvalidated;
 
         {
-            for (const measurement of chargingSession.measurements)
+            for (const measurement of chargingSession.measurements ?? [])
             {
 
                 measurement.chargingSession = chargingSession;
@@ -369,7 +372,7 @@ export class OCMFv1_x extends ACrypt {
             introDiv.innerHTML = this.chargy.GetLocalizedMessage("The following data of the charging session is relevant for metrological and legal metrological purposes and therefore part of the digital signature").
                                              replace("{methodName}",       "OCMFCrypt01").
                                              replace("{cryptoAlgorithm}",   measurementValue.ocmfDocument.publicKey != null && typeof(measurementValue.ocmfDocument.publicKey) !== 'string'
-                                                                                 ? "(" + measurementValue.ocmfDocument.publicKey.algorithm + ") "
+                                                                                 ? "(" + chargyInterfaces.OIDInfo(measurementValue.ocmfDocument.publicKey.algorithm) + ") "
                                                                                  : "");
         }
 
@@ -462,16 +465,16 @@ export class OCMFv1_x extends ACrypt {
 
                 chargyLib.getArrayLikeElement(PublicKeyDiv.parentElement.children, 0, "Missing public key header").innerHTML = typeof measurementValue.ocmfDocument.publicKey === 'string'
                                                                        ? this.chargy.GetLocalizedMessage("Public Key")
-                                                                       : this.chargy.GetLocalizedMessage("Public Key") + " (" + measurementValue.ocmfDocument.publicKey.algorithm + ", " +
-                                                                                                                                measurementValue.ocmfDocument.publicKey.encoding + ")";
+                                                                       : this.chargy.GetLocalizedMessage("Public Key") + " (" + chargyInterfaces.OIDInfo(measurementValue.ocmfDocument.publicKey.algorithm) + ", " +
+                                                                                                                               (measurementValue.ocmfDocument.publicKey.encoding ?? "-") + ")";
 
             }
 
             PublicKeyDiv.innerHTML = typeof measurementValue.ocmfDocument.publicKey === 'string'
                                           ? measurementValue.ocmfDocument.publicKey
-                                          : "der: "           + (measurementValue.ocmfDocument.publicKey.value?.match(/.{1,8}/g)?.join(" ") ?? "-") + "<br /><br />" +
-                                            "x:&nbsp;&nbsp; " + (measurementValue.ocmfDocument.publicKey.x.     match(/.{1,8}/g)?.join(" ") ?? "-") + "<br />" +
-                                            "y:&nbsp;&nbsp; " + (measurementValue.ocmfDocument.publicKey.y.     match(/.{1,8}/g)?.join(" ") ?? "-");
+                                          : "der: "           + (measurementValue.ocmfDocument.publicKey.value.match(/.{1,8}/g)?.join(" ") ?? "-") + "<br /><br />" +
+                                            "x:&nbsp;&nbsp; " + (measurementValue.ocmfDocument.publicKey.x.    match(/.{1,8}/g)?.join(" ") ?? "-") + "<br />" +
+                                            "y:&nbsp;&nbsp; " + (measurementValue.ocmfDocument.publicKey.y.    match(/.{1,8}/g)?.join(" ") ?? "-");
 
         }
 
@@ -501,8 +504,8 @@ export class OCMFv1_x extends ACrypt {
                         signatureDiv.innerHTML = await this.chargy.CheckMeterPublicKeySignature(
                                                            measurementValue.measurement.chargingSession.chargingStation,
                                                            measurementValue.measurement.chargingSession.EVSE,
-                                                           measurementValue.measurement.chargingSession.EVSE?.meters.at(0),
-                                                           measurementValue.measurement.chargingSession.EVSE?.meters.at(0)?.publicKeys?.at(0),
+                                                           measurementValue.measurement.chargingSession.EVSE?.energyMeters?.at(0),
+                                                           measurementValue.measurement.chargingSession.EVSE?.energyMeters?.at(0)?.publicKeys?.at(0),
                                                            signature
                                                        );
 
@@ -530,9 +533,9 @@ export class OCMFv1_x extends ACrypt {
                 chargyLib.getArrayLikeElement(SignatureExpectedDiv.parentElement.children, 0, "Missing expected signature header").innerHTML  = this.chargy.GetLocalizedMessage("Expected signature") + " (rs, hex)";
             }
 
-            SignatureExpectedDiv.innerHTML = "der: "           + (measurementValue.ocmfDocument.signature.SD.                                   match(/.{1,8}/g)?.join(" ") ?? "-") + "<br /><br />" +
-                                             "r:&nbsp;&nbsp; " + (measurementValue.ocmfDocument.signatureRS?.r?.toLowerCase().padStart(56, '0').match(/.{1,8}/g)?.join(" ") ?? "-") + "<br />" +
-                                             "s:&nbsp;&nbsp; " + (measurementValue.ocmfDocument.signatureRS?.s?.toLowerCase().padStart(56, '0').match(/.{1,8}/g)?.join(" ") ?? "-");
+            SignatureExpectedDiv.innerHTML = "der: "           + (measurementValue.ocmfDocument.signature.SD.                                  match(/.{1,8}/g)?.join(" ") ?? "-") + "<br /><br />" +
+                                             "r:&nbsp;&nbsp; " + (measurementValue.ocmfDocument.signatureRS?.r.toLowerCase().padStart(56, '0').match(/.{1,8}/g)?.join(" ") ?? "-") + "<br />" +
+                                             "s:&nbsp;&nbsp; " + (measurementValue.ocmfDocument.signatureRS?.s.toLowerCase().padStart(56, '0').match(/.{1,8}/g)?.join(" ") ?? "-");
 
         }
 
@@ -975,7 +978,7 @@ export interface IOCMFJSONDocument {
     payload:             IOCMFPayload,
     signature:           IOCMFSignature,
     signatureRS?:        chargyInterfaces.ISignatureRS | undefined,
-    publicKey?:          string|chargyInterfaces.IPublicKeyXY | undefined,
+    publicKey?:          string|publicKeyInfoType.IPublicKeyXY | undefined,
     publicKeyEncoding?:  string | undefined,
 
     validationStatus?:   chargyInterfaces.VerificationResult | undefined
@@ -1016,7 +1019,7 @@ export interface IOCMFChargingSession extends chargeTransparencyRecord.ICharging
 {
     internalSessionId?:         string | undefined;
     authorizationStart:         IOCMFAuthorization;
-    meter?:                     chargyInterfaces.IMeter | undefined;
+    meter?:                     chargyInterfaces.IEnergyMeter | undefined;
     measurements:               Array<IOCMFMeasurement>;
 }
 
@@ -1046,7 +1049,7 @@ export class OCMF {
     //#region (private) tryToParseOCMFv1_0(OCMFDataList, ContainerInfos?)
 
     private tryToParseOCMFv1_0(OCMFJSONDocuments:  IOCMFJSONDocument[],
-                               ContainerInfos?:    unknown)
+                               ContainerInfos?:    chargyInterfaces.IContainerInfos)
 
         : IOCMFChargeTransparencyRecord |
           chargyInterfaces.ISessionCryptoResult
@@ -1062,22 +1065,22 @@ export class OCMF {
             // container parsers (SAFE XML, OCPI, chargeIT, ...). They describe
             // the charging station, EVSE and connector of the charging session
             // and will be merged into the resulting charge transparency record.
-            const containerInfos       = chargyLib.asJSONObject(ContainerInfos) ?? {};
-            const chargingStationInfo  = chargyLib.asJSONObject(containerInfos["chargingStation"]);
-            const evseInfo             = chargyLib.asJSONObject(containerInfos["EVSE"]);
-            const connectorInfo        = chargyLib.asJSONObject(containerInfos["connector"]);
-            const energyMeterInfo      = chargyLib.asJSONObject(containerInfos["energyMeter"]);
+        //    const containerInfos       = chargyLib.asJSONObject(ContainerInfos) ?? {};
+        //    const chargingStationInfo  = chargyLib.asJSONObject(containerInfos["chargingStation"]) as chargyInterfaces.IChargingStation | undefined;
+        //    const evseInfo             = chargyLib.asJSONObject(containerInfos["EVSE"]);
+            // const connectorInfo        = chargyLib.asJSONObject(containerInfos["connector"]);
+            // const energyMeterInfo      = chargyLib.asJSONObject(containerInfos["energyMeter"]);
 
-            const chargingStationId    = chargyLib.asString(containerInfos["ChargingStationId"])
-                                             ?? chargyLib.asString(chargingStationInfo?.["@id"])
-                                             ?? "DE*GEF*STATION*CHARGY*1";
+            // const chargingStationId    = chargyLib.asString(containerInfos["ChargingStationId"])
+            //                                  ?? chargyLib.asString(chargingStationInfo?.["@id"])
+            //                                  ?? "DE*GEF*STATION*CHARGY*1";
 
-            const evseId               = chargyLib.asString(containerInfos["EVSEId"])
-                                             ?? chargyLib.asString(evseInfo?.["@id"])
-                                             ?? "DE*GEF*EVSE*CHARGY*1";
+        //    const evseId               = chargyLib.asString(containerInfos["EVSEId"])
+        //                                     ?? chargyLib.asString(evseInfo?.["@id"])
+        //                                     ?? "DE*GEF*EVSE*CHARGY*1";
 
-            const stationDescription   = chargyLib.asJSONObject(chargingStationInfo?.["description"]) as chargyInterfaces.IMultilanguageText | undefined;
-            const evseDescription      = chargyLib.asJSONObject(evseInfo?.["description"])            as chargyInterfaces.IMultilanguageText | undefined;
+            // const stationDescription   = chargyLib.asJSONObject(chargingStationInfo?.["description"]) as chargyInterfaces.I18NString | undefined;
+            // const evseDescription      = chargyLib.asJSONObject(evseInfo?.["description"])            as chargyInterfaces.I18NString | undefined;
 
             //#endregion
 
@@ -1233,55 +1236,70 @@ export class OCMF {
 
                     //    "chargingStationOperators": [{
 
-                        "chargingPools":  [{
-                            "@id":                      "DE*GEF*POOL*CHARGY*1",
-                            "description":              { "en": "GraphDefined CHARGY Virtual Charging Pool 1" },
+                        // "chargingPools":  [{
+                        //     "@id":                      "DE*GEF*POOL*CHARGY*1",
+                        //     "description":              { "en": "GraphDefined CHARGY Virtual Charging Pool 1" },
 
-                            "chargingStations": [{
-                                "@id":                      chargingStationId,
-                                "description":              stationDescription && Object.keys(stationDescription).length > 0
-                                                                ? stationDescription
-                                                                : { "en": "GraphDefined CHARGY Virtual Charging Station 1" },
-                                "firmwareVersion":          chargyLib.asString(chargingStationInfo?.["softwareVersion"])
-                                                                ?? chargyLib.asString(chargingStationInfo?.["firmwareVersion"]),
-                                "geoLocation":              chargyLib.asJSONObject(chargingStationInfo?.["geoLocation"]) as chargyInterfaces.IGeoLocation | undefined,
-                                "address":                  chargyLib.asJSONObject(chargingStationInfo?.["address"])     as chargyInterfaces.IAddress     | undefined,
+                        //     "chargingStations": [{
+                        //         "@id":                      chargingStationId,
+                        //         "description":              stationDescription && Object.keys(stationDescription).length > 0
+                        //                                         ? stationDescription
+                        //                                         : { "en": "GraphDefined CHARGY Virtual Charging Station 1" },
+                        //         // "firmware": {
+                        //         //     "version":              chargyLib.asString(chargingStationInfo?.["softwareVersion"])
+                        //         //                                 ?? chargyLib.asString(chargingStationInfo?.["firmwareVersion"])
+                        //         // },
+                        //         "geoLocation":              chargyLib.asJSONObject(chargingStationInfo?.["geoLocation"]) as chargyInterfaces.IGeoLocation | undefined,
+                        //         "address":                  chargyLib.asJSONObject(chargingStationInfo?.["address"])     as chargyInterfaces.IAddress     | undefined,
 
-                                "EVSEs": [{
-                                    "@id":                      evseId,
-                                    "description":              evseDescription && Object.keys(evseDescription).length > 0
-                                                                    ? evseDescription
-                                                                    : { "en": "GraphDefined CHARGY Virtual EVSE 1" },
-                                    "connectors":               connectorInfo
-                                                                    ? [{
-                                                                          "type":    chargyLib.asString(connectorInfo["type"])   ?? "",
-                                                                          "looses":  chargyLib.asNumber(connectorInfo["looses"]) ?? 0
-                                                                      }]
-                                                                    : undefined,
-                                    "meters": [{
-                                        "@id":                          effectiveMeterSerial,
-                                        // The signed OCMF payload values always win,
-                                        // the container infos only fill the gaps!
-                                        "manufacturer":                 meterVendor   ?? chargyLib.asString(energyMeterInfo?.["manufacturer"]),
-                                        "manufacturerURL":                               chargyLib.asString(energyMeterInfo?.["manufacturerURL"]),
-                                        "model":                        meterModel    ?? chargyLib.asString(energyMeterInfo?.["model"]),
-                                        "modelURL":                                      chargyLib.asString(energyMeterInfo?.["modelURL"]),
-                                        "hardwareVersion":                               chargyLib.asString(energyMeterInfo?.["hardwareVersion"]),
-                                        "firmwareVersion":              meterFirmware ?? chargyLib.asString(energyMeterInfo?.["firmwareVersion"]),
-                                        "signatureFormat":              "https://open.charging.cloud/contexts/EnergyMeterSignatureFormats/OCMFv1.0+json",
-                                        "publicKeys": [{
-                                            "algorithm":                    "?",
-                                            "encoding":                     "?",
-                                            "format":                       "?",
-                                            "value":                        "?",
-                                        }]
-                                    }]
+                        //         "EVSEs": [{
+                        //             "@id":                      evseId,
+                        //             "description":              evseDescription && Object.keys(evseDescription).length > 0
+                        //                                             ? evseDescription
+                        //                                             : { "en": "GraphDefined CHARGY Virtual EVSE 1" },
+                        //             "connectors":               connectorInfo
+                        //                                             ? [{
+                        //                                                   "type":    chargyLib.asString(connectorInfo["type"])   ?? "",
+                        //                                                   "cable": {
+                        //                                                       "length":  chargyLib.asNumber(connectorInfo["length"]) ?? 0,
+                        //                                                       "looses":  chargyLib.asNumber(connectorInfo["looses"]) ?? 0
+                        //                                                   }
+                        //                                               }]
+                        //                                             : [],
+                        //             "energyMeters": [{
+                        //                 "@id":                          effectiveMeterSerial,
+                        //                 // The signed OCMF payload values always win,
+                        //                 // the container infos only fill the gaps!
+                        //                 "manufacturer": {
+                        //                         "name":   meterVendor   ?? chargyLib.asString(energyMeterInfo?.["manufacturer"]),
+                        //                         "contact":  {
+                        //                             "web":    chargyLib.asString(energyMeterInfo?.["manufacturerURL"])
+                        //                         }
+                        //                 },
+                        //                 "model": {
+                        //                     "name":                     meterModel    ?? chargyLib.asString(energyMeterInfo?.["model"]),
+                        //                     "url":                                       chargyLib.asString(energyMeterInfo?.["modelURL"])
+                        //                 },
+                        //                 "hardware": {
+                        //                     "revision":                 chargyLib.asString(energyMeterInfo?.["hardwareVersion"])
+                        //                 },
+                        //                 "firmware": {
+                        //                     "version":                  meterFirmware ?? chargyLib.asString(energyMeterInfo?.["firmwareVersion"])
+                        //                 },
+                        //                 "signatureFormat":              "https://open.charging.cloud/contexts/EnergyMeterSignatureFormats/OCMFv1.0+json",
+                        //                 "publicKeys": [{
+                        //                     "algorithm":                    "?",
+                        //                     "encoding":                     "?",
+                        //                     "format":                       "?",
+                        //                     "value":                        "?",
+                        //                 }]
+                        //             }]
 
-                                }],
+                        //         }],
 
-                            }]
+                        //     }]
 
-                        }],
+                        // }],
 
                         "chargingSessions": [{
 
@@ -1289,7 +1307,7 @@ export class OCMF {
                             "@context":             "https://open.charging.cloud/contexts/SessionSignatureFormats/OCMFv1.0+json",
                             "begin":                "?",
                             "end":                  "?",
-                            "EVSEId":               evseId,
+                            //"EVSEId":               evseId,
 
                             "authorizationStart": {
                                 "@id":                     identificationData ?? "?",
@@ -1306,6 +1324,9 @@ export class OCMF {
                         "certainty":        1
 
                     };
+
+                    if (ContainerInfos?.chargingStations !== undefined)
+                        CTR.chargingStations = ContainerInfos.chargingStations;
 
                     const measurementsByKey = new Map<string, IOCMFMeasurement>();
 
@@ -1490,6 +1511,9 @@ export class OCMF {
 
                         }
                     }
+
+                    if (ContainerInfos?.chargingStations !== undefined)
+                        CTR.chargingStations = ContainerInfos.chargingStations;
 
 
                     CTR.status = (OCMFJSONDocuments.every(ocmfJSONDocument => ocmfJSONDocument.validationStatus === chargyInterfaces.VerificationResult.ValidSignature)
@@ -1695,8 +1719,11 @@ export class OCMF {
     //#region (private) validateOCMFSignature(OCMFJSONDocument, PublicKey, PublicKeyEncoding?)
 
     private async validateOCMFSignature(OCMFJSONDocument:    IOCMFJSONDocument,
-                                        PublicKey:           string|chargyInterfaces.IPublicKeyXY,
-                                        PublicKeyEncoding?:  string): Promise<chargyInterfaces.VerificationResult>
+                                        PublicKey:           string | publicKeyInfoType.IPublicKeyXY,
+                                        PublicKeyEncoding?:  string)
+
+        : Promise<chargyInterfaces.VerificationResult>
+
     {
 
         // Note: We could also get the ECC curve from the DER-encoded public key!
@@ -1902,7 +1929,7 @@ export class OCMF {
 
                 //#region Public Key from XY
 
-                else if (chargyInterfaces.isIPublicKeyXY(OCMFJSONDocument.publicKey))
+                else if (publicKeyInfo.IsAPublicKeyXY(OCMFJSONDocument.publicKey))
                 {
                     publicKey  = curve.keyFromPublic({
                                      x:   OCMFJSONDocument.publicKey.x,
@@ -1960,8 +1987,12 @@ export class OCMF {
     //#region (private) parseOCMFJSONDocuments(OCMFDocuments, PublicKey?, PublicKeyEncoding?)
 
     private async parseOCMFJSONDocuments(OCMFDocuments:       string[],
-                                         PublicKey?:          string|chargyInterfaces.IPublicKeyXY,
-                                         PublicKeyEncoding?:  string): Promise<IOCMFJSONDocument[] | string>
+                                         PublicKey?:          string|publicKeyInfoType.IPublicKeyXY,
+                                         PublicKeyEncoding?:  string)
+
+        : Promise<IOCMFJSONDocument[] |
+                  string>
+
     {
 
         //#region Data
@@ -2132,19 +2163,19 @@ export class OCMF {
                                             // Not an OCMF standard!
                                             case "ECDSA-secp384r1-SHA384":
                                                 hashAlgorithm  = "SHA384, 384 Bits, hex";
-                                                hashValue      = (await chargyLib.sha256(plaintext));
+                                                hashValue      = (await chargyLib.sha384(plaintext));
                                                 break;
 
                                             // Not an OCMF standard!
                                             case "ECDSA-brainpool384r1-SHA384":
                                                 hashAlgorithm  = "SHA384, 384 Bits, hex";
-                                                hashValue      = (await chargyLib.sha256(plaintext));
+                                                hashValue      = (await chargyLib.sha384(plaintext));
                                                 break;
 
                                             // Not an OCMF standard!
                                             case "ECDSA-secp521r1-SHA512":
                                                 hashAlgorithm  = "SHA512, 512 Bits, hex";
-                                                hashValue      = (await chargyLib.sha256(plaintext));
+                                                hashValue      = (await chargyLib.sha512(plaintext));
                                                 break;
 
                                             // ECDSA-secp256r1-SHA256
@@ -2286,11 +2317,22 @@ export class OCMF {
     //#region TryToParseOCMFDocument (OCMFDocument,  PublicKey?, PublicKeyEncoding?, ContainerInfos?)
 
     public async TryToParseOCMFDocument(OCMFDocument:        string,
-                                        PublicKey?:          string|chargyInterfaces.IPublicKeyXY,
+                                        PublicKey?:          string|publicKeyInfoType.IPublicKeyXY,
                                         PublicKeyEncoding?:  string,
-                                        ContainerInfos?:     unknown) : Promise<chargeTransparencyRecord.IChargeTransparencyRecord|chargyInterfaces.ISessionCryptoResult>
+                                        ContainerInfos?:     chargyInterfaces.IContainerInfos)
+
+        : Promise<chargeTransparencyRecord.IChargeTransparencyRecord |
+                  chargyInterfaces.        ISessionCryptoResult>
+
     {
-        return this.TryToParseOCMFDocuments([ OCMFDocument ], PublicKey, PublicKeyEncoding, ContainerInfos);
+
+        return this.TryToParseOCMFDocuments(
+                   [ OCMFDocument ],
+                   PublicKey,
+                   PublicKeyEncoding,
+                   ContainerInfos
+               );
+
     }
 
     //#endregion
@@ -2298,9 +2340,13 @@ export class OCMF {
     //#region TryToParseOCMFDocuments(OCMFDocuments, PublicKey?, PublicKeyEncoding?, ContainerInfos?)
 
     public async TryToParseOCMFDocuments(OCMFDocuments:       string[],
-                                         PublicKey?:          string|chargyInterfaces.IPublicKeyXY,
+                                         PublicKey?:          string|publicKeyInfoType.IPublicKeyXY,
                                          PublicKeyEncoding?:  string,
-                                         ContainerInfos?:     unknown) : Promise<chargeTransparencyRecord.IChargeTransparencyRecord|chargyInterfaces.ISessionCryptoResult>
+                                         ContainerInfos?:     chargyInterfaces.IContainerInfos)
+
+        : Promise<chargeTransparencyRecord.IChargeTransparencyRecord |
+                  chargyInterfaces.        ISessionCryptoResult>
+
     {
 
         //#region Data
@@ -2334,6 +2380,7 @@ export class OCMF {
 
                     const groupingKey    = (ocmfJSONDocument.payload.FV ?? "") + "|" +
                                            (ocmfJSONDocument.payload.GI ?? "") + "|" +
+
                                            (ocmfJSONDocument.payload.GS ?? "") + "|" +
                                            (ocmfJSONDocument.payload.GV ?? "") + "|" +
 
