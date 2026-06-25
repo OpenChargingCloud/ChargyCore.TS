@@ -113,29 +113,45 @@ describe('SAFE Tests with Chargy Extensions', () => {
 
 
 
-    test("Multiple EVSE elements within the chargingStation XML should fail", async () => {
+    test("Multiple EVSE elements within the chargingStation XML should warn only", async () => {
 
         await expectVerificationReportInline(
             "SAFE/withChargyExtensions/SAFE-Testdata-02_multipleEVSEs_shouldFail.xml",
             {
-                status:  "InvalidSessionFormat",
-                message: {
-                    en: "Only one EVSE element is allowed within the given SAFE XML chargingStation element!"
-                }
+                status:  "ValidSignature",
+                warnings: [{
+                    level:   "low",
+                    message: {
+                        en: "Only one EVSE element is allowed within the given SAFE XML chargingStation element!"
+                    }
+                }],
+                chargingSessions: [{
+                    verificationResult: {
+                        status: "ValidSignature"
+                    }
+                }]
             }
         );
 
     });
 
-    test("Multiple connector elements within the EVSE XML should fail", async () => {
+    test("Multiple connector elements within the EVSE XML should warn only", async () => {
 
         await expectVerificationReportInline(
             "SAFE/withChargyExtensions/SAFE-Testdata-02_multipleConnectors_shouldFail.xml",
             {
-                status:  "InvalidSessionFormat",
-                message: {
-                    en: "Only one connector element is allowed within the given SAFE XML EVSE element!"
-                }
+                status:  "ValidSignature",
+                warnings: [{
+                    level:   "low",
+                    message: {
+                        en: "Only one connector element is allowed within the given SAFE XML EVSE element!"
+                    }
+                }],
+                chargingSessions: [{
+                    verificationResult: {
+                        status: "ValidSignature"
+                    }
+                }]
             }
         );
 

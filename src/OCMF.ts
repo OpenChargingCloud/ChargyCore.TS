@@ -1515,6 +1515,9 @@ export class OCMF {
                     if (ContainerInfos?.chargingStations !== undefined)
                         CTR.chargingStations = ContainerInfos.chargingStations;
 
+                    if (ContainerInfos?.warnings !== undefined)
+                        CTR.warnings = [ ...(CTR.warnings ?? []), ...ContainerInfos.warnings ];
+
 
                     CTR.status = (OCMFJSONDocuments.every(ocmfJSONDocument => ocmfJSONDocument.validationStatus === chargyInterfaces.VerificationResult.ValidSignature)
                                      ? chargyInterfaces.SessionVerificationResult.ValidSignature

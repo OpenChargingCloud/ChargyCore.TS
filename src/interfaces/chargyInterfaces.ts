@@ -395,6 +395,16 @@ export interface IWarning {
     message:     chargyLib.I18NString;
 }
 
+export function CreateWarning(message: chargyLib.I18NString,
+                              level:   WarningLevel = WarningLevel.low): IWarning {
+
+    return {
+        level:   level,
+        message: message
+    };
+
+}
+
 export interface IError {
     level:       ErrorLevel;
     message:     chargyLib.I18NString;
@@ -824,4 +834,5 @@ export interface IContainerInfos {
     EVSEs?:                 Array<IEVSE>             | undefined;
     connectors?:            Array<IConnector>        | undefined;
     chargingSessions?:      Array<IChargingSession>  | undefined;
+    warnings?:              Array<IWarning>          | undefined;
 }

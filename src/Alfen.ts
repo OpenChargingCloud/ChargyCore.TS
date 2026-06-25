@@ -461,6 +461,9 @@ export class Alfen  {
 
             _CTR["status"] = chargyInterfaces.SessionVerificationResult.Unvalidated;
 
+            if (ContainerInfos.warnings !== undefined)
+                _CTR.warnings = [ ...(_CTR.warnings ?? []), ...ContainerInfos.warnings ];
+
             //await this.processChargeTransparencyRecord(_CTR);
             return _CTR;
 

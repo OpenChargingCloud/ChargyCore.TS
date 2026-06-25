@@ -63,12 +63,20 @@ export class SAFEXML {
     public static ParseContainerInfos(XMLDocument:  Document,
                                       chargy:       Chargy)
 
-        : chargyInterfaces.IContainerInfos |
-          chargyInterfaces.ISessionCryptoResult
+        : chargyInterfaces.IContainerInfos
 
     {
 
         const containerInfos:chargyInterfaces.IContainerInfos = {};
+
+        const addWarning = (message: string): void => {
+
+            containerInfos.warnings ??= [];
+            containerInfos.warnings.push(
+                chargyInterfaces.CreateWarning(chargy.GetMultilanguageText(message))
+            );
+
+        };
 
         const chargingStationElements = chargyLib.getElementsByLocalName(XMLDocument, "chargingStation");
 
@@ -76,21 +84,12 @@ export class SAFEXML {
             return containerInfos;
 
         if (chargingStationElements.length > 1)
-        {
-            return {
-                status:    chargyInterfaces.SessionVerificationResult.InvalidSessionFormat,
-                message:   chargy.GetMultilanguageText("Only one chargingStation element is allowed within the given SAFE XML container!"),
-                certainty: 0
-            }
-        }
+            addWarning("Only one chargingStation element is allowed within the given SAFE XML container!");
 
         if (chargingStationElements[0] === undefined)
         {
-            return {
-                status:    chargyInterfaces.SessionVerificationResult.InvalidSessionFormat,
-                message:   chargy.GetMultilanguageText("The chargingStation element within the given SAFE XML container is invalid!"),
-                certainty: 0
-            }
+            addWarning("The chargingStation element within the given SAFE XML container is invalid!");
+            return containerInfos;
         }
 
         const chargingStationElement  = chargingStationElements[0];
@@ -102,11 +101,8 @@ export class SAFEXML {
         if (chargingStationId === undefined ||
             chargingStationId.length == 0)
         {
-            return {
-                status:    chargyInterfaces.SessionVerificationResult.InvalidSessionFormat,
-                message:   chargy.GetMultilanguageText("The chargingStation identifier within the given SAFE XML container is invalid!"),
-                certainty: 0
-            }
+            addWarning("The chargingStation identifier within the given SAFE XML container is invalid!");
+            return containerInfos;
         }
 
         //#endregion
@@ -174,21 +170,12 @@ export class SAFEXML {
         const evseElements  = chargyLib.getElementsByLocalName(chargingStationElement, "EVSE");
 
         if (evseElements.length > 1)
-        {
-            return {
-                status:    chargyInterfaces.SessionVerificationResult.InvalidSessionFormat,
-                message:   chargy.GetMultilanguageText("Only one EVSE element is allowed within the given SAFE XML chargingStation element!"),
-                certainty: 0
-            }
-        }
+            addWarning("Only one EVSE element is allowed within the given SAFE XML chargingStation element!");
 
         if (evseElements[0] === undefined)
         {
-            return {
-                status:    chargyInterfaces.SessionVerificationResult.InvalidSessionFormat,
-                message:   chargy.GetMultilanguageText("The EVSE element within the given SAFE XML chargingStation element is invalid!"),
-                certainty: 0
-            }
+            addWarning("The EVSE element within the given SAFE XML chargingStation element is invalid!");
+            return containerInfos;
         }
 
         const evseElement  = evseElements[0];
@@ -215,21 +202,12 @@ export class SAFEXML {
             const connectorElements  = chargyLib.getElementsByLocalName(evseElement, "connector");
 
             if (connectorElements.length > 1)
-            {
-                return {
-                    status:    chargyInterfaces.SessionVerificationResult.InvalidSessionFormat,
-                    message:   chargy.GetMultilanguageText("Only one connector element is allowed within the given SAFE XML EVSE element!"),
-                    certainty: 0
-                }
-            }
+                addWarning("Only one connector element is allowed within the given SAFE XML EVSE element!");
 
             if (connectorElements[0] === undefined)
             {
-                return {
-                    status:    chargyInterfaces.SessionVerificationResult.InvalidSessionFormat,
-                    message:   chargy.GetMultilanguageText("The connector element within the given SAFE XML EVSE element is invalid!"),
-                    certainty: 0
-                }
+                addWarning("The connector element within the given SAFE XML EVSE element is invalid!");
+                return containerInfos;
             }
 
             const connectorElement = connectorElements[0];
@@ -320,10 +298,6 @@ export class SAFEXML {
                                             XMLDocument,
                                             this.chargy
                                         );
-
-                if (chargyInterfaces.isISessionCryptoResult1(safeXMLContext))
-                    return safeXMLContext;
-
 
                 const signedDataValues          = new Array<string>();
 
