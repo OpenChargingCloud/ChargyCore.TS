@@ -113,12 +113,56 @@ describe('SAFE Tests with Chargy Extensions', () => {
 
 
 
+
+    test("ChargingStation XML without warnings", async () => {
+
+        await expectVerificationReportInline(
+            "SAFE/withChargyExtensions/SAFE-Testdata-02.xml",
+            {
+                status:  "ValidSignature",
+                chargingStations: [{
+                    "@id": "DE*GEF*STATION*CI*TESTS*1*A",
+                    EVSEs: [{
+                        "@id": "DE*GEF*EVSE*CI*TESTS*1*A*1",
+                        connectors: [{
+                            "@id": "1",
+                            type:  "Type-2"
+                        }]
+                    }]
+                }],
+                chargingSessions: [{
+                    chargingStationId: "DE*GEF*STATION*CI*TESTS*1*A",
+                    EVSEId:            "DE*GEF*EVSE*CI*TESTS*1*A*1",
+                    ConnectorId:       "1",
+                    Connector: {
+                        "@id": "1",
+                        type:  "Type-2"
+                    },
+                    verificationResult: {
+                        status: "ValidSignature"
+                    }
+                }]
+            }
+        );
+
+    });
+
     test("Multiple EVSE elements within the chargingStation XML should warn only", async () => {
 
         await expectVerificationReportInline(
             "SAFE/withChargyExtensions/SAFE-Testdata-02_multipleEVSEs_shouldFail.xml",
             {
                 status:  "ValidSignature",
+                chargingStations: [{
+                    "@id": "DE*GEF*STATION*CI*TESTS*1*A",
+                    EVSEs: [{
+                        "@id": "DE*GEF*EVSE*CI*TESTS*1*A*1",
+                        connectors: [{
+                            "@id": "1",
+                            type:  "Type-1"
+                        }]
+                    }]
+                }],
                 warnings: [{
                     level:   "low",
                     message: {
@@ -126,6 +170,13 @@ describe('SAFE Tests with Chargy Extensions', () => {
                     }
                 }],
                 chargingSessions: [{
+                    chargingStationId: "DE*GEF*STATION*CI*TESTS*1*A",
+                    EVSEId:            "DE*GEF*EVSE*CI*TESTS*1*A*1",
+                    ConnectorId:       "1",
+                    Connector: {
+                        "@id": "1",
+                        type:  "Type-1"
+                    },
                     verificationResult: {
                         status: "ValidSignature"
                     }
@@ -141,6 +192,16 @@ describe('SAFE Tests with Chargy Extensions', () => {
             "SAFE/withChargyExtensions/SAFE-Testdata-02_multipleConnectors_shouldFail.xml",
             {
                 status:  "ValidSignature",
+                chargingStations: [{
+                    "@id": "DE*GEF*STATION*CI*TESTS*1*A",
+                    EVSEs: [{
+                        "@id": "DE*GEF*EVSE*CI*TESTS*1*A*1",
+                        connectors: [{
+                            "@id": "1",
+                            type:  "Type-2"
+                        }]
+                    }]
+                }],
                 warnings: [{
                     level:   "low",
                     message: {
@@ -148,6 +209,13 @@ describe('SAFE Tests with Chargy Extensions', () => {
                     }
                 }],
                 chargingSessions: [{
+                    chargingStationId: "DE*GEF*STATION*CI*TESTS*1*A",
+                    EVSEId:            "DE*GEF*EVSE*CI*TESTS*1*A*1",
+                    ConnectorId:       "1",
+                    Connector: {
+                        "@id": "1",
+                        type:  "Type-2"
+                    },
                     verificationResult: {
                         status: "ValidSignature"
                     }

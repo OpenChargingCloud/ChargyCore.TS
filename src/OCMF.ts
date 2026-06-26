@@ -1082,6 +1082,10 @@ export class OCMF {
             // const stationDescription   = chargyLib.asJSONObject(chargingStationInfo?.["description"]) as chargyInterfaces.I18NString | undefined;
             // const evseDescription      = chargyLib.asJSONObject(evseInfo?.["description"])            as chargyInterfaces.I18NString | undefined;
 
+            const containerChargingStation = ContainerInfos?.chargingStations?.[0];
+            const containerEVSE            = containerChargingStation?.EVSEs?.[0] ?? ContainerInfos?.EVSEs?.[0];
+            const containerConnector       = containerEVSE?.connectors?.[0]       ?? ContainerInfos?.connectors?.[0];
+
             //#endregion
 
             const firstOCMDJSONDocument = chargyLib.getFirstArrayElement(OCMFJSONDocuments, "Missing first OCMF JSON document");
@@ -1307,7 +1311,6 @@ export class OCMF {
                             "@context":             "https://open.charging.cloud/contexts/SessionSignatureFormats/OCMFv1.0+json",
                             "begin":                "?",
                             "end":                  "?",
-                            //"EVSEId":               evseId,
 
                             "authorizationStart": {
                                 "@id":                     identificationData ?? "?",
@@ -1327,6 +1330,27 @@ export class OCMF {
 
                     if (ContainerInfos?.chargingStations !== undefined)
                         CTR.chargingStations = ContainerInfos.chargingStations;
+
+                    if (containerChargingStation !== undefined &&
+                        CTR.chargingSessions?.[0]  !== undefined)
+                    {
+                        CTR.chargingSessions[0].chargingStationId = containerChargingStation["@id"];
+                        CTR.chargingSessions[0].chargingStation   = containerChargingStation;
+                    }
+
+                    if (containerEVSE              !== undefined &&
+                        CTR.chargingSessions?.[0]  !== undefined)
+                    {
+                        CTR.chargingSessions[0].EVSEId = containerEVSE["@id"];
+                        CTR.chargingSessions[0].EVSE   = containerEVSE;
+                    }
+
+                    if (containerConnector         !== undefined &&
+                        CTR.chargingSessions?.[0]  !== undefined)
+                    {
+                        CTR.chargingSessions[0].ConnectorId = containerConnector["@id"];
+                        CTR.chargingSessions[0].Connector   = containerConnector;
+                    }
 
                     const measurementsByKey = new Map<string, IOCMFMeasurement>();
 

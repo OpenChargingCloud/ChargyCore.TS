@@ -114,6 +114,8 @@ export interface IChargingSession
     chargingStation?:             chargyInterfaces.IChargingStation          | undefined;
     EVSEId?:                      string                                     | undefined;
     EVSE?:                        chargyInterfaces.IEVSE                     | undefined;
+    ConnectorId?:                 string                                     | undefined;
+    Connector?:                   chargyInterfaces.IConnector                | undefined;
     meterId?:                     string                                     | undefined;
     meter?:                       chargyInterfaces.IEnergyMeter              | undefined;
     publicKey?:                   publicKeyInfo.IPublicKey                   | undefined;
