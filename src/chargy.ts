@@ -154,80 +154,6 @@ export class Chargy {
 
     }
 
-    private tryExtractChargeTransparencyTextFromURL(qrText: string): string {
-
-        if (!qrText.startsWith("http://") && !qrText.startsWith("https://"))
-            return qrText;
-
-        try
-        {
-
-            const url = new URL(qrText);
-
-            const candidates = [
-                url.hash.startsWith("#") ? url.hash.substring(1) : url.hash,
-                url.searchParams.get("data"),
-                url.searchParams.get("content"),
-                url.searchParams.get("ctr"),
-                url.searchParams.get("record"),
-                url.searchParams.get("payload"),
-                url.searchParams.get("q")
-            ];
-
-            for (const candidate of candidates)
-            {
-                const decodedCandidate = candidate != null
-                                             ? decodeURIComponent(candidate).trim()
-                                             : "";
-
-                if (decodedCandidate.startsWith("<?xml") ||
-                    decodedCandidate.startsWith("<values") ||
-                    decodedCandidate.startsWith("{")      ||
-                    decodedCandidate.startsWith("[")      ||
-                    decodedCandidate.startsWith("OCMF")   ||
-                    decodedCandidate.startsWith("AP;"))
-                {
-                    return decodedCandidate;
-                }
-            }
-        }
-        catch
-        {
-            console.log("Invalid URL in QR code: " + qrText);
-        }
-
-        return qrText;
-
-    }
-
-    private tryExtractSignedDataTextFromXML(qrText: string): string {
-
-        const trimmedQRCodeText = qrText.trim();
-
-        if (!trimmedQRCodeText.startsWith("<?xml") && !trimmedQRCodeText.startsWith("<"))
-            return qrText;
-
-        try
-        {
-            const xmlDocument       = new DOMParser().parseFromString(trimmedQRCodeText, "text/xml");
-            const signedDataValues  = chargyLib.getElementsByLocalName(xmlDocument, "signedData").
-                                         filter(signedData => (signedData.getAttribute("format") ?? "").trim().toLowerCase() === "alfen").
-                                         map   (signedData => signedData.textContent.trim()).
-                                         filter(signedData => signedData.startsWith("AP;"));
-
-            if (signedDataValues.length > 0)
-                return signedDataValues.join("\n");
-        }
-        catch
-        {
-            console.log("Error parsing XML content from QR code: " + qrText);
-        }
-
-        return qrText;
-
-    }
-
-
     //#region Public key methods...
 
         private PublicKeyIdFromFileName(fileName: string): string {
@@ -366,50 +292,119 @@ export class Chargy {
 
     //#region QR code image files...
 
-    private isSupportedQRCodeImageFile(fileInfo:  chargyInterfaces.IFileInfo,
-                                       mimeType?: string): boolean {
+    private normalizeMIMEType(mimeType?: string): string | undefined {
 
-        const mimeTypeToCheck = (mimeType ?? fileInfo.type ?? "").toLowerCase();
-        const fileName        = fileInfo.name.toLowerCase();
-
-        return mimeTypeToCheck === "image/png"      ||
-               mimeTypeToCheck === "image/jpeg"     ||
-               mimeTypeToCheck === "image/jpg"      ||
-               mimeTypeToCheck === "image/gif"      ||
-               mimeTypeToCheck === "image/webp"     ||
-               mimeTypeToCheck === "image/bmp"      ||
-               mimeTypeToCheck === "image/svg+xml"  ||
-               fileName.endsWith(".png")            ||
-               fileName.endsWith(".jpg")            ||
-               fileName.endsWith(".jpeg")           ||
-               fileName.endsWith(".gif")            ||
-               fileName.endsWith(".webp")           ||
-               fileName.endsWith(".bmp")            ||
-               fileName.endsWith(".svg");
+        return mimeType?.
+                   split(";")[0]?.
+                   trim().
+                   toLowerCase();
 
     }
 
-    private async expandQRCodeImageFiles(FileInfos: Array<chargyInterfaces.IFileInfo>): Promise<Array<chargyInterfaces.IFileInfo>> {
+    private getQRCodeImageMIMETypeFromFileName(fileName: string): string | undefined {
+
+        fileName = fileName.toLowerCase();
+
+        if (fileName.endsWith(".png"))
+            return "image/png";
+
+        if (fileName.endsWith(".jpeg"))
+            return "image/jpeg";
+
+        if (fileName.endsWith(".jpg"))
+            return "image/jpg";
+
+        if (fileName.endsWith(".gif"))
+            return "image/gif";
+
+        if (fileName.endsWith(".webp"))
+            return "image/webp";
+
+        if (fileName.endsWith(".bmp"))
+            return "image/bmp";
+
+        if (fileName.endsWith(".svg"))
+            return "image/svg+xml";
+
+        return undefined;
+
+    }
+
+    private getQRCodeImageMIMEType(fileInfo:   chargyInterfaces.IFileInfo,
+                                   mimeType?:  string): string | undefined {
+
+        const detectedMIMEType  = this.normalizeMIMEType(mimeType);
+        const declaredMIMEType  = this.normalizeMIMEType(fileInfo.type);
+        const fileNameMIMEType  = this.getQRCodeImageMIMETypeFromFileName(fileInfo.name);
+
+        if (this.isSupportedQRCodeImageFileType(detectedMIMEType))
+            return detectedMIMEType;
+
+        if (this.isSupportedQRCodeImageFileType(declaredMIMEType))
+            return declaredMIMEType;
+
+        if (fileNameMIMEType !== undefined)
+            return fileNameMIMEType;
+
+        return detectedMIMEType ?? declaredMIMEType;
+
+    }
+
+    private isSupportedQRCodeImageFileType(MIMEType?: string): boolean
+    {
+
+        switch (MIMEType)
+        {
+
+            case undefined:
+                return false;
+
+            case "image/png":
+            case "image/jpeg":
+            case "image/jpg":
+            case "image/gif":
+            case "image/webp":
+            case "image/bmp":
+            case "image/svg":
+            case "image/svg+xml":
+                return true;
+
+        }
+
+        return false;
+
+    }
+
+    private async expandQRCodeImageFiles(FileInfos: Array<chargyInterfaces.IFileInfo>)
+
+        : Promise<Array<chargyInterfaces.IFileInfo>>
+
+    {
 
         const expandedFileInfos = new Array<chargyInterfaces.IFileInfo>();
 
         for (const fileInfo of FileInfos)
         {
-            if (fileInfo.data != null && this.isSupportedQRCodeImageFile(fileInfo))
+
+            const mimeType = this.getQRCodeImageMIMEType(fileInfo);
+
+            if (fileInfo.data !=  null &&
+                this.isSupportedQRCodeImageFileType(mimeType))
             {
-                const qrText = await readQRCodeTextFromImage(fileInfo.data, fileInfo.type);
+
+                const qrText = await readQRCodeTextFromImage(
+                                         fileInfo.data,
+                                         mimeType
+                                     );
 
                 if (qrText != null)
                 {
-                    const extractedText = this.tryExtractSignedDataTextFromXML(
-                                              this.tryExtractChargeTransparencyTextFromURL(qrText)
-                                          );
 
                     expandedFileInfos.push({
-                        name:  this.textFileNameForQRCodeContent(fileInfo.name, extractedText),
+                        name:  this.textFileNameForQRCodeContent(fileInfo.name, qrText),
                         path:  fileInfo.path,
                         type:  "text/plain",
-                        data:  new TextEncoder().encode(extractedText),
+                        data:  new TextEncoder().encode(qrText),
                         info:  "Text extracted from QR code image"
                     });
 
@@ -425,6 +420,7 @@ export class Chargy {
                 });
 
                 continue;
+
             }
 
             expandedFileInfos.push(fileInfo);
@@ -434,8 +430,9 @@ export class Chargy {
 
     }
 
-    private textFileNameForQRCodeContent(fileName: string,
-                                         qrText:   string): string {
+    private textFileNameForQRCodeContent(fileName:  string,
+                                         qrText:    string): string
+    {
 
         const trimmedQRCodeText = qrText.trimStart();
         const baseFileName      = this.fileNameWithoutExtension(fileName);
@@ -443,7 +440,7 @@ export class Chargy {
         if (trimmedQRCodeText.startsWith("<?xml") || trimmedQRCodeText.startsWith("<"))
             return baseFileName + ".xml";
 
-        if (trimmedQRCodeText.startsWith("{") || trimmedQRCodeText.startsWith("["))
+        if (trimmedQRCodeText.startsWith("{")     || trimmedQRCodeText.startsWith("["))
             return baseFileName + ".json";
 
         return baseFileName + ".txt";
@@ -775,40 +772,32 @@ export class Chargy {
                     try
                     {
 
-                        const filetype = await fileTypeFromBuffer(FileInfo.data);
+                        const filetype  = await fileTypeFromBuffer   (FileInfo.data);
+                        const mimeType  = this.getQRCodeImageMIMEType(FileInfo, filetype?.mime);
 
-                        if (filetype?.mime == undefined)
+                        if (this.isSupportedQRCodeImageFileType(mimeType))
                         {
-
-                            if (this.isSupportedQRCodeImageFile(FileInfo))
-                                expandedFileInfos.push({
-                                                      name:  FileInfo.name,
-                                                      data:  FileInfo.data,
-                                                      type:  FileInfo.type,
-                                                      info:  "QR code image file"
-                                                  });
-
-                            else if (FileInfo.name.endsWith(".chargy"))
-                                expandedFileInfos.push({
-                                                      name:       FileInfo.name,
-                                                      data:       FileInfo.data,
-                                                      info:       ".chargy file"
-                                                  });
-
-                            else
-                                expandedFileInfos.push({
-                                                      name:       FileInfo.name,
-                                                      data:       FileInfo.data,
-                                                      exception:  "Unknown file type!"
-                                                  });
-
+                            expandedFileInfos.push({
+                                                    name:  FileInfo.name,
+                                                    data:  FileInfo.data,
+                                                    type:  FileInfo.type ?? mimeType,
+                                                    info:  "QR code image file"
+                                                });
                             continue;
-
                         }
 
-                        else if (filetype.mime === "text/xml" ||
-                                 filetype.mime === "application/xml"
-                                 )
+                        else if (FileInfo.name.endsWith(".chargy"))
+                        {
+                            expandedFileInfos.push({
+                                                    name:       FileInfo.name,
+                                                    data:       FileInfo.data,
+                                                    info:       ".chargy file"
+                                                });
+                            continue;
+                        }
+
+                        else if (mimeType === "text/xml" ||
+                                 mimeType === "application/xml")
                         {
                             expandedFileInfos.push({
                                                   name:  FileInfo.name,
@@ -818,9 +807,8 @@ export class Chargy {
                             continue;
                         }
 
-                        else if (filetype.mime === "text/json" ||
-                                 filetype.mime === "application/json"
-                                 )
+                        else if (mimeType === "text/json" ||
+                                 mimeType === "application/json")
                         {
                             expandedFileInfos.push({
                                                   name:  FileInfo.name,
@@ -830,29 +818,20 @@ export class Chargy {
                             continue;
                         }
 
-                        else if (this.isSupportedQRCodeImageFile(FileInfo, filetype.mime))
-                        {
-                            expandedFileInfos.push({
-                                                  name:  FileInfo.name,
-                                                  data:  FileInfo.data,
-                                                  type:  filetype.mime,
-                                                  info:  "QR code image file"
-                                              });
-                            continue;
-                        }
-
-                        else if (filetype.mime === "application/zip"     ||
-                                 filetype.mime === "application/x-bzip2" ||
-                                 filetype.mime === "application/gzip"    ||
-                                 filetype.mime === "application/x-tar")
+                        else if (mimeType === "application/zip"     ||
+                                 mimeType === "application/x-bzip2" ||
+                                 mimeType === "application/gzip"    ||
+                                 mimeType === "application/x-tar")
                         {
 
                             try
                             {
 
-                                const compressedFiles = await this.extractArchive(FileInfo.name,
-                                                                                FileInfo.data,
-                                                                                filetype.mime);
+                                const compressedFiles = await this.extractArchive(
+                                                                  FileInfo.name,
+                                                                  FileInfo.data,
+                                                                  mimeType
+                                                              );
 
                                 if (compressedFiles.length == 0)
                                     continue;
@@ -980,6 +959,13 @@ export class Chargy {
                         //                       name:  FileInfo.name,
                         //                       data:  FileInfo.data
                         //                   });
+
+                        expandedFileInfos.push({
+                                              name:       FileInfo.name,
+                                              data:       FileInfo.data,
+                                              exception:  "Unknown file type!"
+                                          });
+                        continue;
 
                     }
                     catch (exception)
