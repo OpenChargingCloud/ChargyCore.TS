@@ -15,15 +15,32 @@ This software is written as a modern ESM TypeScript package with generated decla
 
 ## Supported Charge Transparency Data Formats
 
-- Alfen
-- Bauer energy meters
-- chargeIT (2 versions)
-- chargepoint (2 versions)
-- EDL40 and ISA-EDL40 SML
-- EMH energy meters
-- Mennekes XML
-- OCMF v1.1 - v1.4
-- Porsche Charging Data Format (PCDF)
+ChargyCore.TS supports a broad range of charge transparency data formats used by charging stations, energy meters, backend systems, and invoice-related exports.
+
+Currently supported formats include:
+- **Alfen** charge transparency data
+- **Bauer** energy meter data
+- **chargeIT** transparency data (2 format variants)
+- **ChargePoint** transparency data (2 format variants)
+- **EDL40** and **ISA-EDL40 SML** data
+- **EMH** energy meter data
+- **Mennekes** XML
+- **OCMF**, versions v1.1 to v1.4
+- **Porsche Charging Data Format (PCDF)**
+
+## Supported Data Representations
+
+ChargyCore.TS accepts multiple data representations in order to simplify the validation of individual charge transparency files as well as larger collections of transparency data, for example data sets attached to monthly invoices or exported from backend systems.
+
+Supported representations include:
+- **Plain Files** containing a single charge transparency data set.
+- **Chargy Container Format**, a JSON-based container format for multiple charging sessions.
+- **SAFE XML Container Format**, an XML-based container format for a single charging session, optionally enriched with additional Chargy metadata about the charging session.
+- **Archive formats** such as ***tar, ZIP, tar.gz***, and similar formats that combine or compress multiple charge transparency files.
+- **QR-Code images**, such as ***PNG, JPG, or JPEG files***, where the QR-Code represents a charge transparency data set.
+- **PDF/A-3** files transporting a charge transparency file as an embedded additional data stream.
+
+This allows applications to pass transparency data to ChargyCore.TS in the form in which it was originally received, without having to manually unpack, decode, or normalize every file beforehand.
 
 
 ## Applications based on this library
