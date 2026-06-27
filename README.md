@@ -34,6 +34,7 @@ ChargyCore.TS accepts multiple data representations in order to simplify the val
 
 Supported representations include:
 - **Plain Files** containing a single charge transparency data set.
+- **chargeIT Container Format**, a JSON-based container format for a single charging session (2 format variants).
 - **Chargy Container Format**, a JSON-based container format for multiple charging sessions.
 - **SAFE XML Container Format**, an XML-based container format for a single charging session, optionally enriched with additional Chargy metadata about the charging session.
 - **Archive formats** such as ***tar, ZIP, tar.gz***, and similar formats that combine or compress multiple charge transparency files.
