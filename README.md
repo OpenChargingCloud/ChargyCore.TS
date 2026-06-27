@@ -17,22 +17,43 @@ This software is written as a modern ESM TypeScript package with generated decla
 
 - Alfen
 - Bauer energy meters
+- chargeIT (2 versions)
+- chargepoint (2 versions)
+- EDL40 and ISA-EDL40 SML
 - EMH energy meters
 - Mennekes XML
 - OCMF v1.1 - v1.4
-- Porsche
-- chargeIT (2 versions)
-- chargepoint
+- Porsche Charging Data Format (PCDF)
+
+
+## Applications based on this library
+
+- [Chargy Web App](https://github.com/OpenChargingCloud/ChargyWebApp/), Live demo: [chargy.charging.cloud](https://chargy.charging.cloud)
+- [Chargy Desktop App](https://github.com/OpenChargingCloud/ChargyDesktopApp/)
 
 
 ## Usage
 
+This package is published on npm as [`@open-charging-cloud/chargy-core`](https://www.npmjs.com/package/@open-charging-cloud/chargy-core)
+
+First install it e.g. via npm
+```bash
+npm install @open-charging-cloud/chargy-core@latest
+```
+
+or, for reproducible builds, pin a specific version:
+```bash
+npm install @open-charging-cloud/chargy-core@<version>
+```
+
+Basic Import (TypeScript / ESM) TypeScript
 ```ts
 import { Chargy } from "@open-charging-cloud/chargy-core";
 ```
+The package ships as a modern ESM package and includes generated TypeScript declarations, so it can be used directly in TypeScript projects without additional type packages.
 
 
-## Runtime Architecture
+### Runtime Architecture
 
 ChargyCore is consumed in different JavaScript runtimes. The browser-based Chargy WebApp and Electron renderer processes have Web APIs such as `DOMParser`, `Blob`, `TextEncoder`, `ImageData`, `DOMMatrix`, `Path2D`, and browser worker loading semantics. Node.js-based tests, command line tools, server-side verification, and build-time checks do not provide the same environment.
 
@@ -55,6 +76,7 @@ Keeping these paths separate has several advantages:
 - Bundle checks can verify that the browser build only references browser PDF.js imports and the Node build only references legacy PDF.js imports.
 
 When adding runtime-sensitive dependencies, avoid branching on runtime inside shared source code if that would make bundlers see both implementations. Prefer a small adapter under `src/` and let the build or conditional exports select the runtime-specific implementation.
+
 
 
 ## Development
@@ -99,6 +121,7 @@ For dependency, build, export, PDF.js, or browser-facing changes, run the indivi
 npx playwright install chromium
 ```
 
+## Publishing
 
 ```bash
 npm version 0.8.0 --no-git-tag-version
