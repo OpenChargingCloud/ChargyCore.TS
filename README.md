@@ -38,7 +38,7 @@ Supported representations include:
 - **Chargy Container Format**, a JSON-based container format for multiple charging sessions.
 - **SAFE XML Container Format**, an XML-based container format for a single charging session, optionally enriched with additional Chargy metadata about the charging session.
 - **Archive formats** such as ***tar, ZIP, tar.gz***, and similar formats that combine or compress multiple charge transparency files.
-- **QR-Code images**, such as ***PNG, JPG, or JPEG files***, where the QR-Code represents a charge transparency data set.
+- **QR-Code images**, such as ***PNG, JPG, JPEG or SVG files***, where the QR-Code represents a charge transparency data set.
 - **PDF/A-3** files transporting a charge transparency file as an embedded additional data stream.
 
 This allows applications to pass transparency data to ChargyCore.TS in the form in which it was originally received, without having to manually unpack, decode, or normalize every file beforehand.
