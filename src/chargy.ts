@@ -21,6 +21,7 @@ import { Alfen, AlfenCrypt01 }              from './Alfen'
 import { BSMCrypt01 }                       from './BSMCrypt01'
 import { ChargeIT }                         from './chargeIT'
 import { ChargePoint, ChargePointCrypt01 }  from './chargePoint'
+import { EDL40Crypt01 }                     from './EDL40'
 import { EMHCrypt01 }                       from './EMHCrypt01'
 import { GDFCrypt01 }                       from './GDFCrypt01'
 import { Mennekes, MennekesCrypt01 }        from './Mennekes'
@@ -2379,6 +2380,11 @@ export class Chargy {
 
             case "https://open.charging.cloud/contexts/SessionSignatureFormats/PCDF+json":
                 chargingSession.method = new PCDFCrypt01(this);
+                verificationResult = await chargingSession.method.VerifyChargingSession(chargingSession);
+                break;
+
+            case "https://open.charging.cloud/contexts/SessionSignatureFormats/EDL40+json":
+                chargingSession.method = new EDL40Crypt01(this);
                 verificationResult = await chargingSession.method.VerifyChargingSession(chargingSession);
                 break;
 

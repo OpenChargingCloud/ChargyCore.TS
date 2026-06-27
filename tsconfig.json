@@ -83,7 +83,8 @@
 
   "exclude": [
     "dist",
-    "node_modules"
+    "node_modules",
+    "src/edl40-isa-ts"
   ]
 
 }

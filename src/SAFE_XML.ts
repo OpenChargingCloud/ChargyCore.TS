@@ -17,6 +17,7 @@
 
 import type { Chargy }                     from './chargy'
 import { Alfen }                           from './Alfen'
+import { EDL40 }                           from './EDL40'
 import { OCMF }                            from './OCMF'
 import * as chargyInterfaces               from './interfaces/chargyInterfaces'
 import type * as chargeTransparencyRecord  from './interfaces/IChargeTransparencyRecord'
@@ -436,6 +437,16 @@ export class SAFEXML {
                                                  signedDataValues,
                                                  commonPublicKey,
                                                  commonPublicKeyEncoding,
+                                                 safeXMLContext
+                                             );
+
+                        case "edl_40_p":
+                        case "isa_edl_40_p":
+                        case "sml_edl40_p":
+                            return await new EDL40(this.chargy).
+                                             TryToParseEDL40Documents(
+                                                 signedDataValues,
+                                                 commonPublicKey,
                                                  safeXMLContext
                                              );
 

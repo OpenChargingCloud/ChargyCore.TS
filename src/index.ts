@@ -1,6 +1,7 @@
 export * from "./ACrypt";
 export * from "./Alfen";
 export * from "./BSMCrypt01";
+export * from "./EDL40";
 export * from "./interfaces/CryptoUtils";
 export * from "./EMHCrypt01";
 export * from "./GDFCrypt01";

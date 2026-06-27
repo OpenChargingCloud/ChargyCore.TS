@@ -9,6 +9,7 @@ export default tseslint.config(
       "coverage/**",
       "node_modules/**",
       ".npm-cache/**",
+      "src/edl40-isa-ts/**",
       "*.tgz"
     ]
   },
