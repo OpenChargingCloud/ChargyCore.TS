@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2018-2026 GraphDefined GmbH <achim.friedland@graphdefined.com>
- This file is part of ChargyCore <https://github.com/OpenChargingCloud/ChargyCore.TS>
+ * This file is part of ChargyCore <https://github.com/OpenChargingCloud/ChargyCore.TS>
  *
  * Licensed under the Affero GPL license, Version 3.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,6 +28,11 @@ import type * as publicKeyInfoType         from './interfaces/IPublicKeyInfo'
 import * as publicKeyInfo                  from './interfaces/IPublicKeyInfo'
 import * as chargyLib                      from './interfaces/chargyLib'
 import * as chargyInterfaces               from './interfaces/chargyInterfaces'
+import {
+    ocmfBonnTariffToChargingTariff,
+    tryParseOCMFBonnTariffText,
+    type IOCMFBonnTariff
+} from './OCMF_BET_TariffTextExtension'
 
 
 type ASN1PublicKey = {
@@ -237,6 +242,9 @@ export class OCMFv1_x extends ACrypt {
 
                     case "CL":
                         return "Cumulated Loss";
+
+                    case "EI":
+                        return "Error Index";
 
                     case "EF":
                         return "Error Flags";
@@ -600,8 +608,8 @@ export const enum TimeStatusTypes {
 
 export interface IOCMFLossCompensation {
     LN?:        string,
-    LI?:        string,
-    LR:         string,
+    LI?:        number,
+    LR:         number,
     LU:         string
 }
 
@@ -663,6 +671,8 @@ export interface IOCMFReading {
     CL?:        number,                 // Cumulated Loss:                This parameter is optional and can be added only when RI is indicating an accumulation register reading. The value
                                         //                                reported here represents cumulated loss withdrawned from measurement when computing loss compensation on RV.
                                         //                                CL must be reset at TX=B. CL is given in the same unit as RV which is specified in RU.
+
+    EI?:        number,                 // Error Index:                   Legacy event/error index used by early OCMF data sets.
 
     EF?:        string,                 // Error Flags:                   Optional statement about which quantities are no longer usable for billing due to an error. Each character in this
                                         //                                string identifies a quantity. The following characters are defined: "E" – Energy, "t" – Time
@@ -996,6 +1006,7 @@ export interface IOCMFMeasurementValue extends chargeTransparencyRecord.IMeasure
     transaction?:               string | undefined;
     transactionType:            OCMFTransactionTypes;
     pagination:                 number;
+    errorIndex?:                number | undefined;
     errorFlags?:                string | undefined;
     cumulatedLoss?:             Decimal | undefined;
     status:                     string;
@@ -1024,10 +1035,20 @@ export interface IOCMFChargingSession extends chargeTransparencyRecord.ICharging
 }
 
 export interface IOCMFCTRExtensions {
-    formatVersion?:             string | undefined,
-    gatewayInformation?:        string | undefined,
-    gatewaySerial?:             string | undefined,
-    gatewayVersion?:            string | undefined
+    formatVersion?:                 string                    | undefined,
+    gatewayInformation?:            string                    | undefined,
+    gatewaySerial?:                 string                    | undefined,
+    gatewayVersion?:                string                    | undefined,
+    meterVendor?:                   string                    | undefined,
+    meterModel?:                    string                    | undefined,
+    meterSerial?:                   string                    | undefined,
+    meterFirmware?:                 string                    | undefined,
+    tariffText?:                    string                    | undefined,
+    tariffTextInterpretation?:      IOCMFBonnTariff           | undefined,
+    controllerFirmwareVersion?:     string                    | undefined,
+    lossCompensation?:              IOCMFLossCompensation     | undefined,
+    chargePointIdentificationType?: string                    | undefined,
+    chargePointIdentification?:     string                    | undefined
 }
 
 export interface IOCMFChargeTransparencyRecord extends chargeTransparencyRecord.IChargeTransparencyRecord
@@ -1126,13 +1147,37 @@ export class OCMF {
                 const identificationType            = firstOCMDJSONDocument.payload.IT;
                 const identificationData            = firstOCMDJSONDocument.payload.ID;
                 const tariffText                    = firstOCMDJSONDocument.payload.TT;
+                const tariffTextInterpretation      = typeof tariffText === "string"
+                                                          ? tryParseOCMFBonnTariffText(tariffText)
+                                                          : undefined;
+                const chargingTariff: chargyInterfaces.IChargingTariff | undefined = typeof tariffText === "string" && tariffText.length > 0
+                                                                                          ? tariffTextInterpretation !== undefined
+                                                                                                ? ocmfBonnTariffToChargingTariff(tariffTextInterpretation)
+                                                                                                : { "@id": tariffText }
+                                                                                          : undefined;
 
                 //#endregion
 
                 //#region EVSE Metrologic parameters
 
-                const controlerFirmwareVersion      = firstOCMDJSONDocument.payload.CF;
+                const controllerFirmwareVersion     = firstOCMDJSONDocument.payload.CF;
                 const lossCompensation              = firstOCMDJSONDocument.payload.LC;
+                const signedCable: chargyInterfaces.ICable | undefined = lossCompensation !== undefined &&
+                                                                            typeof lossCompensation.LR === "number" &&
+                                                                            Number.isFinite(lossCompensation.LR) &&
+                                                                            typeof lossCompensation.LU === "string" &&
+                                                                            lossCompensation.LU.length > 0
+                                                                                ? {
+                                                                                      ...(typeof lossCompensation.LN === "string"
+                                                                                              ? { lossCompensation: lossCompensation.LN }
+                                                                                              : {}),
+                                                                                      ...(typeof lossCompensation.LI === "number"
+                                                                                              ? { lossCompensationId: lossCompensation.LI.toString() }
+                                                                                              : {}),
+                                                                                      resistance:     lossCompensation.LR,
+                                                                                      resistanceUnit: lossCompensation.LU
+                                                                                  }
+                                                                                : undefined;
 
                 //#endregion
 
@@ -1140,6 +1185,37 @@ export class OCMF {
 
                 const chargePointIdType             = firstOCMDJSONDocument.payload.CT;
                 const chargePointId                 = firstOCMDJSONDocument.payload.CI;
+
+                let signedChargingStationId: string | undefined;
+                let signedEVSEId:            string | undefined;
+                let signedConnectorId:       string | undefined;
+
+                if (typeof chargePointId === "string" && chargePointId.trim().length > 0)
+                {
+                    const normalizedChargePointId = chargePointId.trim();
+
+                    switch (chargePointIdType?.toUpperCase())
+                    {
+
+                        case undefined:
+                            break;
+
+                        case "EVSEID":
+                            signedEVSEId = normalizedChargePointId;
+                            break;
+
+                        case "CBIDC": {
+                            const cbidcMatch = /^(\S+)\s+(\S+)$/.exec(normalizedChargePointId);
+                            if (cbidcMatch?.[1] !== undefined && cbidcMatch[2] !== undefined)
+                            {
+                                signedChargingStationId = cbidcMatch[1];
+                                signedConnectorId       = cbidcMatch[2];
+                            }
+                            break;
+                        }
+
+                    }
+                }
 
                 //#endregion
 
@@ -1174,7 +1250,7 @@ export class OCMF {
                     chargyLib.isOptionalString          (identificationData)       &&
                     chargyLib.isOptionalString          (tariffText)               &&
 
-                    chargyLib.isOptionalString          (controlerFirmwareVersion) &&
+                    chargyLib.isOptionalString          (controllerFirmwareVersion) &&
                     chargyLib.isOptionalJSONObject      (lossCompensation)         &&
 
                     chargyLib.isOptionalString          (chargePointIdType)        &&
@@ -1231,11 +1307,25 @@ export class OCMF {
                             "type":         identificationType ?? "?"
                         },
 
+                        "chargingTariffs": chargingTariff !== undefined
+                                                ? [ chargingTariff ]
+                                                : undefined,
+
                         "ocmf": {
-                            "formatVersion":       formatVersion,
-                            "gatewayInformation":  gatewayInformation,
-                            "gatewaySerial":       gatewaySerial,
-                            "gatewayVersion":      gatewayVersion
+                            "formatVersion":                  formatVersion,
+                            "gatewayInformation":             gatewayInformation,
+                            "gatewaySerial":                  gatewaySerial,
+                            "gatewayVersion":                 gatewayVersion,
+                            "meterVendor":                    meterVendor,
+                            "meterModel":                     meterModel,
+                            "meterSerial":                    meterSerial,
+                            "meterFirmware":                  meterFirmware,
+                            "tariffText":                     tariffText,
+                            "tariffTextInterpretation":       tariffTextInterpretation,
+                            "controllerFirmwareVersion":      controllerFirmwareVersion,
+                            "lossCompensation":               lossCompensation,
+                            "chargePointIdentificationType":  chargePointIdType,
+                            "chargePointIdentification":      chargePointId
                         },
 
                     //    "chargingStationOperators": [{
@@ -1311,6 +1401,13 @@ export class OCMF {
                             "@context":             "https://open.charging.cloud/contexts/SessionSignatureFormats/OCMFv1.0+json",
                             "begin":                "?",
                             "end":                  "?",
+                            "chargingStationId":    signedChargingStationId,
+                            "EVSEId":               signedEVSEId,
+                            "ConnectorId":          signedConnectorId,
+                            "tariffId":             chargingTariff?.["@id"],
+                            "chargingTariffs":      chargingTariff !== undefined
+                                                        ? [ chargingTariff ]
+                                                        : undefined,
 
                             "authorizationStart": {
                                 "@id":                     identificationData ?? "?",
@@ -1328,28 +1425,73 @@ export class OCMF {
 
                     };
 
-                    if (ContainerInfos?.chargingStations !== undefined)
-                        CTR.chargingStations = ContainerInfos.chargingStations;
+                    const resolvedChargingStationId = signedChargingStationId ?? containerChargingStation?.["@id"];
 
-                    if (containerChargingStation !== undefined &&
-                        CTR.chargingSessions?.[0]  !== undefined)
+                    if (resolvedChargingStationId !== undefined)
                     {
-                        CTR.chargingSessions[0].chargingStationId = containerChargingStation["@id"];
-                        CTR.chargingSessions[0].chargingStation   = containerChargingStation;
+                        const matchingContainerStation = containerChargingStation?.["@id"] === resolvedChargingStationId
+                                                             ? containerChargingStation
+                                                             : undefined;
+                        const resolvedChargingStation: chargyInterfaces.IChargingStation = {
+                            ...(matchingContainerStation ?? { "@id": resolvedChargingStationId }),
+                            ...(controllerFirmwareVersion !== undefined
+                                    ? {
+                                          firmware: {
+                                              ...matchingContainerStation?.firmware,
+                                              version: controllerFirmwareVersion
+                                          }
+                                      }
+                                    : {})
+                        };
+
+                        CTR.chargingStations = [
+                            resolvedChargingStation,
+                            ...(ContainerInfos?.chargingStations?.filter(station => station["@id"] !== resolvedChargingStationId) ?? [])
+                        ];
+
+                        if (CTR.chargingSessions?.[0] !== undefined)
+                        {
+                            CTR.chargingSessions[0].chargingStationId ??= resolvedChargingStationId;
+                            CTR.chargingSessions[0].chargingStation    = resolvedChargingStation;
+                        }
                     }
+                    else if (ContainerInfos?.chargingStations !== undefined)
+                        CTR.chargingStations = ContainerInfos.chargingStations;
 
                     if (containerEVSE              !== undefined &&
                         CTR.chargingSessions?.[0]  !== undefined)
                     {
-                        CTR.chargingSessions[0].EVSEId = containerEVSE["@id"];
-                        CTR.chargingSessions[0].EVSE   = containerEVSE;
+                        const chargingSession = CTR.chargingSessions[0];
+                        chargingSession.EVSEId ??= containerEVSE["@id"];
+                        if (chargingSession.EVSEId === containerEVSE["@id"])
+                            chargingSession.EVSE = containerEVSE;
                     }
 
-                    if (containerConnector         !== undefined &&
-                        CTR.chargingSessions?.[0]  !== undefined)
+                    const resolvedConnectorId = signedConnectorId ?? containerConnector?.["@id"];
+
+                    if ((resolvedConnectorId !== undefined || signedCable !== undefined) &&
+                        CTR.chargingSessions?.[0] !== undefined)
                     {
-                        CTR.chargingSessions[0].ConnectorId = containerConnector["@id"];
-                        CTR.chargingSessions[0].Connector   = containerConnector;
+                        const matchingContainerConnector = containerConnector?.["@id"] === resolvedConnectorId
+                                                               ? containerConnector
+                                                               : undefined;
+                        const resolvedConnector: chargyInterfaces.IConnector = {
+                            ...matchingContainerConnector,
+                            ...(resolvedConnectorId !== undefined
+                                    ? { "@id": resolvedConnectorId }
+                                    : {}),
+                            ...(signedCable !== undefined
+                                    ? {
+                                          cable: {
+                                              ...matchingContainerConnector?.cable,
+                                              ...signedCable
+                                          }
+                                      }
+                                    : {})
+                        };
+                        const chargingSession = CTR.chargingSessions[0];
+                        chargingSession.ConnectorId ??= resolvedConnectorId;
+                        chargingSession.Connector    = resolvedConnector;
                     }
 
                     const measurementsByKey = new Map<string, IOCMFMeasurement>();
@@ -1380,6 +1522,7 @@ export class OCMF {
                             const readingUnit            = effectiveReading.RU;
                             const readingCurrentType     = effectiveReading.RT;
                             const cumulatedLoss          = effectiveReading.CL;
+                            const errorIndex             = effectiveReading.EI;
                             const errorFlags             = effectiveReading.EF;
                             const status                 = effectiveReading.ST;
 
@@ -1394,6 +1537,7 @@ export class OCMF {
                                 chargyLib.isMandatoryString  (readingUnit)           &&
                                 chargyLib.isOptionalString   (readingCurrentType)    &&
                              //   chargyLib.isOptionalDecimal  (cumulatedLoss)         &&
+                                chargyLib.isOptionalNumber   (errorIndex)             &&
                                 chargyLib.isOptionalString   (errorFlags)            &&
                                 chargyLib.isMandatoryString  (status))
                             {
@@ -1517,6 +1661,7 @@ export class OCMF {
                                     "value":               new Decimal(readingValue),   // 2935.6
                                     "transactionType":     transactionType,             // "T"     ToDo: Serialize this to a string!
                                     "pagination":          pagination,                  // "9289"
+                                    "errorIndex":          errorIndex,
                                     "errorFlags":          errorFlags,                  // ""
                                     "cumulatedLoss":       cumulatedLoss != null && cumulatedLoss !== 0                // 0.0
                                                                ? new Decimal(cumulatedLoss)
@@ -1536,11 +1681,8 @@ export class OCMF {
                         }
                     }
 
-                    if (ContainerInfos?.chargingStations !== undefined)
-                        CTR.chargingStations = ContainerInfos.chargingStations;
-
                     if (ContainerInfos?.warnings !== undefined)
-                        CTR.warnings = [ ...(CTR.warnings ?? []), ...ContainerInfos.warnings ];
+                        CTR.warnings = (CTR.warnings ?? []).concat(ContainerInfos.warnings);
 
 
                     CTR.status = (OCMFJSONDocuments.every(ocmfJSONDocument => ocmfJSONDocument.validationStatus === chargyInterfaces.VerificationResult.ValidSignature)
@@ -2461,6 +2603,11 @@ export class OCMF {
                     switch (ocmfJSONDocumentGroup[0].payload.FV)
                     {
 
+                        // FV has cardinality 0..1 in OCMF. All supported 1.x
+                        // versions use the same parser, so an omitted version
+                        // is parsed as generic OCMF without changing the
+                        // signed payload or inventing a concrete version.
+                        case undefined:
                         case "0.1":
                             // OCMF 0.1 SAFE reference data uses a few legacy field names/forms (VI/VV,
                             // string based IS values), but the compact signed document structure is close

@@ -19,14 +19,15 @@ ChargyCore.TS supports a broad range of charge transparency data formats used by
 
 Currently supported formats include:
 - **Alfen** charge transparency data
-- **Bauer** energy meter data
-- **chargeIT** transparency data (2 format variants)
+- **Bauer** energy meter data (2 format variants)
 - **ChargePoint** transparency data (2 format variants)
 - **EDL40** and **ISA-EDL40 SML** data
 - **EMH** energy meter data
 - **Mennekes** XML
 - **OCMF**, versions v1.1 to v1.4
+  - Bonner Eichrechtstage **Tariff Text** Extensions
 - **Porsche Charging Data Format (PCDF)**
+
 
 ## Supported Data Representations
 
@@ -37,6 +38,7 @@ Supported representations include:
 - **chargeIT Container Format**, a JSON-based container format for a single charging session (2 format variants).
 - **Chargy Container Format**, a JSON-based container format for multiple charging sessions.
 - **SAFE XML Container Format**, an XML-based container format for a single charging session, optionally enriched with additional Chargy metadata about the charging session.
+- **PTB Container Format**, a JSON-based container format for a single charging session.
 - **Archive formats** such as ***tar, ZIP, tar.gz***, and similar formats that combine or compress multiple charge transparency files.
 - **QR-Code images**, such as ***PNG, JPG, JPEG or SVG files***, where the QR-Code represents a charge transparency data set.
 - **PDF/A-3** files transporting a charge transparency file as an embedded additional data stream.
@@ -46,8 +48,9 @@ This allows applications to pass transparency data to ChargyCore.TS in the form 
 
 ## Applications based on this library
 
-- [Chargy Web App](https://github.com/OpenChargingCloud/ChargyWebApp/), Live demo: [chargy.charging.cloud](https://chargy.charging.cloud)
-- [Chargy Desktop App](https://github.com/OpenChargingCloud/ChargyDesktopApp/)
+- [Chargy Web App](https://github.com/OpenChargingCloud/ChargyWebApp/) (node.js), live demo at [https://chargy.charging.cloud](https://chargy.charging.cloud)
+- [Chargy Desktop App](https://github.com/OpenChargingCloud/ChargyDesktopApp/) (Electron)
+- [Chargy Mobile Apps](https://github.com/OpenChargingCloud/ChargyMobileApp/) (Android/iOS)
 
 
 ## Usage

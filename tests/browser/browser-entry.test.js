@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 import i18n from "../../i18n.json";
-import { Chargy, Alfen, OCMF, SAFEXML } from "../../dist/browser/index.js";
+import { Chargy, Alfen, OCMF, SAFEXML } from "@open-charging-cloud/chargy-core";
 
 const ellipticStub = {
   ec: class {

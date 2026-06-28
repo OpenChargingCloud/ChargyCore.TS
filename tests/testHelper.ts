@@ -31,7 +31,9 @@ export {
     expectArchiveVerificationReport,
     expectMultiArchiveVerificationReport,
     expectVerificationReportWithPublicKey,
-    expectVerificationReportWithValidationRules
+    expectVerificationReportWithValidationRules,
+    verifyChargeData,
+    verifyChargeDataFiles
 }
 
 vi.mock('pdfjs-dist', async () => {

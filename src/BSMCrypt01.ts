@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2018-2026 GraphDefined GmbH <achim.friedland@graphdefined.com>
- This file is part of ChargyCore <https://github.com/OpenChargingCloud/ChargyCore.TS>
+ * This file is part of ChargyCore <https://github.com/OpenChargingCloud/ChargyCore.TS>
  *
  * Licensed under the Affero GPL license, Version 3.0 (the "License");
  * you may not use this file except in compliance with the License.

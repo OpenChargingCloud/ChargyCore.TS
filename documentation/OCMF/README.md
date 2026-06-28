@@ -1,6 +1,104 @@
 # Open Charge Metering Format (OCMF)
 
-The Chargy Transparency Software supports the [Open Charge Metering Format (OCMF)](https://github.com/SAFE-eV/OCMF-Open-Charge-Metering-Format) from version __v1.0__ up to the latest __v1.2__.
+The Chargy Transparency Software supports the [Open Charge Metering Format (OCMF)](https://github.com/SAFE-eV/OCMF-Open-Charge-Metering-Format) from the legacy version __v0.1__ through __v1.4__.
+
+## Supported Versions
+
+All OCMF 1.x versions are backward compatible and use the same structural
+parser. Chargy additionally recognizes the relevant fields introduced by each
+minor version:
+
+| Version | Relevant format additions handled by Chargy |
+|---------|---------------------------------------------|
+| `0.1` | Legacy `VI`/`VV` gateway aliases and string-based `IS` values. |
+| `1.0` | Base 1.x payload, transaction pagination, meter and user assignment. |
+| `1.1` | Ad-hoc charging and tariff text in `TT`. |
+| `1.2` | Cable loss compensation in `LC` and cumulative reading loss in `CL`. |
+| `1.3` | EVSE charge-controller firmware in `CF`. |
+| `1.4` | Unified IEC 62056-6-1 OBIS representation. |
+
+`FV` has cardinality `0..1` and is therefore genuinely optional. If it is
+missing, Chargy parses the payload with the generic OCMF parser and retains the
+format version as unknown. It does not insert a version into the signed payload
+or claim a concrete version based only on optional feature fields. Legacy and
+version-specific fields are still mapped normally.
+
+The version matrix is covered by deterministic randomized test data. Each
+supported version is signed and tested once with its `FV` value and once with
+the same semantic data but without `FV`:
+
+```text
+tests/fixtures/OCMF/versionTestData.ts
+tests/OCMFVersions.tests.ts
+```
+
+### Bonn Calibration-Law Days Tariff Extension
+
+The Bonn Calibration-Law Days defined a structured interpretation for selected
+OCMF `TT` values. Fields are separated by semicolons and monetary parameters
+are expressed in euro cents:
+
+| Profile | Format | Interpretation |
+|---------|--------|----------------|
+| `001` | `001;EUR;W;X;Y;Z` | `W` cents start fee, `X` cents/kWh, plus `Y` cents/minute blocking fee beginning with minute `Z`. |
+| `002` | `002;EUR;W;X;Y` | `W` cents start fee, `X` cents/kWh, plus `Y` cents/minute blocking fee after charging ends. |
+| `003` | `003;EUR;W;X` | `W` cents start fee plus `X` cents/minute. |
+
+Chargy parses these forms into `IOCMFBonnTariff001`,
+`IOCMFBonnTariff002` or `IOCMFBonnTariff003`. The parsed structure is retained
+as `CTR.ocmf.tariffTextInterpretation`, while the unmodified `TT` remains in
+`CTR.ocmf.tariffText`.
+
+The corresponding CTR `IChargingTariff` uses the original `TT` as its `@id`:
+
+| Bonn value | CTR price component |
+|------------|---------------------|
+| Start fee | `FLAT`, converted from cents to EUR. |
+| Energy fee | `ENERGY`, converted to EUR/kWh. |
+| Time fee | `TIME`, converted from cents/minute to EUR/hour, with a 60-second step. |
+| Blocking fee | `PARKING_TIME`, converted from cents/minute to EUR/hour, with a 60-second step. |
+
+For profile `001`, `Z` is converted to a tariff restriction of
+`min_duration = Z * 60` seconds. For profile `002`, the `PARKING_TIME`
+component expresses that the blocking price applies after charging has ended.
+
+Chargy exposes the generated tariff through `CTR.chargingTariffs`, and links it
+from the charging session through both `tariffId` and `chargingTariffs`.
+Unrecognized free-form `TT` strings remain valid tariff identifiers but do not
+receive generated tariff elements.
+
+### Charge Point Assignment
+
+Chargy maps the signed `CT`/`CI` assignment into the standard CTR session
+fields:
+
+| `CT` | `CI` format | CTR mapping |
+|------|-------------|-------------|
+| `EVSEID` | EVSE identifier | `chargingSession.EVSEId` |
+| `CBIDC` | `<chargeBoxId> <connectorId>` | `chargingSession.chargingStationId` and `chargingSession.ConnectorId` |
+
+An empty `CI` is treated as no assignment. Signed OCMF identifiers take
+precedence over conflicting unsigned metadata from a surrounding container;
+container identifiers only fill fields that are absent from OCMF.
+
+From OCMF 1.3 onward, `CF` identifies the charge-controller firmware. When a
+charging station can be resolved through `CBIDC` or surrounding container
+metadata, Chargy maps it to `chargingStation.firmware.version`. The signed `CF`
+value takes precedence over a container firmware version and is additionally
+retained as `CTR.ocmf.controllerFirmwareVersion`.
+
+From OCMF 1.2 onward, `LC` describes the charging cable used for loss
+compensation. Chargy maps it to `chargingSession.Connector.cable` as follows:
+
+| OCMF | `ICable` |
+|------|----------|
+| `LN` | `lossCompensation` |
+| `LI` | `lossCompensationId` |
+| `LR` | `resistance` |
+| `LU` | `resistanceUnit` |
+
+Existing unsigned cable metadata such as `length` is retained, while the signed
+loss-compensation fields take precedence.
 
 ## Parsing OCMF documents
 

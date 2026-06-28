@@ -340,8 +340,7 @@ export class Alfen  {
                                          "connectors": [ {
                                              "type":                     chargyLib.asString(connector?.["type"])   ?? "",
                                              "cable": {
-                                                "length":                   chargyLib.asNumber(connector?.["cableLength"]) ?? 0,
-                                                "looses":                   chargyLib.asNumber(connector?.["cableLooses"]) ?? 0
+                                                "length":                   chargyLib.asNumber(connector?.["cableLength"]) ?? 0
                                              }
                                           } ],
                                          "energyMeters": [

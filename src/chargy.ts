@@ -27,6 +27,7 @@ import { GDFCrypt01 }                       from './GDFCrypt01'
 import { Mennekes, MennekesCrypt01 }        from './Mennekes'
 import { OCMF, OCMFv1_x }                   from './OCMF'
 import { PCDF, PCDFCrypt01, isPCDFText }    from './PCDF'
+import { PTB }                              from './PTBContainer'
 import { SAFEXML }                          from './SAFE_XML'
 import { XMLContainer }                     from './XMLContainer'
 import { OCPI }                             from './OCPI'
@@ -1627,6 +1628,9 @@ export class Chargy {
                         processedFile.result = JSONContent;
 
                     }
+
+                    else if (JSONContent["format"] === "ptb")
+                        processedFile.result = await new PTB(this).TryToParsePTBContainer(JSONContent);
 
                     else if (chargyLib.isMandatoryString(JSONContext))
                     {

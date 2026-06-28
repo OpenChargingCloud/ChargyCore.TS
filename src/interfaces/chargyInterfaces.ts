@@ -216,8 +216,11 @@ export interface IConnector {
 }
 
 export interface ICable {
-    length:                     number;
-    looses?:                    number | undefined;
+    length?:                    number | undefined;
+    lossCompensation?:          string | undefined;
+    lossCompensationId?:        string | undefined;
+    resistance?:                number | undefined;
+    resistanceUnit?:            string | undefined;
 }
 
 export interface IConformity {
@@ -673,17 +676,17 @@ export enum DayOfWeek
 }
 
 export interface ITariffRestriction {
-    start_time:             string,
-    end_time:               string,
-    start_date:             string,
-    end_date:               string,
-    min_kwh:                Decimal,
-    max_kwh:                Decimal,
-    min_power:              Decimal,
-    max_power:              Decimal,
-    min_duration:           number,
-    max_duration:           number,
-    day_of_week:            Array<DayOfWeek>
+    start_time?:            string           | undefined,
+    end_time?:              string           | undefined,
+    start_date?:            string           | undefined,
+    end_date?:              string           | undefined,
+    min_kwh?:               Decimal          | undefined,
+    max_kwh?:               Decimal          | undefined,
+    min_power?:             Decimal          | undefined,
+    max_power?:             Decimal          | undefined,
+    min_duration?:          number           | undefined,
+    max_duration?:          number           | undefined,
+    day_of_week?:           Array<DayOfWeek> | undefined
 }
 
 export interface IPriceComponent {
@@ -694,7 +697,7 @@ export interface IPriceComponent {
 
 export interface IChargingTariffElement {
     price_components:           Array<IPriceComponent>,
-    restrictions:               ITariffRestriction
+    restrictions?:              ITariffRestriction | undefined
 }
 
 export interface IDisplayText {
