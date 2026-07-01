@@ -16,7 +16,8 @@
  */
 
 import type { Chargy,
-              EllipticCurve }         from './chargy'
+              EllipticCurve,
+              EllipticKeyPair }       from './chargy'
 import { ACrypt }                     from './ACrypt'
 import * as chargyInterfaces          from './interfaces/chargyInterfaces'
 import type * as chargeTransparencyRecord  from './interfaces/IChargeTransparencyRecord'
@@ -1267,35 +1268,53 @@ export class BSMCrypt01 extends ACrypt {
 
                             }
 
+                            // Step 1: decode the meter's public key.
+                            let keyPair: EllipticKeyPair;
                             try
                             {
-
-                                if (this.curve.keyFromPublic(publicKey, 'hex').
-                                               verify       (cryptoResult.sha256value,
-                                                             cryptoResult.signature))
-                                {
-
-                                    if (measurementValue.errors && measurementValue.errors.length > 0)
-                                        return setResult(chargyInterfaces.VerificationResult.ValidationError);
-
-                                    return setResult(chargyInterfaces.VerificationResult.ValidSignature);
-
-                                }
-
-                                if (measurementValue.errors && measurementValue.errors.length > 0)
-                                    return setResult(chargyInterfaces.VerificationResult.ValidationError);
-
-                                return setResult(chargyInterfaces.VerificationResult.InvalidSignature);
-
+                                keyPair = this.curve.keyFromPublic(publicKey, 'hex');
                             }
-                            catch
+                            catch (exception)
                             {
+                                this.AddVerificationError(cryptoResult, "Verification_PublicKeyDecodingFailed", exception);
+                                return setResult(chargyInterfaces.VerificationResult.InvalidPublicKey);
+                            }
+
+                            // Step 2: ensure the public key is a valid point on the curve.
+                            const keyValidation = keyPair.validate();
+                            if (!keyValidation.result)
+                            {
+                                this.AddVerificationError(cryptoResult, "Verification_PublicKeyNotOnCurve", keyValidation.reason ?? undefined);
+                                return setResult(chargyInterfaces.VerificationResult.InvalidPublicKey);
+                            }
+
+                            // Step 3: verify the signature over the hashed plain text.
+                            let signatureValid: boolean;
+                            try
+                            {
+                                signatureValid = keyPair.verify(cryptoResult.sha256value, cryptoResult.signature);
+                            }
+                            catch (exception)
+                            {
+                                this.AddVerificationError(cryptoResult, "Verification_SignatureMalformed", exception);
                                 return setResult(chargyInterfaces.VerificationResult.InvalidSignature);
                             }
+
+                            // BSM flags structural validation issues independently of the signature result.
+                            if (measurementValue.errors && measurementValue.errors.length > 0)
+                                return setResult(chargyInterfaces.VerificationResult.ValidationError);
+
+                            if (signatureValid)
+                                return setResult(chargyInterfaces.VerificationResult.ValidSignature);
+
+                            // Structurally valid, but the signature does not match the signed data.
+                            this.AddVerificationError(cryptoResult, "Verification_SignatureMismatch");
+                            return setResult(chargyInterfaces.VerificationResult.InvalidSignature);
 
                         }
-                        catch
+                        catch (exception)
                         {
+                            this.AddVerificationError(cryptoResult, "Verification_PublicKeyDecodingFailed", exception);
                             return setResult(chargyInterfaces.VerificationResult.InvalidPublicKey);
                         }
 
@@ -1310,14 +1329,17 @@ export class BSMCrypt01 extends ACrypt {
                     return setResult(chargyInterfaces.VerificationResult.EnergyMeterNotFound);
 
             }
-            catch
+            catch (exception)
             {
+                this.AddVerificationError(cryptoResult, "Verification_UnexpectedError", exception);
                 return setResult(chargyInterfaces.VerificationResult.InvalidSignature);
             }
 
         }
 
-        return {} as IBSMCrypt01Result;
+        // No signature present: the measurement cannot be cryptographically verified.
+        this.AddVerificationError(cryptoResult, "Verification_SignatureMissing");
+        return setResult(chargyInterfaces.VerificationResult.InvalidSignature);
 
     }
 
@@ -1614,48 +1636,6 @@ export class BSMCrypt01 extends ACrypt {
 
     }
 
-    // private DecodeStatus(statusValue: string) : Array<string>
-    // {
-
-    //     const statusArray:string[] = [];
-
-    //     try
-    //     {
-
-    //         const status = parseInt(statusValue);
-
-    //         if ((status &  1) ==  1)
-    //             statusArray.push("Fehler erkannt");
-
-    //         if ((status &  2) ==  2)
-    //             statusArray.push("Synchrone Messwertübermittlung");
-
-    //         // Bit 3 is reserved!
-
-    //         if ((status &  8) ==  8)
-    //             statusArray.push("System-Uhr ist synchron");
-    //         else
-    //             statusArray.push("System-Uhr ist nicht synchron");
-
-    //         if ((status & 16) == 16)
-    //             statusArray.push("Rücklaufsperre aktiv");
-
-    //         if ((status & 32) == 32)
-    //             statusArray.push("Energierichtung -A");
-
-    //         if ((status & 64) == 64)
-    //             statusArray.push("Magnetfeld erkannt");
-
-    //     }
-    //     catch
-    //     {
-    //         statusArray.push("Invalid status!");
-    //     }
-
-    //     return statusArray;
-
-    // }
-
-    // //#endregion
+    //#endregion
 
 }

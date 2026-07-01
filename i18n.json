@@ -66,6 +66,41 @@
         "en": "Unknown or invalid public key format!"
     },
 
+    "Verification_SignatureMissing": {
+        "de": "Es ist keine Signatur vorhanden, daher kann der Messwert nicht kryptografisch geprüft werden!",
+        "en": "No signature is present, so the measurement cannot be cryptographically verified!"
+    },
+
+    "Verification_PublicKeyDecodingFailed": {
+        "de": "Der öffentliche Schlüssel konnte nicht dekodiert werden!",
+        "en": "The public key could not be decoded!"
+    },
+
+    "Verification_PublicKeyNotOnCurve": {
+        "de": "Der öffentliche Schlüssel ist kein gültiger Punkt auf der elliptischen Kurve!",
+        "en": "The public key is not a valid point on the elliptic curve!"
+    },
+
+    "Verification_SignatureMalformed": {
+        "de": "Die Signatur ist fehlerhaft kodiert und konnte nicht ausgewertet werden!",
+        "en": "The signature is malformed and could not be parsed!"
+    },
+
+    "Verification_UnknownSignatureFormat": {
+        "de": "Das Signaturformat ist unbekannt oder wird nicht unterstützt!",
+        "en": "The signature format is unknown or unsupported!"
+    },
+
+    "Verification_SignatureMismatch": {
+        "de": "Die Signatur passt nicht zu den signierten Daten!",
+        "en": "The signature does not match the signed data!"
+    },
+
+    "Verification_UnexpectedError": {
+        "de": "Bei der Signaturprüfung ist ein unerwarteter Fehler aufgetreten!",
+        "en": "An unexpected error occurred during signature verification!"
+    },
+
     "UnknownOrInvalidChargingSessionFormat": {
         "de": "Unbekanntes oder ungültiges Ladevorgangsformat!",
         "en": "Unknown or invalid charging session format!"

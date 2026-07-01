@@ -665,12 +665,22 @@ export class AlfenCrypt01 extends ACrypt {
                             cryptoResult.publicKeyFormat      = meter.publicKeys[0]?.format;
                             cryptoResult.publicKeySignatures  = meter.publicKeys[0]?.signatures;
 
+                            // Step 1: decode the meter's public key.
+                            let publicKey: string;
                             try
                             {
+                                publicKey = chargyLib.buf2hex(this.chargy.base32Decode(cryptoResult.publicKey ?? "", 'RFC4648'));
+                            }
+                            catch (exception)
+                            {
+                                this.AddVerificationError(cryptoResult, "Verification_PublicKeyDecodingFailed", exception);
+                                return setResult(chargyInterfaces.VerificationResult.InvalidPublicKey);
+                            }
 
-                                const publicKey  = chargyLib.buf2hex(this.chargy.base32Decode(cryptoResult.publicKey ?? "", 'RFC4648'));
-                                let   result     = false;
-
+                            // Step 2: verify the signature over the hashed plain text.
+                            let result = false;
+                            try
+                            {
                                 switch (meter.publicKeys[0]?.algorithm ?? "")
                                 {
 
@@ -718,22 +728,24 @@ export class AlfenCrypt01 extends ACrypt {
 
                                 }
 
-                                if (result)
-                                {
-                                    return setResult(chargyInterfaces.VerificationResult.ValidSignature);
-                                }
-
-                                return setResult(chargyInterfaces.VerificationResult.InvalidSignature);
-
                             }
-                            catch
+                            catch (exception)
                             {
+                                this.AddVerificationError(cryptoResult, "Verification_SignatureMalformed", exception);
                                 return setResult(chargyInterfaces.VerificationResult.InvalidSignature);
                             }
+
+                            if (result)
+                                return setResult(chargyInterfaces.VerificationResult.ValidSignature);
+
+                            // Structurally valid, but the signature does not match the signed data.
+                            this.AddVerificationError(cryptoResult, "Verification_SignatureMismatch");
+                            return setResult(chargyInterfaces.VerificationResult.InvalidSignature);
 
                         }
-                        catch
+                        catch (exception)
                         {
+                            this.AddVerificationError(cryptoResult, "Verification_PublicKeyDecodingFailed", exception);
                             return setResult(chargyInterfaces.VerificationResult.InvalidPublicKey);
                         }
 
@@ -748,14 +760,17 @@ export class AlfenCrypt01 extends ACrypt {
                     return setResult(chargyInterfaces.VerificationResult.EnergyMeterNotFound);
 
             }
-            catch
+            catch (exception)
             {
+                this.AddVerificationError(cryptoResult, "Verification_UnexpectedError", exception);
                 return setResult(chargyInterfaces.VerificationResult.InvalidSignature);
             }
 
         }
 
-        return {} as IAlfenCrypt01Result;
+        // No signature present: the measurement cannot be cryptographically verified.
+        this.AddVerificationError(cryptoResult, "Verification_SignatureMissing");
+        return setResult(chargyInterfaces.VerificationResult.InvalidSignature);
 
     }
 

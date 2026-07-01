@@ -991,7 +991,11 @@ export interface IOCMFJSONDocument {
     publicKey?:          string|publicKeyInfoType.IPublicKeyXY | undefined,
     publicKeyEncoding?:  string | undefined,
 
-    validationStatus?:   chargyInterfaces.VerificationResult | undefined
+    validationStatus?:   chargyInterfaces.VerificationResult | undefined,
+
+    // Diagnostic detail captured when a verification step fails, so that the
+    // reason is not lost when the status is mapped onto a generic VerificationResult.
+    validationErrors?:   chargyInterfaces.IError[] | undefined
 
 }
 
@@ -1671,7 +1675,11 @@ export class OCMF {
                                     //                            "value":  ocmfJSONDocument.signature["SD"]
                                     //                        }],
                                     "result":              {
-                                                               "status": ocmfJSONDocument.validationStatus ?? chargyInterfaces.VerificationResult.Unvalidated
+                                                               "status": ocmfJSONDocument.validationStatus ?? chargyInterfaces.VerificationResult.Unvalidated,
+                                                               // Surface the per-document verification diagnostics on the measurement value.
+                                                               ...(ocmfJSONDocument.validationErrors && ocmfJSONDocument.validationErrors.length > 0
+                                                                       ? { errors: ocmfJSONDocument.validationErrors }
+                                                                       : {})
                                                            },
                                     "ocmfDocument":        ocmfJSONDocument
                                 });
@@ -1885,6 +1893,31 @@ export class OCMF {
 
     // //#endregion
 
+    // Records why a verification step failed as structured data: a stable reason
+    // key (localized via i18n.json and machine-switchable by the GUI) plus an
+    // optional, language-neutral technical detail. Presentation is left to the GUI.
+    private AddValidationError(OCMFJSONDocument:  IOCMFJSONDocument,
+                               reasonKey:         string,
+                               detail?:           unknown): void
+    {
+
+        const details = detail instanceof Error
+                            ? detail.message
+                            : typeof detail === "string"
+                                ? detail
+                                : undefined;
+
+        (OCMFJSONDocument.validationErrors ??= []).push(
+            chargyInterfaces.CreateError(
+                this.chargy.GetMultilanguageText(reasonKey),
+                chargyInterfaces.ErrorLevel.high,
+                reasonKey,
+                details
+            )
+        );
+
+    }
+
     //#region (private) validateOCMFSignature(OCMFJSONDocument, PublicKey, PublicKeyEncoding?)
 
     private async validateOCMFSignature(OCMFJSONDocument:    IOCMFJSONDocument,
@@ -1955,8 +1988,9 @@ export class OCMF {
                 }
 
             }
-            catch
+            catch (exception)
             {
+                this.AddValidationError(OCMFJSONDocument, "Verification_UnknownSignatureFormat", exception);
                 OCMFJSONDocument.validationStatus = chargyInterfaces.VerificationResult.UnknownSignatureFormat;
                 return OCMFJSONDocument.validationStatus;
             }
@@ -2109,8 +2143,9 @@ export class OCMF {
                 //#endregion
 
             }
-            catch
+            catch (exception)
             {
+                this.AddValidationError(OCMFJSONDocument, "Verification_PublicKeyDecodingFailed", exception);
                 OCMFJSONDocument.validationStatus = chargyInterfaces.VerificationResult.InvalidPublicKey;
                 return OCMFJSONDocument.validationStatus;
             }
@@ -2127,15 +2162,22 @@ export class OCMF {
                 if (publicKey === null)
                     throw new Error("Missing public key!");
 
-                OCMFJSONDocument.validationStatus = publicKey.verify(OCMFJSONDocument.hashValue, OCMFJSONDocument.signatureRS)
+                const signatureValid = publicKey.verify(OCMFJSONDocument.hashValue, OCMFJSONDocument.signatureRS);
+
+                // Structurally valid, but the signature does not match the signed data.
+                if (!signatureValid)
+                    this.AddValidationError(OCMFJSONDocument, "Verification_SignatureMismatch");
+
+                OCMFJSONDocument.validationStatus = signatureValid
                                                         ? chargyInterfaces.VerificationResult.ValidSignature
                                                         : chargyInterfaces.VerificationResult.InvalidSignature;
 
                 return await Promise.resolve(OCMFJSONDocument.validationStatus);
 
             }
-            catch
+            catch (exception)
             {
+                this.AddValidationError(OCMFJSONDocument, "Verification_SignatureMalformed", exception);
                 OCMFJSONDocument.validationStatus = chargyInterfaces.VerificationResult.InvalidSignature;
                 return OCMFJSONDocument.validationStatus;
             }
@@ -2143,8 +2185,9 @@ export class OCMF {
             //#endregion
 
         }
-        catch
+        catch (exception)
         {
+            this.AddValidationError(OCMFJSONDocument, "Verification_UnexpectedError", exception);
             OCMFJSONDocument.validationStatus = chargyInterfaces.VerificationResult.InvalidSignature;
             return OCMFJSONDocument.validationStatus;
         }

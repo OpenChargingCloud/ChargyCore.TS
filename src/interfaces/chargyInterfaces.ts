@@ -411,15 +411,27 @@ export function CreateWarning(message: chargyLib.I18NString,
 export interface IError {
     level:       ErrorLevel;
     message:     chargyLib.I18NString;
+    code?:       string;   // Stable, language-neutral identifier (the i18n key) the GUI can branch on.
+    details?:    string;   // Optional raw technical detail (e.g. an exception message); not localized.
 }
 
-export function CreateError(message: chargyLib.I18NString,
-                            level:   ErrorLevel = ErrorLevel.high): IError {
+export function CreateError(message:  chargyLib.I18NString,
+                            level:    ErrorLevel = ErrorLevel.high,
+                            code?:    string,
+                            details?: string): IError {
 
-    return {
+    const error: IError = {
         level:   level,
         message: message
     };
+
+    if (code !== undefined)
+        error.code = code;
+
+    if (details !== undefined)
+        error.details = details;
+
+    return error;
 
 }
 

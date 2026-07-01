@@ -16,7 +16,8 @@
  */
 
 import type { Chargy,
-              EllipticCurve }         from './chargy'
+              EllipticCurve,
+              EllipticKeyPair }       from './chargy'
 import { ACrypt }                     from './ACrypt'
 import * as chargyInterfaces          from './interfaces/chargyInterfaces'
 import type * as chargeTransparencyRecord  from './interfaces/IChargeTransparencyRecord'
@@ -175,27 +176,49 @@ export class GDFCrypt01 extends ACrypt {
                             cryptoResult.publicKeyFormat      = publicKey?.format;
                             cryptoResult.publicKeySignatures  = publicKey?.signatures;
 
+                            // Step 1: decode the meter's public key.
+                            let keyPair: EllipticKeyPair;
                             try
                             {
-
-                                if (this.curve.keyFromPublic(cryptoResult.publicKey ?? "", 'hex').
-                                               verify       (cryptoResult.sha256value,
-                                                             cryptoResult.signature))
-                                {
-                                    return setResult(chargyInterfaces.VerificationResult.ValidSignature);
-                                }
-
-                                return setResult(chargyInterfaces.VerificationResult.InvalidSignature);
-
+                                keyPair = this.curve.keyFromPublic(cryptoResult.publicKey ?? "", 'hex');
                             }
-                            catch
+                            catch (exception)
                             {
+                                this.AddVerificationError(cryptoResult, "Verification_PublicKeyDecodingFailed", exception);
+                                return setResult(chargyInterfaces.VerificationResult.InvalidPublicKey);
+                            }
+
+                            // Step 2: ensure the public key is a valid point on the curve.
+                            const keyValidation = keyPair.validate();
+                            if (!keyValidation.result)
+                            {
+                                this.AddVerificationError(cryptoResult, "Verification_PublicKeyNotOnCurve", keyValidation.reason ?? undefined);
+                                return setResult(chargyInterfaces.VerificationResult.InvalidPublicKey);
+                            }
+
+                            // Step 3: verify the signature over the hashed plain text.
+                            let signatureValid: boolean;
+                            try
+                            {
+                                signatureValid = keyPair.verify(cryptoResult.sha256value, cryptoResult.signature);
+                            }
+                            catch (exception)
+                            {
+                                this.AddVerificationError(cryptoResult, "Verification_SignatureMalformed", exception);
                                 return setResult(chargyInterfaces.VerificationResult.InvalidSignature);
                             }
+
+                            if (signatureValid)
+                                return setResult(chargyInterfaces.VerificationResult.ValidSignature);
+
+                            // Structurally valid, but the signature does not match the signed data.
+                            this.AddVerificationError(cryptoResult, "Verification_SignatureMismatch");
+                            return setResult(chargyInterfaces.VerificationResult.InvalidSignature);
 
                         }
-                        catch
+                        catch (exception)
                         {
+                            this.AddVerificationError(cryptoResult, "Verification_PublicKeyDecodingFailed", exception);
                             return setResult(chargyInterfaces.VerificationResult.InvalidPublicKey);
                         }
 
@@ -210,14 +233,17 @@ export class GDFCrypt01 extends ACrypt {
                     return setResult(chargyInterfaces.VerificationResult.EnergyMeterNotFound);
 
             }
-            catch
+            catch (exception)
             {
+                this.AddVerificationError(cryptoResult, "Verification_UnexpectedError", exception);
                 return setResult(chargyInterfaces.VerificationResult.InvalidSignature);
             }
 
         }
 
-        return {} as IGDFCrypt01Result;
+        // No signature present: the measurement cannot be cryptographically verified.
+        this.AddVerificationError(cryptoResult, "Verification_SignatureMissing");
+        return setResult(chargyInterfaces.VerificationResult.InvalidSignature);
 
     }
 

@@ -28,6 +28,8 @@ Currently supported formats include:
   - Bonner Eichrechtstage **Tariff Text** Extensions
 - **Porsche Charging Data Format (PCDF)**
 
+Detailed per-format documentation (data structures, signed payloads and signature verification) is available in [`documentation/`](documentation/README.md).
+
 
 ## Supported Data Representations
 

@@ -16,7 +16,7 @@
  */
 
 import      * as chargyLib                 from './interfaces/chargyLib'
-import type * as chargyInterfaces          from './interfaces/chargyInterfaces'
+import      * as chargyInterfaces          from './interfaces/chargyInterfaces'
 import type * as chargeTransparencyRecord  from './interfaces/IChargeTransparencyRecord'
 import type { Chargy, EllipticCurve }      from './chargy'
 import      { secp224k1 }                  from './interfaces/secp224k1'
@@ -123,6 +123,31 @@ export abstract class ACrypt {
         lineDiv.onmouseleave = function(this: GlobalEventHandlers): void {
             newText.classList.remove("overEntry");
         }
+
+    }
+
+    // Records why a verification step failed as structured data: a stable reason
+    // key (localized via i18n.json and machine-switchable by the GUI) plus an
+    // optional, language-neutral technical detail. Presentation is left to the GUI.
+    protected AddVerificationError(cryptoResult:  chargyInterfaces.ICryptoResult,
+                                   reasonKey:     string,
+                                   detail?:       unknown): void
+    {
+
+        const details = detail instanceof Error
+                            ? detail.message
+                            : typeof detail === "string"
+                                ? detail
+                                : undefined;
+
+        (cryptoResult.errors ??= []).push(
+            chargyInterfaces.CreateError(
+                this.chargy.GetMultilanguageText(reasonKey),
+                chargyInterfaces.ErrorLevel.high,
+                reasonKey,
+                details
+            )
+        );
 
     }
 

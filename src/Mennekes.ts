@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-import type { Chargy }                     from './chargy'
+import type { Chargy, EllipticKeyPair }    from './chargy'
 import { ACrypt }                          from './ACrypt'
 import * as chargyInterfaces               from './interfaces/chargyInterfaces'
 import type * as chargeTransparencyRecord  from './interfaces/IChargeTransparencyRecord'
@@ -414,25 +414,57 @@ export class MennekesCrypt01 extends ACrypt {
             const publicKey = chargyLib.cleanHex(meter.publicKeys.at(0)?.value ?? measurement.publicKey);
 
             if (publicKey.length !== 96)
+            {
+                this.AddVerificationError(cryptoResult, "Verification_PublicKeyDecodingFailed");
                 return setResult(chargyInterfaces.VerificationResult.InvalidPublicKey);
+            }
 
-            const result = this.curve192r1.
-                               keyFromPublic("04" + publicKey, "hex").
-                               verify(cryptoResult.hashValue.toUpperCase(), {
-                                   r: signatureExpected.r,
-                                   s: signatureExpected.s
-                               }
-                           );
+            // Step 1: decode the meter's public key.
+            let keyPair: EllipticKeyPair;
+            try
+            {
+                keyPair = this.curve192r1.keyFromPublic("04" + publicKey, "hex");
+            }
+            catch (exception)
+            {
+                this.AddVerificationError(cryptoResult, "Verification_PublicKeyDecodingFailed", exception);
+                return setResult(chargyInterfaces.VerificationResult.InvalidPublicKey);
+            }
 
-            return setResult(
-                       result
-                           ? chargyInterfaces.VerificationResult.ValidSignature
-                           : chargyInterfaces.VerificationResult.InvalidSignature
-                   );
+            // Step 2: ensure the public key is a valid point on the curve.
+            const keyValidation = keyPair.validate();
+            if (!keyValidation.result)
+            {
+                this.AddVerificationError(cryptoResult, "Verification_PublicKeyNotOnCurve", keyValidation.reason ?? undefined);
+                return setResult(chargyInterfaces.VerificationResult.InvalidPublicKey);
+            }
+
+            // Step 3: verify the signature over the hashed plain text.
+            let signatureValid: boolean;
+            try
+            {
+                signatureValid = keyPair.verify(cryptoResult.hashValue.toUpperCase(), {
+                                     r: signatureExpected.r,
+                                     s: signatureExpected.s
+                                 });
+            }
+            catch (exception)
+            {
+                this.AddVerificationError(cryptoResult, "Verification_SignatureMalformed", exception);
+                return setResult(chargyInterfaces.VerificationResult.InvalidSignature);
+            }
+
+            if (signatureValid)
+                return setResult(chargyInterfaces.VerificationResult.ValidSignature);
+
+            // Structurally valid, but the signature does not match the signed data.
+            this.AddVerificationError(cryptoResult, "Verification_SignatureMismatch");
+            return setResult(chargyInterfaces.VerificationResult.InvalidSignature);
 
         }
-        catch
+        catch (exception)
         {
+            this.AddVerificationError(cryptoResult, "Verification_UnexpectedError", exception);
             return setResult(chargyInterfaces.VerificationResult.InvalidSignature);
         }
 

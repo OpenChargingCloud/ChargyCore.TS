@@ -86,6 +86,7 @@ type Base32Decode = (input: string, variant: "RFC3548" | "RFC4648" | "RFC4648-HE
 
 export type EllipticKeyPair = {
     verify(hash: string, signature: unknown): boolean;
+    validate(): { result: boolean; reason?: string | null };
 };
 
 export type EllipticCurve = {
