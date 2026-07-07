@@ -291,6 +291,43 @@ export class Chargy {
 
     }
 
+    private TryToCreatePublicKeyLookup(processedFiles: Array<chargeTransparencyRecord.IExtendedFileInfo>): publicKeyInfo.IPublicKeyLookup|undefined {
+
+        if (processedFiles.length === 0)
+            return undefined;
+
+        const publicKeys = new Array<publicKeyInfo.IPublicKey>();
+
+        for (const processedFile of processedFiles)
+        {
+
+            if (chargeTransparencyRecord.IsAChargeTransparencyRecord(processedFile.result) ||
+                chargeTransparencyLiveLink.IsAChargeTransparencyLiveLink(processedFile.result))
+            {
+                return undefined;
+            }
+
+            if (publicKeyInfo.IsAPublicKey(processedFile.result))
+                publicKeys.push(processedFile.result);
+
+            else if (publicKeyInfo.IsAPublicKeyLookup(processedFile.result))
+                publicKeys.push(...processedFile.result.publicKeys);
+
+            else
+                return undefined;
+
+        }
+
+        if (processedFiles.length === 1 &&
+            publicKeyInfo.IsAPublicKeyLookup(processedFiles[0]?.result))
+        {
+            return processedFiles[0].result;
+        }
+
+        return { publicKeys };
+
+    }
+
     //#endregion
 
     //#region QR code image files...
@@ -1218,6 +1255,7 @@ export class Chargy {
         : Promise<chargeTransparencyRecord.  IChargeTransparencyRecord   |
                   chargeTransparencyLiveLink.IChargeTransparencyLiveLink |
                   publicKeyInfo.             IPublicKey                  |
+                  publicKeyInfo.             IPublicKeyLookup            |
                   chargyInterfaces.          ISessionCryptoResult> {
 
         //#region Initial checks
@@ -1722,6 +1760,16 @@ export class Chargy {
         //#endregion
 
 
+        //#region If only public key files had been found...
+
+        const publicKeyLookup = this.TryToCreatePublicKeyLookup(processedFiles);
+
+        if (publicKeyLookup != null)
+            return publicKeyLookup;
+
+        //#endregion
+
+
         //#region If a single CTR had been found...
 
         if (processedFiles.length == 1)
@@ -1734,13 +1782,6 @@ export class Chargy {
 
             if (chargeTransparencyLiveLink.IsAChargeTransparencyLiveLink(processedFile.result))
                 return processedFile.result;
-
-            if (publicKeyInfo.IsAPublicKeyLookup(processedFile.result))
-                return {
-                    status:     chargyInterfaces.SessionVerificationResult.InvalidSessionFormat,
-                    message:    this.GetMultilanguageText("UnknownOrInvalidChargeTransparencyRecord"),
-                    certainty:  0
-                };
 
             // Can only be an ISessionCryptoResult/error message!
             return processedFile.result;

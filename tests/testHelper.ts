@@ -21,7 +21,8 @@ import type {
     IFileInfo,
     ISessionCryptoResult,
     IValidationRules,
-    IPublicKey
+    IPublicKey,
+    IPublicKeyLookup
 } from '@open-charging-cloud/chargy-core';
 
 export {
@@ -259,6 +260,7 @@ async function verifyChargeData(fileName:          string,
     : Promise<IChargeTransparencyRecord   |
               IChargeTransparencyLiveLink |
               IPublicKey                  |
+              IPublicKeyLookup            |
               ISessionCryptoResult>
 
 {
@@ -281,13 +283,14 @@ async function verifyChargeDataFiles(fileInfos:         IFileInfo[],
     : Promise<IChargeTransparencyRecord   |
               IChargeTransparencyLiveLink |
               IPublicKey                  |
+              IPublicKeyLookup            |
               ISessionCryptoResult>
 
 {
     return createVerificationChargy(validationRules).DetectAndConvertContentFormat(fileInfos);
 }
 
-function formatChargeDataVerificationReport(report: IChargeTransparencyRecord | IChargeTransparencyLiveLink | IPublicKey | ISessionCryptoResult): string
+function formatChargeDataVerificationReport(report: IChargeTransparencyRecord | IChargeTransparencyLiveLink | IPublicKey | IPublicKeyLookup | ISessionCryptoResult): string
 {
 
     if (IsAChargeTransparencyLiveLink(report))

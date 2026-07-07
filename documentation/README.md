@@ -6,6 +6,13 @@ that transport them and the overall software architecture.
 
 For the high-level feature overview see the [project README](../README.md).
 
+## Charge Transparency Record format
+
+- [Charge Transparency Record (CTR) Format](CTR_Format.md) — draft
+  specification of the long-standing JSON/JSON-LD data model, including
+  sessions, infrastructure, measurements, signatures, public keys, tariffs,
+  verifier results, extensions, and legacy compatibility.
+
 ## Signed meter value / signature formats
 
 These formats carry the legally relevant, cryptographically signed meter
@@ -40,6 +47,15 @@ Additional representations accepted by the library — plain files, the Chargy
 multi-session container, archive formats (tar, ZIP, tar.gz, …), QR-code images
 and PDF/A-3 attachments — are summarized in the
 [project README](../README.md#supported-data-representations).
+
+## CTR extension proposals
+
+- [Legally Relevant Log Messages](CTR_Legally_Relevant_Log_Messages.md) — draft
+  specification for event semantics, pagination, stream manifests, hash chaining,
+  signatures, and completeness checks.
+- [Time Synchronization Sources](CTR_Time_Synchronization_Sources.md) — draft
+  specification for clock snapshots, NTS source metadata, uncertainty, drift,
+  quality policies, and significant time-source changes.
 
 ## Architecture
 

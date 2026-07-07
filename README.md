@@ -30,6 +30,17 @@ Currently supported formats include:
 
 Detailed per-format documentation (data structures, signed payloads and signature verification) is available in [`documentation/`](documentation/README.md).
 
+The long-standing, consumer-oriented CTR data model is described in the draft
+[Charge Transparency Record format specification](documentation/CTR_Format.md).
+CTR connects signed technical evidence with charging sessions, tariffs, costs,
+and PDF/A-3 invoices so EV drivers can assess a bill without having to understand
+each meter vendor's cryptographic format.
+Additional draft CTR extension specifications are available for
+[legally relevant log messages](documentation/CTR_Legally_Relevant_Log_Messages.md)
+and [time synchronization sources](documentation/CTR_Time_Synchronization_Sources.md),
+including event pagination, hash chaining, NTS source information, clock
+quality, and significant time-source changes.
+
 
 ## Supported Data Representations
 
