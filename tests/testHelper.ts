@@ -9,11 +9,13 @@ import {
 } from "./chargyTestRuntime";
 import {
     IsAChargeTransparencyRecord,
-    IsAChargeTransparencyLiveLink
+    IsAChargeTransparencyLiveLink,
+    IsAURL
 } from '@open-charging-cloud/chargy-core';
 import type {
     IChargeTransparencyRecord,
     IChargeTransparencyLiveLink,
+    IURL,
     IMeasurement,
     IMeasurementValue,
     I18NString,
@@ -259,6 +261,7 @@ async function verifyChargeData(fileName:          string,
 
     : Promise<IChargeTransparencyRecord   |
               IChargeTransparencyLiveLink |
+              IURL                        |
               IPublicKey                  |
               IPublicKeyLookup            |
               ISessionCryptoResult>
@@ -282,6 +285,7 @@ async function verifyChargeDataFiles(fileInfos:         IFileInfo[],
 
     : Promise<IChargeTransparencyRecord   |
               IChargeTransparencyLiveLink |
+              IURL                        |
               IPublicKey                  |
               IPublicKeyLookup            |
               ISessionCryptoResult>
@@ -290,7 +294,7 @@ async function verifyChargeDataFiles(fileInfos:         IFileInfo[],
     return createVerificationChargy(validationRules).DetectAndConvertContentFormat(fileInfos);
 }
 
-function formatChargeDataVerificationReport(report: IChargeTransparencyRecord | IChargeTransparencyLiveLink | IPublicKey | IPublicKeyLookup | ISessionCryptoResult): string
+function formatChargeDataVerificationReport(report: IChargeTransparencyRecord | IChargeTransparencyLiveLink | IURL | IPublicKey | IPublicKeyLookup | ISessionCryptoResult): string
 {
 
     if (IsAChargeTransparencyLiveLink(report))
@@ -299,6 +303,9 @@ function formatChargeDataVerificationReport(report: IChargeTransparencyRecord | 
             "timestamp: "  +  (report.timestamp ?? ""),
             "transports: " + ((report.transports?.length ?? 0).toString())
         ].join("\n");
+
+    if (IsAURL(report))
+        return "url: " + report.url;
 
     if (!IsAChargeTransparencyRecord(report)) {
         const sessionResult = report as ISessionCryptoResult;

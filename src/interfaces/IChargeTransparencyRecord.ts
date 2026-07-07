@@ -19,6 +19,7 @@ import type { ACrypt }                       from '../ACrypt'
 import type { ISignatureRS }                 from './chargyInterfaces';
 import type * as chargyInterfaces            from './chargyInterfaces'
 import type * as chargeTransparencyLiveLink  from './IChargeTransparencyLiveLink'
+import type * as simpleURL                    from './IURL'
 import type * as publicKeyInfo               from './IPublicKeyInfo';
 import      * as chargyLib                   from './chargyLib'
 import Decimal                               from 'decimal.js';
@@ -204,6 +205,7 @@ export interface IExtendedFileInfo extends chargyInterfaces.IFileInfo {
 
     result:  IChargeTransparencyRecord                              |
              chargeTransparencyLiveLink.IChargeTransparencyLiveLink |
+             simpleURL.IURL                                         |
              publicKeyInfo.IPublicKey                               |
              publicKeyInfo.IPublicKeyLookup                         |
              chargyInterfaces.ISessionCryptoResult

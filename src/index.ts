@@ -26,6 +26,13 @@ export * from "./interfaces/chargyInterfaces";
 export * from "./interfaces/IChargeTransparencyRecord";
 export * from "./interfaces/IPublicKeyInfo";
 export {
+    IsAURL,
+    IsValidURL,
+    URLContext,
+    type IURL,
+    type URLResolver
+} from "./interfaces/IURL";
+export {
     ChargeTransparencyLiveLinkContext,
     IsAChargeTransparencyLiveLink,
     type IChargeTransparencyLiveLink,
@@ -42,3 +49,4 @@ export * as ChargyInterfaces from "./interfaces/chargyInterfaces";
 export * as ChargeTransparencyLiveLink from "./interfaces/IChargeTransparencyLiveLink";
 export * as ChargeTransparencyRecord from "./interfaces/IChargeTransparencyRecord";
 export * as PublicKeyInfo from "./interfaces/IPublicKeyInfo";
+export * as SimpleURL from "./interfaces/IURL";

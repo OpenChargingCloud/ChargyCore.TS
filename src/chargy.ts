@@ -34,6 +34,7 @@ import { OCPI }                             from './OCPI'
 import * as chargyInterfaces                from './interfaces/chargyInterfaces'
 import * as chargeTransparencyRecord        from './interfaces/IChargeTransparencyRecord'
 import * as chargeTransparencyLiveLink      from './interfaces/IChargeTransparencyLiveLink'
+import * as simpleURL                       from './interfaces/IURL'
 import * as publicKeyInfo                   from './interfaces/IPublicKeyInfo'
 import * as chargyLib                       from './interfaces/chargyLib'
 import { readQRCodeTextFromImage }          from './qrCodeReader'
@@ -111,6 +112,8 @@ export class Chargy {
     public  readonly base32Decode:     Base32Decode;
     public  readonly showPKIDetails:   chargyInterfaces.ShowPKIDetailsFunction;
     public  readonly validationRules:  chargyInterfaces.IValidationRules;
+    public  readonly resolveURLs:      boolean;
+    public  readonly urlResolver:      simpleURL.URLResolver | undefined;
 
     private chargingStationOperators  = new Array<chargyInterfaces.IChargingStationOperator>();
     private chargingPools             = new Array<chargyInterfaces.IChargingPool>();
@@ -131,7 +134,9 @@ export class Chargy {
                 asn1:             Asn1Module,
                 base32Decode:     Base32Decode,
                 ShowPKIDetails:   chargyInterfaces.ShowPKIDetailsFunction,
-                validationRules:  chargyInterfaces.IValidationRules = defaultValidationRules as chargyInterfaces.IValidationRules) {
+                validationRules:  chargyInterfaces.IValidationRules = defaultValidationRules as chargyInterfaces.IValidationRules,
+                resolveURLs:      boolean = false,
+                urlResolver?:     simpleURL.URLResolver) {
 
         this.i18n             = i18n;
         this.uiLanguages      = this.NormalizeUILanguages(UILanguages);
@@ -141,6 +146,59 @@ export class Chargy {
         this.base32Decode     = base32Decode;
         this.showPKIDetails   = ShowPKIDetails;
         this.validationRules  = validationRules;
+        this.resolveURLs      = resolveURLs;
+        this.urlResolver      = urlResolver;
+
+    }
+
+    private async resolveURL(url: simpleURL.IURL): Promise<simpleURL.IURL> {
+
+        if (!this.resolveURLs)
+            return url;
+
+        try
+        {
+
+            if (this.urlResolver != null)
+                return await this.urlResolver(url);
+
+            const response = await fetch(url.url, {
+                method:  "GET",
+                headers: {
+                    "Accept": "application/chargy"
+                }
+            });
+
+            if (!response.ok)
+                return url;
+
+            const resolvedURL: simpleURL.IURL = { ...url };
+            const contentType = response.headers.get("Content-Type")?.split(';')[0]?.trim().toLowerCase();
+
+            if (contentType === "application/chargy")
+                resolvedURL.serviceTypes = [ "chargy" ];
+
+            const responseBody = await response.text();
+
+            try
+            {
+                const serviceData: unknown = JSON.parse(responseBody);
+
+                if (chargyLib.isMandatoryJSONObject(serviceData))
+                    resolvedURL.serviceData = serviceData;
+            }
+            catch
+            {
+                // A non-JSON response body is valid and needs no service data.
+            }
+
+            return resolvedURL;
+
+        }
+        catch
+        {
+            return url;
+        }
 
     }
 
@@ -1254,6 +1312,7 @@ export class Chargy {
 
         : Promise<chargeTransparencyRecord.  IChargeTransparencyRecord   |
                   chargeTransparencyLiveLink.IChargeTransparencyLiveLink |
+                  simpleURL.                    IURL                       |
                   publicKeyInfo.             IPublicKey                  |
                   publicKeyInfo.             IPublicKeyLookup            |
                   chargyInterfaces.          ISessionCryptoResult> {
@@ -1744,6 +1803,18 @@ export class Chargy {
 
             //#endregion
 
+            //#region Simple URL processing
+
+            else if (simpleURL.IsValidURL(textContent))
+                processedFile.result = await this.resolveURL(
+                    {
+                        "@context": simpleURL.URLContext,
+                        "url":      textContent
+                    }
+                );
+
+            //#endregion
+
 
             // if (processedFile.result == undefined) {
             //     processedFile.result = {
@@ -1781,6 +1852,9 @@ export class Chargy {
                 return this.processChargeTransparencyRecord(processedFile.result);
 
             if (chargeTransparencyLiveLink.IsAChargeTransparencyLiveLink(processedFile.result))
+                return processedFile.result;
+
+            if (simpleURL.IsAURL(processedFile.result))
                 return processedFile.result;
 
             // Can only be an ISessionCryptoResult/error message!
