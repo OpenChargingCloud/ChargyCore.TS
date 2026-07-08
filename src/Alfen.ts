@@ -707,21 +707,21 @@ export class AlfenCrypt01 extends ACrypt {
 
                                     case "curve256r1":
                                         cryptoResult.hashValue  = (await chargyLib.sha256(cryptoBuffer));
-                                        result                  = this.curve192r1.keyFromPublic(publicKey, 'hex').
+                                        result                  = this.curve256r1.keyFromPublic(publicKey, 'hex').
                                                                                   verify       (cryptoResult.hashValue.toUpperCase(),
                                                                                                 cryptoResult.signature);
                                         break;
 
                                     case "curve384r1":
                                         cryptoResult.hashValue  = (await chargyLib.sha384(cryptoBuffer));
-                                        result                  = this.curve192r1.keyFromPublic(publicKey, 'hex').
+                                        result                  = this.curve384r1.keyFromPublic(publicKey, 'hex').
                                                                                   verify       (cryptoResult.hashValue.toUpperCase(),
                                                                                                 cryptoResult.signature);
                                         break;
 
                                     case "curve521r1":
                                         cryptoResult.hashValue  = (await chargyLib.sha512(cryptoBuffer));
-                                        result                  = this.curve192r1.keyFromPublic(publicKey, 'hex').
+                                        result                  = this.curve521r1.keyFromPublic(publicKey, 'hex').
                                                                                   verify       (cryptoResult.hashValue.toUpperCase(),
                                                                                                 cryptoResult.signature);
                                         break;

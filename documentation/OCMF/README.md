@@ -2,6 +2,8 @@
 
 The Chargy Transparency Software supports the [Open Charge Metering Format (OCMF)](https://github.com/SAFE-eV/OCMF-Open-Charge-Metering-Format) from the legacy version __v0.1__ through __v1.4__.
 
+Standalone OCMF documents use the `.ocmf` file extension in Chargy fixtures and exports. This allows operating systems and applications to associate the format directly with Chargy instead of treating it as generic text.
+
 ## Supported Versions
 
 All OCMF 1.x versions are backward compatible and use the same structural
@@ -183,6 +185,20 @@ OCMF|
 3. The specification includes `ECDSA-secp384r1-SHA256` and `ECDSA-brainpool384r1-SHA256` algorithms. However, within the cryptographic community, there's a consensus that pairing these elliptic curves with the `SHA256` hash algorithm is not as secure as advertised. The concern arises because the 256-bit output of SHA256 is significantly smaller than the 384-bit block size of the ECC algorithms making the hash algorithm the weakest part of the entire algorithm. Chargy has implemented these algorithms to maintain interoperability, but it also supports the more secure pairings of `ECDSA-secp384r1-SHA384` and `ECDSA-brainpool384r1-SHA384` to address these severe security concerns.
 
 4. `ISO 15118-20` specifies `SHA512` and `secp521r1` as the standard algorithms. Given this standard, it is reasonable to also support these algorithms in the context of the calibration law. Consequently, Chargy extends the OCMF specification to include `ECDSA-secp521r1-SHA512` signatures.
+
+5. Chargy additionally defines algorithm-agile OCMF extensions for modern Edwards-curve and post-quantum signatures. These identifiers are not part of the upstream OCMF specification:
+
+   | `SA` identifier | Public key | Signature | Signed input |
+   | --- | ---: | ---: | --- |
+   | `EdDSA-Ed25519` | 32 bytes | 64 bytes | Original OCMF payload bytes |
+   | `EdDSA-Ed448` | 57 bytes | 114 bytes | Original OCMF payload bytes |
+   | `ML-DSA-44` | 1312 bytes | 2420 bytes | Original OCMF payload bytes |
+   | `ML-DSA-65` | 1952 bytes | 3309 bytes | Original OCMF payload bytes |
+   | `ML-DSA-87` | 2592 bytes | 4627 bytes | Original OCMF payload bytes |
+
+   The signature uses `SM: "application/octet-stream"`; `SD` contains the raw signature bytes encoded according to `SE` (`hex` or `base64`). OCMF verification receives the public keys as raw encoded bytes. EdDSA and ML-DSA sign the exact original OCMF payload directly using their standardized internal message processing, so Chargy does not apply an additional external digest.
+
+   Deterministically re-signed examples based on the payload of `BET_TariffTextExtension/001/001-01.ocmf` are included as `001-01_Ed25519.ocmf`, `001-01_Ed448.ocmf`, and `001-01_ML-DSA-65.ocmf`. Each example has both a `*.publicKey.hex` raw-key fixture and a standards-compliant `*.publicKey.pem` SubjectPublicKeyInfo representation. Ed25519 and Ed448 use the algorithm identifiers defined by RFC 8410; ML-DSA uses the identifiers and raw-key BIT STRING encoding defined by RFC 9881. AlgorithmIdentifier parameters are absent in all three formats.
 
 
 

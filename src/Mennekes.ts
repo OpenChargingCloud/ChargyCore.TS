@@ -15,7 +15,8 @@
  * limitations under the License.
  */
 
-import type { Chargy, EllipticKeyPair }    from './chargy'
+import type { Chargy }                     from './chargy'
+import type { CompatiblePublicKey }        from './SignatureCrypto'
 import { ACrypt }                          from './ACrypt'
 import * as chargyInterfaces               from './interfaces/chargyInterfaces'
 import type * as chargeTransparencyRecord  from './interfaces/IChargeTransparencyRecord'
@@ -420,7 +421,7 @@ export class MennekesCrypt01 extends ACrypt {
             }
 
             // Step 1: decode the meter's public key.
-            let keyPair: EllipticKeyPair;
+            let keyPair: CompatiblePublicKey;
             try
             {
                 keyPair = this.curve192r1.keyFromPublic("04" + publicKey, "hex");

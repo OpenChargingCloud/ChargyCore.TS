@@ -15,15 +15,26 @@
  * limitations under the License.
  */
 
-import { ec as EC }        from "elliptic";
-import * as chargyLib      from './chargyLib'
+import { getSignatureSuite } from '../SignatureCrypto'
+import type { NobleSignatureAlgorithm,
+              SignatureEncoding,
+              SignatureKeyPair,
+              SignatureOperationOptions } from '../SignatureCrypto'
+import * as chargyLib        from './chargyLib'
+
+export type JSONSigningKeyPair = SignatureKeyPair;
 
 
 export interface JSONSignature {
-    publicKey:     string;
-    publicKeyHEX:  string;
-    signature:     string;
-    signatureHEX:  string;
+    algorithm?:         NobleSignatureAlgorithm;
+    publicKeyEncoding?: "sec1" | "raw";
+    signatureEncoding?: SignatureEncoding;
+    context?:             string;
+    contextHEX?:          string;
+    publicKey:           string;
+    publicKeyHEX:        string;
+    signature:           string;
+    signatureHEX:        string;
 }
 
 export interface SignedJSONMessage extends chargyLib.JSONObject {
@@ -55,33 +66,41 @@ export interface JSONMessageSignaturesVerificationResult {
 }
 
 export interface SignJSONMessageOptions {
-    curve?:          string;
-    canonical?:      boolean;
-    signatureFormat?: "DER";
+    algorithm?:         NobleSignatureAlgorithm;
+    context?:           Uint8Array;
+    extraEntropy?:      Uint8Array | false;
+    curve?:             string;
+    canonical?:         boolean;
+    signatureFormat?:   "DER";
+    signatureEncoding?: SignatureEncoding;
 }
 
-const defaultSignOptions: Required<SignJSONMessageOptions> = {
-    curve:           "p256",
-    canonical:       true,
-    signatureFormat: "DER"
+const defaultSignOptions: {
+    algorithm:         NobleSignatureAlgorithm;
+    canonical:         boolean;
+    signatureEncoding: SignatureEncoding;
+} = {
+    algorithm:         "ECDSA-P256",
+    canonical:         true,
+    signatureEncoding: "der"
 };
 
 export async function signMessage(JSONMessage: SignedJSONMessage,
-                                  ...KeyPairs: EC.KeyPair[]): Promise<boolean> {
+                                  ...KeyPairs: JSONSigningKeyPair[]): Promise<boolean> {
 
     return signJSONMessage(JSONMessage, KeyPairs);
 
 }
 
 export async function SignMessage(JSONMessage: SignedJSONMessage,
-                                  ...KeyPairs: EC.KeyPair[]): Promise<boolean> {
+                                  ...KeyPairs: JSONSigningKeyPair[]): Promise<boolean> {
 
     return signJSONMessage(JSONMessage, KeyPairs);
 
 }
 
 export async function signJSONMessage(JSONMessage:  SignedJSONMessage | null | undefined,
-                                      KeyPairs:     Array<EC.KeyPair  | null | undefined> | null | undefined,
+                                      KeyPairs:     Array<JSONSigningKeyPair | null | undefined> | null | undefined,
                                       options?:     SignJSONMessageOptions): Promise<boolean> {
 
     if (JSONMessage == null || KeyPairs == null || KeyPairs.length === 0)
@@ -90,41 +109,50 @@ export async function signJSONMessage(JSONMessage:  SignedJSONMessage | null | u
     if (JSONMessage.signatures != null && !Array.isArray(JSONMessage.signatures))
         return false;
 
-    const resolvedOptions = {
-        ...defaultSignOptions,
-        ...options
-    };
-
-    const curve = new EC(resolvedOptions.curve);
-
     for (const KeyPair of KeyPairs)
     {
 
-        if (KeyPair == null || !hasPrivateAndPublicKey(KeyPair))
+        if (KeyPair == null || !isNobleSignatureKeyPair(KeyPair))
             continue;
 
         const messageJSON     = cloneMessageWithoutSignatures(JSONMessage);
-        const plainText       = canonicalJSONBytes(messageJSON);
-        const sha256Hash      = await chargyLib.sha256____(plainText);
+        const plainText       = await Promise.resolve(canonicalJSONBytes(messageJSON));
 
-        JSONMessage.signatures ??= [];
+        const algorithm          = KeyPair.algorithm;
+        const suite              = getSignatureSuite(algorithm);
+        const privateKeyIsValid: boolean = suite.isValidPrivateKey(KeyPair.privateKey);
+        if (!privateKeyIsValid)
+            continue;
 
-        const publicKeyBytes  = Uint8Array.from(KeyPair.getPublic(false, "array"));
-        const signature       = KeyPair.sign(sha256Hash, {
-            canonical: resolvedOptions.canonical
-        });
-        const signatureBytes  = Uint8Array.from(signature.toDER());
+        const publicKeyEncoding  = isRawSignatureAlgorithm(algorithm) ? "raw" : "sec1";
+        const signatureEncoding  = options?.signatureEncoding ?? suite.signatureEncoding;
+        const publicKeyBytes     = KeyPair.publicKey ?? suite.getPublicKey(KeyPair.privateKey);
+        const signatureBytes     = suite.sign(plainText, KeyPair.privateKey,
+                                              signatureOptions(options, signatureEncoding));
 
         const signatureJSON: JSONSignature = {
-            publicKey:     chargyLib.bytesToBase64(publicKeyBytes),
-            publicKeyHEX:  chargyLib.bytesToHex(publicKeyBytes),
-            signature:     chargyLib.bytesToBase64(signatureBytes),
-            signatureHEX:  chargyLib.bytesToHex(signatureBytes)
+            algorithm,
+            publicKeyEncoding,
+            signatureEncoding,
+            publicKey:          chargyLib.bytesToBase64(publicKeyBytes),
+            publicKeyHEX:       chargyLib.bytesToHex(publicKeyBytes),
+            signature:          chargyLib.bytesToBase64(signatureBytes),
+            signatureHEX:       chargyLib.bytesToHex(signatureBytes)
         };
+        if (options?.context != null)
+        {
+            signatureJSON.context    = chargyLib.bytesToBase64(options.context);
+            signatureJSON.contextHEX = chargyLib.bytesToHex(options.context);
+        }
 
+        JSONMessage.signatures ??= [];
         JSONMessage.signatures.push(signatureJSON);
 
-        if (!curve.keyFromPublic(signatureJSON.publicKeyHEX, "hex").verify(sha256Hash, signature))
+        const signatureIsValid: boolean = suite.verify(plainText,
+                                                       signatureBytes,
+                                                       publicKeyBytes,
+                                                       signatureOptions(options, signatureEncoding));
+        if (!signatureIsValid)
             return false;
 
     }
@@ -157,20 +185,12 @@ export async function verifyJSONSignatureResult(JSONMessage:  SignedJSONMessage 
         return verificationResult(JSONSignatureVerificationStatus.InvalidSignatureEncoding,
                                   "Base64 and hexadecimal encodings of the public key or signature do not match.");
 
-    const resolvedOptions = {
-        ...defaultSignOptions,
-        ...options
-    };
-
-    const curve = new EC(resolvedOptions.curve);
-
-    let sha256Hash: Uint8Array;
+    let plainText: Uint8Array;
 
     try
     {
         const messageJSON = cloneMessageWithoutSignatures(JSONMessage);
-        const plainText   = canonicalJSONBytes(messageJSON);
-        sha256Hash        = await chargyLib.sha256____(plainText);
+        plainText         = await Promise.resolve(canonicalJSONBytes(messageJSON));
     }
     catch (exception)
     {
@@ -178,15 +198,20 @@ export async function verifyJSONSignatureResult(JSONMessage:  SignedJSONMessage 
                                   exception instanceof Error ? exception.message : "JSON message can not be canonicalized.");
     }
 
-    let publicKey: EC.KeyPair;
+    const resolvedOptions  = resolveSignOptions(options);
+    const algorithm        = signature.algorithm ?? resolvedOptions.algorithm;
+    const suite            = getSignatureSuite(algorithm);
+    const publicKeyBytes   = chargyLib.hexToBytes(signature.publicKeyHEX);
+    const signatureBytes   = chargyLib.hexToBytes(signature.signatureHEX);
+    const signatureEncoding = signature.signatureEncoding ??
+                              (isRawSignatureAlgorithm(algorithm) ? "raw" : "der");
 
     try
     {
-        publicKey = curve.keyFromPublic(signature.publicKeyHEX, "hex");
-
-        if (!publicKey.validate().result)
+        const publicKeyIsValid: boolean = suite.isValidPublicKey(publicKeyBytes);
+        if (!publicKeyIsValid)
             return verificationResult(JSONSignatureVerificationStatus.InvalidPublicKey,
-                                      publicKey.validate().reason || "Public key is not valid on the selected curve.");
+                                      "Public key is not valid for the selected signature algorithm.");
     }
     catch (exception)
     {
@@ -196,9 +221,14 @@ export async function verifyJSONSignatureResult(JSONMessage:  SignedJSONMessage 
 
     try
     {
-        return curve.verify(sha256Hash,
-                            signature.signatureHEX,
-                            publicKey)
+        const signatureIsValid: boolean = suite.verify(
+            plainText,
+            signatureBytes,
+            publicKeyBytes,
+            signatureVerificationOptions(signature, options, signatureEncoding)
+        );
+
+        return signatureIsValid
                    ? verificationResult(JSONSignatureVerificationStatus.True)
                    : verificationResult(JSONSignatureVerificationStatus.False,
                                         "Signature does not match the canonical JSON message.");
@@ -344,7 +374,14 @@ function isJSONSignature(value: unknown): value is JSONSignature {
            typeof value["publicKey"]    === "string" &&
            typeof value["publicKeyHEX"] === "string" &&
            typeof value["signature"]    === "string" &&
-           typeof value["signatureHEX"] === "string";
+           typeof value["signatureHEX"] === "string" &&
+           (value["algorithm"] == null || isNobleSignatureAlgorithm(value["algorithm"])) &&
+           ((value["context"] == null && value["contextHEX"] == null) ||
+            (typeof value["context"] === "string" && typeof value["contextHEX"] === "string")) &&
+           (value["signatureEncoding"] == null ||
+            value["signatureEncoding"] === "compact" ||
+            value["signatureEncoding"] === "der" ||
+            value["signatureEncoding"] === "raw");
 
 }
 
@@ -353,7 +390,9 @@ function signatureEncodingsMatch(signature: JSONSignature): boolean {
     try
     {
         return chargyLib.bytesToHex(chargyLib.base64ToBytes(signature.publicKey)).toLowerCase()  === signature.publicKeyHEX.toLowerCase() &&
-               chargyLib.bytesToHex(chargyLib.base64ToBytes(signature.signature)).toLowerCase()  === signature.signatureHEX.toLowerCase();
+               chargyLib.bytesToHex(chargyLib.base64ToBytes(signature.signature)).toLowerCase()  === signature.signatureHEX.toLowerCase() &&
+               (signature.context == null ||
+                chargyLib.bytesToHex(chargyLib.base64ToBytes(signature.context)).toLowerCase() === signature.contextHEX?.toLowerCase());
     }
     catch
     {
@@ -362,19 +401,82 @@ function signatureEncodingsMatch(signature: JSONSignature): boolean {
 
 }
 
-function hasPrivateAndPublicKey(KeyPair: EC.KeyPair): boolean {
+function isNobleSignatureKeyPair(keyPair: JSONSigningKeyPair): keyPair is SignatureKeyPair {
+    return "algorithm" in keyPair   &&
+           "privateKey" in keyPair  &&
+           isNobleSignatureAlgorithm(keyPair.algorithm) &&
+           keyPair.privateKey instanceof Uint8Array;
+}
 
-    try
-    {
-        KeyPair.getPrivate("hex");
-        KeyPair.getPublic(false, "hex");
-        return KeyPair.validate().result;
-    }
-    catch
-    {
-        return false;
-    }
+function isNobleSignatureAlgorithm(value: unknown): value is NobleSignatureAlgorithm {
+    return value === "ECDSA-secp256k1" ||
+           value === "ECDSA-P256"      ||
+           value === "ECDSA-P384"      ||
+           value === "ECDSA-P521"      ||
+           value === "Ed25519"         ||
+           value === "Ed25519ctx"      ||
+           value === "Ed25519ph"       ||
+           value === "Ed448"           ||
+           value === "Ed448ph"         ||
+           value === "ML-DSA-44"       ||
+           value === "ML-DSA-65"       ||
+           value === "ML-DSA-87";
+}
 
+function isRawSignatureAlgorithm(algorithm: NobleSignatureAlgorithm): boolean {
+    return algorithm.startsWith("Ed") || algorithm.startsWith("ML-DSA-");
+}
+
+function resolveSignOptions(options?: SignJSONMessageOptions): {
+    algorithm:         NobleSignatureAlgorithm;
+    canonical:         boolean;
+    signatureEncoding: SignatureEncoding;
+} {
+    return {
+        algorithm:         options?.algorithm ?? algorithmFromLegacyCurve(options?.curve) ?? defaultSignOptions.algorithm,
+        canonical:         options?.canonical ?? defaultSignOptions.canonical,
+        signatureEncoding: options?.signatureEncoding ??
+                           (options?.signatureFormat === "DER" ? "der" : defaultSignOptions.signatureEncoding)
+    };
+}
+
+function algorithmFromLegacyCurve(curve?: string): NobleSignatureAlgorithm | undefined {
+    switch (curve?.toLowerCase())
+    {
+        case "secp256k1":
+            return "ECDSA-secp256k1";
+        case "p256":
+        case "secp256r1":
+        case undefined:
+            return undefined;
+        case "p384":
+        case "secp384r1":
+            return "ECDSA-P384";
+        case "p521":
+        case "secp521r1":
+            return "ECDSA-P521";
+        default:
+            throw new TypeError(`Unsupported signature curve '${curve}'.`);
+    }
+}
+
+function signatureOptions(options: SignJSONMessageOptions | undefined,
+                          encoding: SignatureEncoding): SignatureOperationOptions {
+    const result: SignatureOperationOptions = { encoding };
+    if (options?.context != null)
+        result.context = options.context;
+    if (options?.extraEntropy != null)
+        result.extraEntropy = options.extraEntropy;
+    return result;
+}
+
+function signatureVerificationOptions(signature: JSONSignature,
+                                      options: SignJSONMessageOptions | undefined,
+                                      encoding: SignatureEncoding): SignatureOperationOptions {
+    const result = signatureOptions(options, encoding);
+    if (result.context == null && signature.contextHEX != null)
+        result.context = chargyLib.hexToBytes(signature.contextHEX);
+    return result;
 }
 
 function verificationResult(status:       JSONSignatureVerificationStatus,

@@ -18,10 +18,14 @@
 // Note: More information about implementation details and limitations
 //       can be found within ~/documentation/OCMF/README.md!
 
-import type { Chargy,
-              EllipticCurve,
-              EllipticKeyPair }            from './chargy'
+import type { Chargy }                     from './chargy'
 import { ACrypt }                          from './ACrypt'
+import { createCompatibleCurve,
+         getSignatureSuite }               from './SignatureCrypto'
+import type { CompatibleCurve,
+              CompatiblePublicKey,
+              NobleSignatureAlgorithm,
+              SignatureSuite }             from './SignatureCrypto'
 import Decimal                             from 'decimal.js';
 import type * as chargeTransparencyRecord  from './interfaces/IChargeTransparencyRecord'
 import type * as publicKeyInfoType         from './interfaces/IPublicKeyInfo'
@@ -33,6 +37,58 @@ import {
     tryParseOCMFBonnTariffText,
     type IOCMFBonnTariff
 } from './OCMF_BET_TariffTextExtension'
+
+export const OCMF_SIGNATURE_ALGORITHMS = [
+    "ECDSA-secp192k1-SHA256",
+    "ECDSA-secp192r1-SHA256",
+    "ECDSA-secp256k1-SHA256",
+    "ECDSA-secp256r1-SHA256",
+    "ECDSA-brainpool256r1-SHA256",
+    "ECDSA-secp384r1-SHA256",
+    "ECDSA-brainpool384r1-SHA256",
+    "ECDSA-secp384r1-SHA384",
+    "ECDSA-brainpool384r1-SHA384",
+    "ECDSA-secp521r1-SHA512",
+    "EdDSA-Ed25519",
+    "EdDSA-Ed448",
+    "ML-DSA-44",
+    "ML-DSA-65",
+    "ML-DSA-87"
+] as const;
+
+export type OCMFSignatureAlgorithm = typeof OCMF_SIGNATURE_ALGORITHMS[number];
+
+function nobleAlgorithmForOCMF(algorithm: OCMFSignatureAlgorithm | undefined): NobleSignatureAlgorithm | null {
+    switch (algorithm)
+    {
+        case "EdDSA-Ed25519":
+            return "Ed25519";
+        case "EdDSA-Ed448":
+            return "Ed448";
+        case "ML-DSA-44":
+        case "ML-DSA-65":
+        case "ML-DSA-87":
+            return algorithm;
+        default:
+            return null;
+    }
+}
+
+function decodeRawOCMFBytes(value: string, encoding?: string): Uint8Array {
+    const normalizedEncoding = encoding?.toLowerCase();
+    if (normalizedEncoding === "hex" ||
+        (normalizedEncoding == null && /^[0-9a-f]+$/iu.test(value)))
+    {
+        if (!/^(?:[0-9a-f]{2})+$/iu.test(value))
+            throw new TypeError("Raw hexadecimal key data is malformed.");
+        return new Uint8Array(Buffer.from(value, "hex"));
+    }
+
+    if (normalizedEncoding === "base64" || normalizedEncoding == null)
+        return new Uint8Array(Buffer.from(value, "base64"));
+
+    throw new TypeError(`Unsupported raw key encoding '${encoding ?? ""}'.`);
+}
 
 
 type ASN1PublicKey = {
@@ -84,11 +140,13 @@ export interface IOCMFv1_0Result extends chargyInterfaces.ICryptoResult
 
 export class OCMFv1_x extends ACrypt {
 
-    readonly curve: EllipticCurve = new this.chargy.elliptic.ec('p256');
+    readonly curve: CompatibleCurve;
 
     constructor(chargy:  Chargy) {
         super("OCMF",
               chargy);
+
+        this.curve = this.curve256r1;
     }
 
 
@@ -703,7 +761,7 @@ export interface IOCMFSignature {
     //   "SD": "304402201455BF1082C9EB8B1272D7FA838EB44286B03AC96E8BAFC5E79E30C5B3E1B872022006286CA81AEE0FAFCB1D6A137FFB2C0DD014727E2AEC149F30CD5A7E87619139"
     // }
 
-    SA?:        string,                 // Signature Algorithm:           Optionally selects the algorithm used to create the signature. This includes the signature algorithm, its parameters, and the hash algorithm
+    SA?:        OCMFSignatureAlgorithm, // Signature Algorithm:           Optionally selects the algorithm used to create the signature. This includes the signature algorithm, its parameters, and the hash algorithm
                                         //                                that will be applied to the data to be signed. If it is omitted, the default value is effective.
                                         //                                ECDSA-secp256r1-SHA256 is the default since OCMF Version 0.4.
                                         //
@@ -716,6 +774,11 @@ export interface IOCMFSignature {
                                         // ECDSA-brainpool256r1-SHA256        ECDSA                 brainpool256r1                                                256 bit      SHA-256          64
                                         // ECDSA-secp384r1-SHA256             ECDSA                 secp384r1, NIST P-384, ANSI X9.62 elliptic curve prime384v1   384 bit      SHA-256          96
                                         // ECDSA-brainpool384r1-SHA256        ECDSA                 brainpool384r1                                                384 bit      SHA-256          96
+                                        // EdDSA-Ed25519                      EdDSA                 Ed25519                                                        256 bit      internal          64
+                                        // EdDSA-Ed448                        EdDSA                 Ed448                                                          456 bit      internal         114
+                                        // ML-DSA-44                          ML-DSA                FIPS 204 category 2                                           1312 bytes    internal        2420
+                                        // ML-DSA-65                          ML-DSA                FIPS 204 category 3                                           1952 bytes    internal        3309
+                                        // ML-DSA-87                          ML-DSA                FIPS 204 category 5                                           2592 bytes    internal        4627
 
                                         // Note: The hash algorithms for 384++ key lengths should be SHA-384 and SHA-512, not SHA-256 to match the security levels of the official crypto standards!
 
@@ -729,6 +792,7 @@ export interface IOCMFSignature {
                                         //                                If it is omitted, the default value is effective.
                                         //                                The following values are possible:
                                         //                                    application/x-der:   DER encoded ASN.1 structure (default)
+                                        //                                    application/octet-stream: Raw EdDSA or ML-DSA signature bytes (Chargy extension)
 
     SD:         string                  // Signature Data:                The actual signature data according to the format specification above.
 
@@ -988,6 +1052,7 @@ export interface IOCMFJSONDocument {
     payload:             IOCMFPayload,
     signature:           IOCMFSignature,
     signatureRS?:        chargyInterfaces.ISignatureRS | undefined,
+    signatureBytes?:     Uint8Array | undefined,
     publicKey?:          string|publicKeyInfoType.IPublicKeyXY | undefined,
     publicKeyEncoding?:  string | undefined,
 
@@ -1935,8 +2000,9 @@ export class OCMF {
 
             //#region Setup crypto
 
-            let   curve:     EllipticCurve   | null = null;
-            let   publicKey: EllipticKeyPair | null = null;
+            let curve:          CompatibleCurve     | null = null;
+            let publicKey:      CompatiblePublicKey | null = null;
+            let signatureSuite: SignatureSuite      | null = null;
 
             try
             {
@@ -1951,7 +2017,7 @@ export class OCMF {
                         break;
 
                     case "ECDSA-secp256k1-SHA256":
-                        curve = new this.chargy.elliptic.ec('secp256k1');
+                        curve = createCompatibleCurve('secp256k1');
                         break;
 
                     case "ECDSA-brainpool256r1-SHA256":
@@ -1959,7 +2025,7 @@ export class OCMF {
 
                     // Note: Cryptographical wrong hash algorithm!
                     case "ECDSA-secp384r1-SHA256":
-                        curve = new this.chargy.elliptic.ec('p384');
+                        curve = createCompatibleCurve('p384');
                         break;
 
                     // Note: Cryptographical wrong hash algorithm!
@@ -1968,7 +2034,7 @@ export class OCMF {
 
                     // Not an OCMF standard!
                     case "ECDSA-secp384r1-SHA384":
-                        curve = new this.chargy.elliptic.ec('p384');
+                        curve = createCompatibleCurve('p384');
                         break;
 
                     // Not an OCMF standard!
@@ -1977,13 +2043,30 @@ export class OCMF {
 
                     // Not an OCMF standard!
                     case "ECDSA-secp521r1-SHA512":
-                        curve = new this.chargy.elliptic.ec('p521');
+                        curve = createCompatibleCurve('p521');
                         break;
 
-                    // ECDSA-secp256r1-SHA256
-                    default:
-                        curve = new this.chargy.elliptic.ec('p256');
+                    case "EdDSA-Ed25519":
+                    case "EdDSA-Ed448":
+                    case "ML-DSA-44":
+                    case "ML-DSA-65":
+                    case "ML-DSA-87":
+                    {
+                        const nobleAlgorithm = nobleAlgorithmForOCMF(OCMFJSONDocument.signature.SA);
+                        if (nobleAlgorithm === null)
+                            throw new Error(`Unsupported signature algorithm '${OCMFJSONDocument.signature.SA}'.`);
+                        signatureSuite = getSignatureSuite(nobleAlgorithm);
                         break;
+                    }
+
+                    // ECDSA-secp256r1-SHA256
+                    case "ECDSA-secp256r1-SHA256":
+                    case undefined:
+                        curve = createCompatibleCurve('p256');
+                        break;
+
+                    default:
+                        throw new Error(`Unsupported signature algorithm '${String(OCMFJSONDocument.signature.SA)}'.`);
 
                 }
 
@@ -1996,6 +2079,47 @@ export class OCMF {
             }
 
             //#endregion
+
+            if (signatureSuite !== null)
+            {
+                try
+                {
+                    if (typeof PublicKey !== "string")
+                        throw new TypeError("EdDSA and ML-DSA public keys must use a raw string encoding.");
+
+                    const publicKeyBytes = decodeRawOCMFBytes(PublicKey, PublicKeyEncoding);
+                    const signatureBytes = OCMFJSONDocument.signatureBytes;
+                    const rawPayload     = OCMFJSONDocument.rawPayload;
+
+                    if (!signatureSuite.isValidPublicKey(publicKeyBytes))
+                        throw new TypeError("Public key is invalid for the selected signature algorithm.");
+                    if (signatureBytes == null)
+                        throw new TypeError("Missing raw signature bytes.");
+                    if (rawPayload == null)
+                        throw new TypeError("Missing raw OCMF payload.");
+
+                    const signatureValid: boolean = signatureSuite.verify(
+                        new TextEncoder().encode(rawPayload),
+                        signatureBytes,
+                        publicKeyBytes
+                    );
+
+                    if (!signatureValid)
+                        this.AddValidationError(OCMFJSONDocument, "Verification_SignatureMismatch");
+
+                    OCMFJSONDocument.publicKey = PublicKey;
+                    OCMFJSONDocument.validationStatus = signatureValid
+                                                            ? chargyInterfaces.VerificationResult.ValidSignature
+                                                            : chargyInterfaces.VerificationResult.InvalidSignature;
+                    return OCMFJSONDocument.validationStatus;
+                }
+                catch (exception)
+                {
+                    this.AddValidationError(OCMFJSONDocument, "Verification_SignatureMalformed", exception);
+                    OCMFJSONDocument.validationStatus = chargyInterfaces.VerificationResult.InvalidSignature;
+                    return OCMFJSONDocument.validationStatus;
+                }
+            }
 
             //#region Parse the public key
 
@@ -2390,10 +2514,24 @@ export class OCMF {
                                                 hashValue      = (await chargyLib.sha512(plaintext));
                                                 break;
 
+                                            case "EdDSA-Ed25519":
+                                            case "EdDSA-Ed448":
+                                            case "ML-DSA-44":
+                                            case "ML-DSA-65":
+                                            case "ML-DSA-87":
+                                                hashAlgorithm  = "none; message signed directly";
+                                                hashValue      = "";
+                                                break;
+
                                             // ECDSA-secp256r1-SHA256
-                                            default:
+                                            case "ECDSA-secp256r1-SHA256":
+                                            case undefined:
                                                 hashAlgorithm  = "SHA256";
                                                 hashValue      = (await chargyLib.sha256(plaintext));
+                                                break;
+
+                                            default:
+                                                validationStatus = chargyInterfaces.VerificationResult.UnknownSignatureFormat;
                                                 break;
 
                                         }
@@ -2455,16 +2593,24 @@ export class OCMF {
 
                                         }
 
-                                        // Parse the DER-encoded signature
-                                        const decodedSignatureObj: unknown = ECDSASignature.decode(Buffer.from(ocmfJSONDocument.signature.SD, bufferEncoding), 'der');
-                                        const signatureObj                 = decodedSignatureObj as ASN1Signature;
+                                        const encodedSignature = Buffer.from(ocmfJSONDocument.signature.SD, bufferEncoding);
+                                        if (nobleAlgorithmForOCMF(ocmfJSONDocument.signature.SA) !== null)
+                                        {
+                                            ocmfJSONDocument.signatureBytes = new Uint8Array(encodedSignature);
+                                        }
+                                        else
+                                        {
+                                            // Parse the DER-encoded ECDSA signature
+                                            const decodedSignatureObj: unknown = ECDSASignature.decode(encodedSignature, 'der');
+                                            const signatureObj                 = decodedSignatureObj as ASN1Signature;
 
-                                        // Extract the r and s components of the signature
-                                        ocmfJSONDocument.signatureRS =  {
-                                            value:  ocmfJSONDocument.signature.SD,
-                                            r:      signatureObj.r.toString(16),
-                                            s:      signatureObj.s.toString(16)
-                                        };
+                                            // Extract the r and s components of the signature
+                                            ocmfJSONDocument.signatureRS =  {
+                                                value:  ocmfJSONDocument.signature.SD,
+                                                r:      signatureObj.r.toString(16),
+                                                s:      signatureObj.s.toString(16)
+                                            };
+                                        }
 
                                     }
                                     catch

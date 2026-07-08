@@ -87,6 +87,29 @@ import { Chargy } from "@open-charging-cloud/chargy-core";
 The package ships as a modern ESM package and includes generated TypeScript declarations, so it can be used directly in TypeScript projects without additional type packages.
 
 
+### Signature providers
+
+ChargyCore uses audited Noble implementations for modern signature algorithms. The common `SignatureSuite` API supports ECDSA over secp256k1, P-256, P-384 and P-521; Ed25519, Ed25519ctx, Ed25519ph, Ed448 and Ed448ph; and the FIPS 204 ML-DSA-44, ML-DSA-65 and ML-DSA-87 parameter sets. The older `elliptic` implementation is restricted to verification of legacy P-192 charging data.
+
+Keys and signatures use `Uint8Array`, and every serialized JSON signature records its algorithm and encoding. For example:
+
+```ts
+import {
+  generateSignatureKeyPair,
+  signMessage,
+  verifyJSONMessageSignatures
+} from "@open-charging-cloud/chargy-core";
+
+const keyPair = generateSignatureKeyPair("ML-DSA-65");
+const record = { sessionId: "DE*TEST*E1", energy: 12.5 };
+
+await signMessage(record, keyPair);
+const valid = await verifyJSONMessageSignatures(record);
+```
+
+Use the distinct `Ed25519ph`, `Ed448ph`, or ML-DSA algorithm identifier when a protocol requires that variant. The generic `prehashed` option is intentionally rejected for these schemes so that pure and pre-hash signatures cannot be confused accidentally.
+
+
 ### Runtime Architecture
 
 ChargyCore is consumed in different JavaScript runtimes. The browser-based Chargy WebApp and Electron renderer processes have Web APIs such as `DOMParser`, `Blob`, `TextEncoder`, `ImageData`, `DOMMatrix`, `Path2D`, and browser worker loading semantics. Node.js-based tests, command line tools, server-side verification, and build-time checks do not provide the same environment.

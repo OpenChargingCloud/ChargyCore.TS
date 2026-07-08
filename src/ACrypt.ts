@@ -18,8 +18,11 @@
 import      * as chargyLib                 from './interfaces/chargyLib'
 import      * as chargyInterfaces          from './interfaces/chargyInterfaces'
 import type * as chargeTransparencyRecord  from './interfaces/IChargeTransparencyRecord'
-import type { Chargy, EllipticCurve }      from './chargy'
+import type { Chargy }                     from './chargy'
 import      { secp224k1 }                  from './interfaces/secp224k1'
+import      { createCompatibleCurve,
+              createLegacyP192Curve }      from './SignatureCrypto'
+import type { CompatibleCurve }            from './SignatureCrypto'
 
 
 export abstract class ACrypt {
@@ -29,11 +32,11 @@ export abstract class ACrypt {
     readonly description:  string;
     readonly chargy:       Chargy;
 
-    readonly curve192r1:   EllipticCurve;
+    readonly curve192r1:   CompatibleCurve;
     readonly curve224k1:   secp224k1;
-    readonly curve256r1:   EllipticCurve;
-    readonly curve384r1:   EllipticCurve;
-    readonly curve521r1:   EllipticCurve;
+    readonly curve256r1:   CompatibleCurve;
+    readonly curve384r1:   CompatibleCurve;
+    readonly curve521r1:   CompatibleCurve;
 
     //#endregion
 
@@ -45,7 +48,7 @@ export abstract class ACrypt {
 
         // NIST/ANSI X9.62 named 192-bit elliptic curve: secp192r1
         // https://www.secg.org/sec2-v2.pdf
-        this.curve192r1   = new this.chargy.elliptic.ec('p192');
+        this.curve192r1   = createLegacyP192Curve(this.chargy.elliptic);
 
         // Koblitz 224-bit curve: secp224k1
         // https://www.secg.org/sec2-v2.pdf
@@ -53,15 +56,15 @@ export abstract class ACrypt {
 
         // NIST/ANSI X9.62 named 256-bit elliptic curve: secp256r1
         // https://www.secg.org/sec2-v2.pdf
-        this.curve256r1   = new this.chargy.elliptic.ec('p256');
+        this.curve256r1   = createCompatibleCurve('p256');
 
         // NIST/ANSI X9.62 named 384-bit elliptic curve: secp384r1
         // https://www.secg.org/sec2-v2.pdf
-        this.curve384r1   = new this.chargy.elliptic.ec('p384');
+        this.curve384r1   = createCompatibleCurve('p384');
 
         // NIST/ANSI X9.62 named 521-bit elliptic curve: secp521r1
         // https://www.secg.org/sec2-v2.pdf
-        this.curve521r1   = new this.chargy.elliptic.ec('p521');
+        this.curve521r1   = createCompatibleCurve('p521');
 
     }
 

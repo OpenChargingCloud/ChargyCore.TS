@@ -15,9 +15,9 @@
  * limitations under the License.
  */
 
-import type { Chargy,
-              EllipticCurve,
-              EllipticKeyPair }       from './chargy'
+import type { Chargy }                from './chargy'
+import type { CompatibleCurve,
+              CompatiblePublicKey }   from './SignatureCrypto'
 import { ACrypt }                     from './ACrypt'
 import * as chargyInterfaces          from './interfaces/chargyInterfaces'
 import type * as chargeTransparencyRecord  from './interfaces/IChargeTransparencyRecord'
@@ -49,11 +49,13 @@ export interface IGDFCrypt01Result extends chargyInterfaces.ICryptoResult
 
 export class GDFCrypt01 extends ACrypt {
 
-    readonly curve: EllipticCurve = new this.chargy.elliptic.ec('p256');
+    readonly curve: CompatibleCurve;
 
     constructor(chargy:  Chargy) {
         super("ECC secp256r1",
               chargy);
+
+        this.curve = this.curve256r1;
     }
 
     async VerifyChargingSession(chargingSession: chargeTransparencyRecord.IChargingSession): Promise<chargyInterfaces.ISessionCryptoResult>
@@ -177,7 +179,7 @@ export class GDFCrypt01 extends ACrypt {
                             cryptoResult.publicKeySignatures  = publicKey?.signatures;
 
                             // Step 1: decode the meter's public key.
-                            let keyPair: EllipticKeyPair;
+                            let keyPair: CompatiblePublicKey;
                             try
                             {
                                 keyPair = this.curve.keyFromPublic(cryptoResult.publicKey ?? "", 'hex');

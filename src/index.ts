@@ -15,6 +15,7 @@ export * from "./QIDigital_DCC";
 export * from "./QIDigital_DCoA";
 export * from "./QIDigital_DCoC";
 export * from "./SAFE_XML";
+export * from "./SignatureCrypto";
 export * from "./XMLContainer";
 export * from "./chargeIT";
 export * from "./chargePoint";

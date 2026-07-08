@@ -42,6 +42,10 @@ import { importPdfJs }                      from '#pdfjs-runtime'
 import defaultValidationRules               from '../validationRules.json'
 import seekBzip                             from 'seek-bzip';
 import type moment                          from 'moment';
+import { createCompatibleCurve }            from './SignatureCrypto'
+import type { CompatibleCurve,
+              CompatiblePublicKey,
+              LegacyEllipticModule }        from './SignatureCrypto'
 
 type DERPublicKey = {
     oids:      [number[], number[]];
@@ -85,18 +89,11 @@ type Asn1Module = {
 
 type Base32Decode = (input: string, variant: "RFC3548" | "RFC4648" | "RFC4648-HEX" | "Crockford") => ArrayBuffer;
 
-export type EllipticKeyPair = {
-    verify(hash: string, signature: unknown): boolean;
-    validate(): { result: boolean; reason?: string | null };
-};
-
-export type EllipticCurve = {
-    keyFromPublic(publicKey: string | { x: string; y: string }, encoding: string): EllipticKeyPair;
-};
-
-type EllipticModule = {
-    ec: new (curve: string) => EllipticCurve;
-};
+/** @deprecated Use CompatiblePublicKey from SignatureCrypto. */
+export type EllipticKeyPair = CompatiblePublicKey;
+/** @deprecated Use CompatibleCurve from SignatureCrypto. */
+export type EllipticCurve = CompatibleCurve;
+type EllipticModule = LegacyEllipticModule;
 
 type MomentModule = typeof moment;
 
@@ -541,6 +538,9 @@ export class Chargy {
         if (trimmedQRCodeText.startsWith("{")     || trimmedQRCodeText.startsWith("["))
             return baseFileName + ".json";
 
+        if (trimmedQRCodeText.startsWith("OCMF|"))
+            return baseFileName + ".ocmf";
+
         return baseFileName + ".txt";
 
     }
@@ -820,7 +820,7 @@ export class Chargy {
 
             const sha256value = await chargyLib.sha256(JSON.stringify(toCheck));
 
-            const result      = new this.elliptic.ec('secp256r1').
+            const result      = createCompatibleCurve('secp256r1').
                                         keyFromPublic(chargyLib.asString(signatureView["publicKey"]) ?? "", 'hex').
                                         verify       (sha256value,
                                                       signatureView["signature"]);

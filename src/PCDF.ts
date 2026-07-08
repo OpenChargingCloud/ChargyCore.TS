@@ -16,6 +16,7 @@
  */
 
 import { ACrypt }                          from './ACrypt'
+import { createCompatibleCurve }           from './SignatureCrypto'
 import type { Chargy }                     from './chargy'
 import type * as chargeTransparencyRecord  from './interfaces/IChargeTransparencyRecord'
 import type * as publicKeyInfo             from './interfaces/IPublicKeyInfo'
@@ -413,12 +414,12 @@ export function parsePCDFSignature(signatureHex: string): chargyInterfaces.ISign
 }
 
 export async function verifyPCDFDocument(document: IPCDFDocument,
-                                         chargy:   Chargy): Promise<chargyInterfaces.VerificationResult> {
+                                         _chargy:  Chargy): Promise<chargyInterfaces.VerificationResult> {
 
     try
     {
 
-        const curve     = new chargy.elliptic.ec('p256');
+        const curve     = createCompatibleCurve('p256');
         const publicKey = curve.keyFromPublic(document.publicKeyHex, 'hex');
 
         document.hashValue = await chargyLib.sha256(document.signedPayload);

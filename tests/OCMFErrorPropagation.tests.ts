@@ -15,7 +15,7 @@ describe("OCMF verification error propagation", () => {
 
     test("surfaces a wrong public key as a structured error on the measurement value result", async () => {
 
-        const ocmf = readFixtureText("OCMF/OCMF-Testdata-01.txt");
+        const ocmf = readFixtureText("OCMF/OCMF-Testdata-01.ocmf");
 
         // A valid but unrelated secp256r1 key (same SubjectPublicKeyInfo DER prefix,
         // different point) — decodes fine, but the signature will not match.
@@ -23,7 +23,7 @@ describe("OCMF verification error propagation", () => {
                                new EC("p256").genKeyPair().getPublic(false, "hex");
 
         const files: IFileInfo[] = [
-            { name: "OCMF-Testdata-01.txt", type: "binary/octet-stream", data: new TextEncoder().encode(ocmf) },
+            { name: "OCMF-Testdata-01.ocmf", type: "application/ocmf", data: new TextEncoder().encode(ocmf) },
             { name: "publicKey.txt",        type: "binary/octet-stream", data: new TextEncoder().encode(wrongPublicKey) }
         ];
 

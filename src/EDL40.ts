@@ -16,6 +16,8 @@
  */
 
 import { ACrypt }                          from './ACrypt'
+import { createCompatibleCurve,
+         createLegacyP192Curve }           from './SignatureCrypto'
 import type { Chargy }                     from './chargy'
 import type * as chargeTransparencyRecord  from './interfaces/IChargeTransparencyRecord'
 import * as publicKeyInfo                  from './interfaces/IPublicKeyInfo'
@@ -1279,8 +1281,8 @@ function verifyRawSignature(chargy:    Chargy,
     try
     {
         const ec = curve === "secp192r1"
-                       ? new chargy.elliptic.ec("p192")
-                       : new chargy.elliptic.ec("p256");
+                       ? createLegacyP192Curve(chargy.elliptic)
+                       : createCompatibleCurve("p256");
 
         const verified = ec.
             keyFromPublic("04" + publicKey, "hex").

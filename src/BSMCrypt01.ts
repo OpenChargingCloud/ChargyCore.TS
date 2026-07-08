@@ -15,9 +15,9 @@
  * limitations under the License.
  */
 
-import type { Chargy,
-              EllipticCurve,
-              EllipticKeyPair }       from './chargy'
+import type { Chargy }                from './chargy'
+import type { CompatibleCurve,
+              CompatiblePublicKey }   from './SignatureCrypto'
 import { ACrypt }                     from './ACrypt'
 import * as chargyInterfaces          from './interfaces/chargyInterfaces'
 import type * as chargeTransparencyRecord  from './interfaces/IChargeTransparencyRecord'
@@ -164,11 +164,13 @@ export interface IBSMCrypt01Result extends chargyInterfaces.ICryptoResult
 
 export class BSMCrypt01 extends ACrypt {
 
-    readonly curve: EllipticCurve = new this.chargy.elliptic.ec('p256');
+    readonly curve: CompatibleCurve;
 
     constructor(chargy: Chargy) {
         super("ECC secp256r1",
               chargy);
+
+        this.curve = this.curve256r1;
     }
 
 
@@ -1269,7 +1271,7 @@ export class BSMCrypt01 extends ACrypt {
                             }
 
                             // Step 1: decode the meter's public key.
-                            let keyPair: EllipticKeyPair;
+                            let keyPair: CompatiblePublicKey;
                             try
                             {
                                 keyPair = this.curve.keyFromPublic(publicKey, 'hex');
