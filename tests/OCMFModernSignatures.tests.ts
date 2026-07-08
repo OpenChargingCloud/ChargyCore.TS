@@ -6,8 +6,10 @@ import {
     IsAChargeTransparencyRecord,
     OCMF,
     OCMF_SIGNATURE_ALGORITHMS,
+    getOCMFSignatureDisplay,
     SessionVerificationResult,
-    type IOCMFChargeTransparencyRecord
+    type IOCMFChargeTransparencyRecord,
+    type IOCMFSignature
 } from "@open-charging-cloud/chargy-core";
 import { createTestChargy } from "./chargyTestRuntime";
 
@@ -78,6 +80,35 @@ function encodeSubjectPublicKeyInfo(oid: string, publicKey: Buffer): Buffer {
 }
 
 describe("Chargy OCMF modern signature extensions", () => {
+
+    test.each([
+        [ "001-01_Ed25519.ocmf",   32 ],
+        [ "001-01_Ed448.ocmf",     57 ],
+        [ "001-01_ML-DSA-65.ocmf", undefined ]
+    ])("formats the raw signature components of %s", (fileName, componentByteLength) => {
+
+        const document  = readFileSync(new URL(fileName, fixtureRoot), "utf8").trim();
+        const signature = JSON.parse(document.split("|")[2] ?? "null") as IOCMFSignature;
+        const display   = getOCMFSignatureDisplay(signature, new Uint8Array());
+
+        expect(display.valueLabel).toBe("raw");
+        expect(display.value).toBe(signature.SD);
+
+        if (componentByteLength === undefined)
+        {
+            expect(display.format).toBe("raw, hex");
+            expect(display.r).toBeUndefined();
+            expect(display.s).toBeUndefined();
+        }
+        else
+        {
+            const componentHexLength = componentByteLength * 2;
+            expect(display.format).toBe("RS, hex");
+            expect(display.r).toBe(signature.SD.substring(0, componentHexLength));
+            expect(display.s).toBe(signature.SD.substring(componentHexLength));
+        }
+
+    });
 
     test.each(modernFixtures)("detects and verifies $fileName together with $publicKeyPEMName", async fixture => {
 

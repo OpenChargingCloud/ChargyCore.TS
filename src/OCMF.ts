@@ -90,6 +90,56 @@ function decodeRawOCMFBytes(value: string, encoding?: string): Uint8Array {
     throw new TypeError(`Unsupported raw key encoding '${encoding ?? ""}'.`);
 }
 
+export type OCMFSignatureDisplay = {
+    format:     "RS, hex" | "raw, hex" | "rs, hex";
+    valueLabel: "raw" | "der";
+    value:      string;
+    r?:         string;
+    s?:         string;
+};
+
+export function getOCMFSignatureDisplay(signature:       IOCMFSignature,
+                                        signatureBytes?: Uint8Array,
+                                        signatureRS?:    chargyInterfaces.ISignatureRS): OCMFSignatureDisplay {
+
+    const encodedSignature = signatureBytes !== undefined && signatureBytes.length > 0
+                                 ? signatureBytes
+                                 : decodeRawOCMFBytes(signature.SD, signature.SE);
+    const rawHex           = chargyLib.buf2hex(encodedSignature).toUpperCase();
+
+    if (signature.SA === "EdDSA-Ed25519" || signature.SA === "EdDSA-Ed448")
+    {
+        const componentHexLength = signature.SA === "EdDSA-Ed25519" ? 64 : 114;
+
+        if (rawHex.length !== componentHexLength * 2)
+            return { format: "RS, hex", valueLabel: "raw", value: rawHex };
+
+        return {
+            format:     "RS, hex",
+            valueLabel: "raw",
+            value:      rawHex,
+            r:          rawHex.substring(0, componentHexLength),
+            s:          rawHex.substring(componentHexLength)
+        };
+    }
+
+    if (signature.SA === "ML-DSA-44" || signature.SA === "ML-DSA-65" || signature.SA === "ML-DSA-87")
+        return { format: "raw, hex", valueLabel: "raw", value: rawHex };
+
+    return {
+        format:     "rs, hex",
+        valueLabel: "der",
+        value:      rawHex,
+        ...(signatureRS === undefined
+                ? {}
+                : {
+                      r: signatureRS.r.toLowerCase().padStart(56, '0'),
+                      s: signatureRS.s.toLowerCase().padStart(56, '0')
+                  })
+    };
+
+}
+
 
 type ASN1PublicKey = {
     algorithm: {
@@ -594,14 +644,22 @@ export class OCMFv1_x extends ACrypt {
         if (measurementValue.ocmfDocument.signature.SD)
         {
 
+            const signatureDisplay = getOCMFSignatureDisplay(
+                                         measurementValue.ocmfDocument.signature,
+                                         measurementValue.ocmfDocument.signatureBytes,
+                                         measurementValue.ocmfDocument.signatureRS
+                                     );
+
             if (SignatureExpectedDiv.parentElement)
             {
-                chargyLib.getArrayLikeElement(SignatureExpectedDiv.parentElement.children, 0, "Missing expected signature header").innerHTML  = this.chargy.GetLocalizedMessage("Expected signature") + " (rs, hex)";
+                chargyLib.getArrayLikeElement(SignatureExpectedDiv.parentElement.children, 0, "Missing expected signature header").innerHTML = this.chargy.GetLocalizedMessage("Expected signature") + " (" + signatureDisplay.format + ")";
             }
 
-            SignatureExpectedDiv.innerHTML = "der: "           + (measurementValue.ocmfDocument.signature.SD.                                  match(/.{1,8}/g)?.join(" ") ?? "-") + "<br /><br />" +
-                                             "r:&nbsp;&nbsp; " + (measurementValue.ocmfDocument.signatureRS?.r.toLowerCase().padStart(56, '0').match(/.{1,8}/g)?.join(" ") ?? "-") + "<br />" +
-                                             "s:&nbsp;&nbsp; " + (measurementValue.ocmfDocument.signatureRS?.s.toLowerCase().padStart(56, '0').match(/.{1,8}/g)?.join(" ") ?? "-");
+            SignatureExpectedDiv.innerHTML = signatureDisplay.valueLabel + ": " + (signatureDisplay.value.match(/.{1,8}/g)?.join(" ") ?? "-") +
+                                             (signatureDisplay.r === undefined || signatureDisplay.s === undefined
+                                                  ? ""
+                                                  : "<br /><br />R:&nbsp;&nbsp; " + (signatureDisplay.r.match(/.{1,8}/g)?.join(" ") ?? "-") + "<br />" +
+                                                    "S:&nbsp;&nbsp; " + (signatureDisplay.s.match(/.{1,8}/g)?.join(" ") ?? "-"));
 
         }
 
