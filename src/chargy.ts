@@ -325,10 +325,12 @@ export class Chargy {
                     "@id":            keyId,
                     "@context":       "https://open.charging.cloud/contexts/publicKey+json",
                     "subject":        keyId,
-                    type: {
-                        oid:          KeyType_OID,
-                        name:         KeyType
-                    },
+                    type:       KeyType === "EdDSA" || KeyType === "ML-DSA"
+                                    ? KeyType
+                                    : {
+                                          oid:  KeyType_OID,
+                                          name: KeyType
+                                      },
                     algorithm: {
                         oid:          Algorithm_OID,
                         name:         Algorithm

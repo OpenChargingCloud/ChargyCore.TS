@@ -42,10 +42,10 @@ async function loadPublicKeys(...names: string[]): Promise<IPublicKeyLookup> {
 describe("Public key file processing", () => {
 
     test.each([
-        [ "001-01_Ed25519.publicKey.pem",   "1.3.101.112",              "Ed25519",   32   ],
-        [ "001-01_Ed448.publicKey.pem",     "1.3.101.113",              "Ed448",     57   ],
-        [ "001-01_ML-DSA-65.publicKey.pem", "2.16.840.1.101.3.4.3.18", "ML-DSA-65", 1952 ]
-    ])("recognizes %s", async (fileName, oid, algorithm, keyLength) => {
+        [ "001-01_Ed25519.publicKey.pem",   "1.3.101.112",              "Ed25519",   "EdDSA",  32   ],
+        [ "001-01_Ed448.publicKey.pem",     "1.3.101.113",              "Ed448",     "EdDSA",  57   ],
+        [ "001-01_ML-DSA-65.publicKey.pem", "2.16.840.1.101.3.4.3.18", "ML-DSA-65", "ML-DSA", 1952 ]
+    ])("recognizes %s", async (fileName, oid, algorithm, type, keyLength) => {
 
         const result = await createTestChargy(Chargy).DetectAndConvertContentFormat([{
             name: fileName,
@@ -59,7 +59,8 @@ describe("Public key file processing", () => {
 
         expect(result.publicKeys).toHaveLength(1);
         expect(result.publicKeys[0]).toMatchObject({
-            algorithm: { oid, name: algorithm }
+            algorithm: { oid, name: algorithm },
+            type
         });
         expect(result.publicKeys[0]?.value).toHaveLength(keyLength * 2);
 
