@@ -48,9 +48,10 @@ import type { CompatibleCurve,
               LegacyEllipticModule }        from './SignatureCrypto'
 
 type DERPublicKey = {
-    oids:      [number[], number[]];
+    oids:      number[][];
     publicKey: {
-        data:  ArrayBuffer | Uint8Array;
+        unused?: number;
+        data:    ArrayBuffer | Uint8Array;
     };
 };
 
@@ -240,41 +241,81 @@ export class Chargy {
 
         const publicKeyDER   = ASN1_PublicKey.decode(publicKeyBuffer, 'der') as DERPublicKey;
 
-        const KeyType_OID    = publicKeyDER.oids[0].join(".");
+        const firstOID       = publicKeyDER.oids[0];
+        if (firstOID === undefined)
+            throw new Error("The SubjectPublicKeyInfo algorithm identifier is missing!");
+
+        const KeyType_OID    = firstOID.join(".");
         let   KeyType        = "unknown";
         switch (KeyType_OID)
         {
             case "1.2.840.10045.2.1":
                 KeyType      = "ecPublicKey";   // ANSI X9.62 public key type
                 break;
+
+            case "1.3.101.112":
+            case "1.3.101.113":
+                KeyType      = "EdDSA";
+                break;
+
+            case "2.16.840.1.101.3.4.3.18":
+                KeyType      = "ML-DSA";
+                break;
         }
 
-        const Curve_OID      = publicKeyDER.oids[1].join(".");
-        let   Curve          = "unknown";
-        switch (Curve_OID)
+        const Algorithm_OID  = publicKeyDER.oids[1]?.join(".") ?? KeyType_OID;
+        let   Algorithm      = "unknown";
+        switch (Algorithm_OID)
         {
+
+            case "1.3.101.112":
+                Algorithm    = "Ed25519";
+                break;
+
+            case "1.3.101.113":
+                Algorithm    = "Ed448";
+                break;
+
+            case "2.16.840.1.101.3.4.3.18":
+                Algorithm    = "ML-DSA-65";
+                break;
 
             // Koblitz 224-bit curve
             case "1.3.132.0.32":
-                Curve        = "secp224k1";
+                Algorithm    = "secp224k1";
                 break;
 
             // NIST/ANSI X9.62 named 256-bit elliptic curve used with SHA256
             case "1.2.840.10045.3.1.7":
-                Curve        = "secp256r1";    // also: ANSI prime256v1, NIST P-256
+                Algorithm    = "secp256r1";    // also: ANSI prime256v1, NIST P-256
                 break;
 
             // NIST/ANSI X9.62 named 384-bit elliptic curve used with SHA384
             case "1.3.132.0.34":
-                Curve        = "secp384r1";    // also: ANSI prime384v1, NIST P-384
+                Algorithm    = "secp384r1";    // also: ANSI prime384v1, NIST P-384
                 break;
 
             // NIST/ANSI X9.62 named 521-bit elliptic curve used with SHA512
             case "1.3.132.0.35":
-                Curve        = "secp521r1";    // also: ANSI prime521v1, NIST P-521
+                Algorithm    = "secp521r1";    // also: ANSI prime521v1, NIST P-521
                 break;
 
         }
+
+        const publicKeyData  = new Uint8Array(publicKeyDER.publicKey.data);
+        const expectedLength = Algorithm === "Ed25519"
+                                   ? 32
+                                   : Algorithm === "Ed448"
+                                         ? 57
+                                         : Algorithm === "ML-DSA-65"
+                                               ? 1952
+                                               : undefined;
+
+        if (publicKeyDER.publicKey.unused !== undefined && publicKeyDER.publicKey.unused !== 0)
+            throw new Error("The SubjectPublicKeyInfo public key has unused bits!");
+
+        if (expectedLength !== undefined && publicKeyData.length !== expectedLength)
+            throw new Error(`Invalid ${Algorithm} public key length: expected ${expectedLength} bytes, got ${publicKeyData.length}!`);
 
         return {
             "@id":       keyId,
@@ -289,10 +330,10 @@ export class Chargy {
                         name:         KeyType
                     },
                     algorithm: {
-                        oid:          Curve_OID,
-                        name:         Curve
+                        oid:          Algorithm_OID,
+                        name:         Algorithm
                     },
-                    value:      chargyLib.buf2hex(publicKeyDER.publicKey.data),
+                    value:      chargyLib.buf2hex(publicKeyData),
                     certainty:  0
                 }
             ]
@@ -320,8 +361,8 @@ export class Chargy {
 
     }
 
-    private TryToGetDERPublicKeyHEX(fileName:     string,
-                                    textContent?: string): string|undefined {
+    private TryToGetPublicKeyHEX(fileName:     string,
+                                 textContent?: string): string|undefined {
 
         if (textContent == null)
             return undefined;
@@ -336,11 +377,51 @@ export class Chargy {
                                              filter ((line) => line !== '' && !line.startsWith('#')).
                                              join   ("");
 
-            return chargyLib.buf2hex(Buffer.from(publicKeyPEM, 'base64'));
+            try
+            {
+                const publicKeyDER = Buffer.from(publicKeyPEM, 'base64');
+                const publicKey    = this.TryToParseDERPublicKey(
+                                              this.PublicKeyIdFromFileName(fileName),
+                                              publicKeyDER
+                                          ).publicKeys[0];
+
+                const algorithm = typeof publicKey?.algorithm === "string"
+                                      ? publicKey.algorithm
+                                      : publicKey?.algorithm.name;
+
+                return algorithm === "Ed25519" || algorithm === "Ed448" || algorithm === "ML-DSA-65"
+                           ? publicKey?.value
+                           : chargyLib.buf2hex(publicKeyDER);
+            }
+            catch
+            {
+                return undefined;
+            }
         }
 
         if (this.IsHexEncodedPublicKeyFile(fileName, textContent))
-            return textContent.replace(/\s+/g, "");
+        {
+            try
+            {
+                const publicKeyDER = Buffer.from(textContent.replace(/\s+/g, ""), 'hex');
+                const publicKey    = this.TryToParseDERPublicKey(
+                                              this.PublicKeyIdFromFileName(fileName),
+                                              publicKeyDER
+                                          ).publicKeys[0];
+
+                const algorithm = typeof publicKey?.algorithm === "string"
+                                      ? publicKey.algorithm
+                                      : publicKey?.algorithm.name;
+
+                return algorithm === "Ed25519" || algorithm === "Ed448" || algorithm === "ML-DSA-65"
+                           ? publicKey?.value
+                           : chargyLib.buf2hex(publicKeyDER);
+            }
+            catch
+            {
+                return undefined;
+            }
+        }
 
         return undefined;
 
@@ -1436,7 +1517,7 @@ export class Chargy {
             if (textContent.charCodeAt(0) === 0xFEFF)
                 textContent = textContent.substring(1);
 
-            const publicKeyHEX = this.TryToGetDERPublicKeyHEX(expandedFile.name, textContent);
+            const publicKeyHEX = this.TryToGetPublicKeyHEX(expandedFile.name, textContent);
 
             if (publicKeyHEX != null)
                 publicKeyHEXLookup.set(this.PublicKeyIdFromFileName(expandedFile.name), publicKeyHEX);

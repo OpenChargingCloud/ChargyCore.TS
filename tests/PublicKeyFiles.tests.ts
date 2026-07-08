@@ -11,14 +11,15 @@ import type {
 import { createTestChargy } from "./chargyTestRuntime";
 
 
-const fixtureRoot = new URL("fixtures/ChargePoint/", import.meta.url);
+const chargePointFixtureRoot = new URL("fixtures/ChargePoint/", import.meta.url);
+const modernKeyFixtureRoot   = new URL("fixtures/OCMF/BET_TariffTextExtension/001/", import.meta.url);
 
 function publicKeyFile(name: string): IFileInfo {
 
     return {
         name: name.substring(name.lastIndexOf("/") + 1),
         type: name.endsWith(".pem") ? "application/x-pem-file" : "application/chargy",
-        data: new Uint8Array(readFileSync(new URL(name, fixtureRoot)))
+        data: new Uint8Array(readFileSync(new URL(name, chargePointFixtureRoot)))
     };
 
 }
@@ -39,6 +40,30 @@ async function loadPublicKeys(...names: string[]): Promise<IPublicKeyLookup> {
 }
 
 describe("Public key file processing", () => {
+
+    test.each([
+        [ "001-01_Ed25519.publicKey.pem",   "1.3.101.112",              "Ed25519",   32   ],
+        [ "001-01_Ed448.publicKey.pem",     "1.3.101.113",              "Ed448",     57   ],
+        [ "001-01_ML-DSA-65.publicKey.pem", "2.16.840.1.101.3.4.3.18", "ML-DSA-65", 1952 ]
+    ])("recognizes %s", async (fileName, oid, algorithm, keyLength) => {
+
+        const result = await createTestChargy(Chargy).DetectAndConvertContentFormat([{
+            name: fileName,
+            type: "application/x-pem-file",
+            data: new Uint8Array(readFileSync(new URL(fileName, modernKeyFixtureRoot)))
+        }]);
+
+        expect(IsAPublicKeyLookup(result)).toBe(true);
+        if (!IsAPublicKeyLookup(result))
+            throw new Error("Expected a public key lookup");
+
+        expect(result.publicKeys).toHaveLength(1);
+        expect(result.publicKeys[0]).toMatchObject({
+            algorithm: { oid, name: algorithm }
+        });
+        expect(result.publicKeys[0]?.value).toHaveLength(keyLength * 2);
+
+    });
 
     test("returns a lookup for one PEM file", async () => {
 

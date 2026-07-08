@@ -79,6 +79,28 @@ function encodeSubjectPublicKeyInfo(oid: string, publicKey: Buffer): Buffer {
 
 describe("Chargy OCMF modern signature extensions", () => {
 
+    test.each(modernFixtures)("detects and verifies $fileName together with $publicKeyPEMName", async fixture => {
+
+        const result = await createTestChargy(Chargy).DetectAndConvertContentFormat([
+            {
+                name: fixture.fileName,
+                data: new Uint8Array(readFileSync(new URL(fixture.fileName, fixtureRoot)))
+            },
+            {
+                name: fixture.publicKeyPEMName,
+                type: "application/x-pem-file",
+                data: new Uint8Array(readFileSync(new URL(fixture.publicKeyPEMName, fixtureRoot)))
+            }
+        ]);
+
+        expect(IsAChargeTransparencyRecord(result)).toBe(true);
+        if (!IsAChargeTransparencyRecord(result))
+            throw new Error(`Expected ${fixture.fileName} to produce a charge transparency record.`);
+
+        expect(result.chargingSessions?.[0]?.verificationResult?.status).toBe(SessionVerificationResult.ValidSignature);
+
+    });
+
     test.each(modernFixtures)("verifies $fileName using $algorithm", async fixture => {
 
         expect(OCMF_SIGNATURE_ALGORITHMS).toContain(fixture.algorithm);
