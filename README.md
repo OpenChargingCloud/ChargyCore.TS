@@ -26,6 +26,8 @@ Currently supported formats include:
 - **Mennekes** XML
 - **OCMF**, versions v1.1 to v1.4
   - Bonner Eichrechtstage **Tariff Text** Extensions
+  - EdDSA support: Ed25519 and Ed448
+  - Post-Quantum Cryptography support: ML-DSA-44, ML-DSA-65, ML-DSA-87
 - **Porsche Charging Data Format (PCDF)**
 
 Detailed per-format documentation (data structures, signed payloads and signature verification) is available in [`documentation/`](documentation/README.md).
