@@ -44,7 +44,9 @@ describe("Public key file processing", () => {
     test.each([
         [ "001-01_Ed25519.publicKey.pem",   "1.3.101.112",              "Ed25519",   "EdDSA",  32   ],
         [ "001-01_Ed448.publicKey.pem",     "1.3.101.113",              "Ed448",     "EdDSA",  57   ],
-        [ "001-01_ML-DSA-65.publicKey.pem", "2.16.840.1.101.3.4.3.18", "ML-DSA-65", "ML-DSA", 1952 ]
+        [ "001-01_ML-DSA-44.publicKey.pem", "2.16.840.1.101.3.4.3.17", "ML-DSA-44", "ML-DSA", 1312 ],
+        [ "001-01_ML-DSA-65.publicKey.pem", "2.16.840.1.101.3.4.3.18", "ML-DSA-65", "ML-DSA", 1952 ],
+        [ "001-01_ML-DSA-87.publicKey.pem", "2.16.840.1.101.3.4.3.19", "ML-DSA-87", "ML-DSA", 2592 ]
     ])("recognizes %s", async (fileName, oid, algorithm, type, keyLength) => {
 
         const result = await createTestChargy(Chargy).DetectAndConvertContentFormat([{

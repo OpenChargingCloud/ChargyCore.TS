@@ -258,7 +258,9 @@ export class Chargy {
                 KeyType      = "EdDSA";
                 break;
 
+            case "2.16.840.1.101.3.4.3.17":
             case "2.16.840.1.101.3.4.3.18":
+            case "2.16.840.1.101.3.4.3.19":
                 KeyType      = "ML-DSA";
                 break;
         }
@@ -276,8 +278,16 @@ export class Chargy {
                 Algorithm    = "Ed448";
                 break;
 
+            case "2.16.840.1.101.3.4.3.17":
+                Algorithm    = "ML-DSA-44";
+                break;
+
             case "2.16.840.1.101.3.4.3.18":
                 Algorithm    = "ML-DSA-65";
+                break;
+
+            case "2.16.840.1.101.3.4.3.19":
+                Algorithm    = "ML-DSA-87";
                 break;
 
             // Koblitz 224-bit curve
@@ -307,9 +317,13 @@ export class Chargy {
                                    ? 32
                                    : Algorithm === "Ed448"
                                          ? 57
-                                         : Algorithm === "ML-DSA-65"
-                                               ? 1952
-                                               : undefined;
+                                         : Algorithm === "ML-DSA-44"
+                                               ? 1312
+                                               : Algorithm === "ML-DSA-65"
+                                                     ? 1952
+                                                     : Algorithm === "ML-DSA-87"
+                                                           ? 2592
+                                                           : undefined;
 
         if (publicKeyDER.publicKey.unused !== undefined && publicKeyDER.publicKey.unused !== 0)
             throw new Error("The SubjectPublicKeyInfo public key has unused bits!");
@@ -391,7 +405,7 @@ export class Chargy {
                                       ? publicKey.algorithm
                                       : publicKey?.algorithm.name;
 
-                return algorithm === "Ed25519" || algorithm === "Ed448" || algorithm === "ML-DSA-65"
+                return algorithm === "Ed25519" || algorithm === "Ed448" || algorithm?.startsWith("ML-DSA-")
                            ? publicKey?.value
                            : chargyLib.buf2hex(publicKeyDER);
             }
@@ -415,7 +429,7 @@ export class Chargy {
                                       ? publicKey.algorithm
                                       : publicKey?.algorithm.name;
 
-                return algorithm === "Ed25519" || algorithm === "Ed448" || algorithm === "ML-DSA-65"
+                return algorithm === "Ed25519" || algorithm === "Ed448" || algorithm?.startsWith("ML-DSA-")
                            ? publicKey?.value
                            : chargyLib.buf2hex(publicKeyDER);
             }
