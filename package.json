@@ -63,7 +63,7 @@
     "is-url-superb": "^6.1.0",
     "jsqr": "^1.4.0",
     "moment": "^2.30.1",
-    "pdfjs-dist": "6.0.227",
+    "pdfjs-dist": "6.2.108",
     "seek-bzip": "^2.0.0"
   },
   "optionalDependencies": {
