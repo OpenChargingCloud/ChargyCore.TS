@@ -405,7 +405,7 @@ export class Chargy {
                                       ? publicKey.algorithm
                                       : publicKey?.algorithm.name;
 
-                return algorithm === "Ed25519" || algorithm === "Ed448" || algorithm?.startsWith("ML-DSA-")
+                return algorithm === "Ed25519" || algorithm === "Ed448" || algorithm?.startsWith("ML-DSA-") === true
                            ? publicKey?.value
                            : chargyLib.buf2hex(publicKeyDER);
             }
@@ -429,7 +429,7 @@ export class Chargy {
                                       ? publicKey.algorithm
                                       : publicKey?.algorithm.name;
 
-                return algorithm === "Ed25519" || algorithm === "Ed448" || algorithm?.startsWith("ML-DSA-")
+                return algorithm === "Ed25519" || algorithm === "Ed448" || algorithm?.startsWith("ML-DSA-") === true
                            ? publicKey?.value
                            : chargyLib.buf2hex(publicKeyDER);
             }

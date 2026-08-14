@@ -350,7 +350,7 @@ export enum IECCurves {
     secp256k1   = "secp256k1",
     secp256r1   = "secp256r1",
     secp384r1   = "secp384r1",
-    secp512r1   = "secp512r1"
+    secp521r1   = "secp521r1"
 }
 
 export enum IEncoding {

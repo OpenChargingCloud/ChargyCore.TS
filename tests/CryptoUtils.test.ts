@@ -322,7 +322,7 @@ describe("CryptoUtils", () => {
 
     });
 
-    test("skips invalid key pairs and keeps the alias matching the C# name", async () => {
+    test("reports failure when no key pair could be used, and keeps the alias matching the C# name", async () => {
 
         const invalidKey = {
             algorithm:  "ECDSA-P256" as const,
@@ -330,8 +330,25 @@ describe("CryptoUtils", () => {
         };
         const message: SignedJSONMessage = { a: 1 };
 
-        await expect(SignMessage(message, invalidKey)).resolves.toBe(true);
+        // Signing must not report success when it produced no signature at all,
+        // otherwise a caller could mistake an unsigned message for a signed one.
+        await expect(SignMessage(message, invalidKey)).resolves.toBe(false);
         expect(message.signatures).toBeUndefined();
+
+    });
+
+    test("skips invalid key pairs but still signs with the usable ones", async () => {
+
+        const invalidKey = {
+            algorithm:  "ECDSA-P256" as const,
+            privateKey: new Uint8Array()
+        };
+        const validKey = generateSignatureKeyPair("ECDSA-P256");
+        const message: SignedJSONMessage = { a: 1 };
+
+        await expect(signJSONMessage(message, [ invalidKey, validKey ])).resolves.toBe(true);
+        expect(message.signatures).toHaveLength(1);
+        await expect(verifyJSONMessageSignatures(JSON.stringify(message))).resolves.toBe(true);
 
     });
 

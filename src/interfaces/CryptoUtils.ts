@@ -109,6 +109,8 @@ export async function signJSONMessage(JSONMessage:  SignedJSONMessage | null | u
     if (JSONMessage.signatures != null && !Array.isArray(JSONMessage.signatures))
         return false;
 
+    let signaturesCreated = 0;
+
     for (const KeyPair of KeyPairs)
     {
 
@@ -145,9 +147,8 @@ export async function signJSONMessage(JSONMessage:  SignedJSONMessage | null | u
             signatureJSON.contextHEX = chargyLib.bytesToHex(options.context);
         }
 
-        JSONMessage.signatures ??= [];
-        JSONMessage.signatures.push(signatureJSON);
-
+        // Verify before attaching, so that a signature which does not validate
+        // is never left behind in the caller's message.
         const signatureIsValid: boolean = suite.verify(plainText,
                                                        signatureBytes,
                                                        publicKeyBytes,
@@ -155,9 +156,15 @@ export async function signJSONMessage(JSONMessage:  SignedJSONMessage | null | u
         if (!signatureIsValid)
             return false;
 
+        JSONMessage.signatures ??= [];
+        JSONMessage.signatures.push(signatureJSON);
+        signaturesCreated++;
+
     }
 
-    return true;
+    // Never report success when not a single key pair could be used, so that
+    // callers can not mistake an unsigned message for a signed one.
+    return signaturesCreated > 0;
 
 }
 

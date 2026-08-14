@@ -892,6 +892,11 @@ export class ChargePointCrypt01 extends ACrypt {
 
                         }
 
+                        // Stop at the first matching public key: when no key matched the
+                        // EVSE Id above, all available keys are tried as a fallback and a
+                        // later, non-matching key would otherwise overwrite this result.
+                        break;
+
                     }
 
                 }
@@ -1147,7 +1152,7 @@ export class ChargePointCrypt01 extends ACrypt {
                 hashInfo  = "(SHA384, 384 Bits, hex)";
                 break;
 
-            case "secp512r1":
+            case "secp521r1":
                 hashInfo  = "(SHA512, 512 Bits, hex)";
                 break;
 
