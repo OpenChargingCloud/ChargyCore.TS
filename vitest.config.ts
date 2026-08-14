@@ -11,6 +11,12 @@ const config: ReturnType<typeof defineConfig> = defineConfig({
     name: "node",
     environment: "node",
     globals: false,
+    // Deliberately not Europe/Berlin: the fixtures are signed with German local
+    // time, so running the suite anywhere else is what exposes code that reads
+    // the offset from the host instead of from the record.
+    env: {
+      TZ: "UTC"
+    },
     include: [
       "tests/**/*.test.ts",
       "tests/**/*.tests.ts"

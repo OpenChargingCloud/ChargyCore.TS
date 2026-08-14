@@ -590,16 +590,76 @@ export function SetHex(dv: DataView, hex: string, offset: number, reverse?: bool
 
 }
 
+// EMH and GDF energy meters write their own *local* time into the signed buffer
+// as if it were a unix timestamp. Reconstructing that buffer therefore needs the
+// offset the meter used, which must never be taken from the verifying machine:
+// the same charge transparency record would otherwise verify in one time zone
+// and fail in another.
+//
+// These meters are deployed under German calibration law, so their local time is
+// Europe/Berlin unless the record states otherwise.
+export const meterTimeZone = "Europe/Berlin";
+
+// A timestamp ending in a numeric offset, e.g. '2019-02-19T08:47:50+01:00',
+// states the meter's own offset. A 'Z' suffix does not: it only says that the
+// record stores the instant in UTC, which reveals nothing about the meter.
+const statesItsOwnUTCOffset = /[+-]\d{2}:?\d{2}$/;
+
+// The offset of the given time zone at the given instant, honouring daylight
+// saving time, resolved through the runtime's IANA time zone database.
+export function timeZoneOffsetMinutes(instant: Date, timeZone: string = meterTimeZone): number {
+
+    const parts = new Intl.DateTimeFormat("en-US", {
+                          timeZone,
+                          hour12: false,
+                          year:   "numeric",
+                          month:  "2-digit",
+                          day:    "2-digit",
+                          hour:   "2-digit",
+                          minute: "2-digit",
+                          second: "2-digit"
+                      }).formatToParts(instant);
+
+    const field = (type: string): number => Number(parts.find(part => part.type === type)?.value ?? "0");
+
+    const asUTC = Date.UTC(field("year"),
+                           field("month") - 1,
+                           field("day"),
+                           field("hour") % 24,   // Intl may report midnight as hour 24
+                           field("minute"),
+                           field("second"));
+
+    return (asUTC - Math.floor(instant.getTime() / 1000) * 1000) / 60000;
+
+}
+
+// Resolves a timestamp into the moment it denotes plus the offset the meter used.
+function meterLocalTime(timestamp: string | Moment): { moment: Moment, offsetMinutes: number } {
+
+    // A caller passing a Moment has already chosen an offset explicitly.
+    if (typeof timestamp !== 'string')
+        return { moment: timestamp, offsetMinutes: timestamp.utcOffset() };
+
+    const parsed = moment.parseZone(timestamp);
+
+    return {
+        moment:        parsed,
+        offsetMinutes: statesItsOwnUTCOffset.test(timestamp.trim())
+                           ? parsed.utcOffset()
+                           : timeZoneOffsetMinutes(new Date(parsed.valueOf()))
+    };
+
+}
+
 export function SetTimestamp(dv: DataView, timestamp: string | Moment | undefined, offset: number, addLocalOffset: boolean = true): string
 {
 
     if (timestamp == undefined)
         throw new Error("Timestamp is missing!");
 
-    if (typeof timestamp === 'string')
-        timestamp = parseUTC(timestamp);
+    const meterTime = meterLocalTime(timestamp);
 
-    const unixtime  = timestamp.unix() + (addLocalOffset ? 60 * timestamp.utcOffset() : 0); // Usage of utcOffset() is afaik EMH specific!
+    const unixtime  = meterTime.moment.unix() + (addLocalOffset ? 60 * meterTime.offsetMinutes : 0); // Usage of the local offset is afaik EMH specific!
     const bytes     = getInt64Bytes(unixtime);
     const buffer    = new ArrayBuffer(8);
     const tv        = new DataView(buffer);
@@ -619,10 +679,9 @@ export function SetTimestamp32(dv: DataView, timestamp: string | Moment | undefi
     if (timestamp == undefined)
         throw new Error("Timestamp is missing!");
 
-    if (typeof timestamp === 'string')
-        timestamp = parseUTC(timestamp);
+    const meterTime = meterLocalTime(timestamp);
 
-    const unixtime  = timestamp.unix() + (addLocalOffset ? 60 * timestamp.utcOffset() : 0); // Usage of utcOffset() is afaik EMH specific!
+    const unixtime  = meterTime.moment.unix() + (addLocalOffset ? 60 * meterTime.offsetMinutes : 0); // Usage of the local offset is afaik EMH specific!
     const bytes     = getInt64Bytes(unixtime);
     const buffer    = new ArrayBuffer(4);
     const tv        = new DataView(buffer);
