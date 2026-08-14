@@ -1,0 +1,127 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+  # Manual runs from the Actions tab ("Run workflow").
+  workflow_dispatch:
+
+concurrency:
+  # Pull requests: one run per branch, newest wins — a run against a head
+  # that has been superseded is answering a question nobody is asking any
+  # more.
+  #
+  # Pushes: one run per commit, and nothing cancels anything. A commit with
+  # no verdict is a hole nobody comes back to fill: the next commit contains
+  # it, so the code does get tested eventually, but once that run is red
+  # there is no longer any way to say which of the two commits did it.
+  #
+  # Keying the group on the SHA, rather than only turning cancel-in-progress
+  # off, is what makes that hold for more than two pushes: a group keeps at
+  # most one run *pending*, so a third push discards the second before it
+  # ever starts.
+  group: ci-${{ github.event_name == 'pull_request' && github.ref || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  verify:
+    # Unlike the .NET repositories, the interesting axis here is the Node
+    # version rather than the operating system, so the matrix spans both:
+    #
+    #  * Ubuntu on Node 22.13, because that is the exact minimum package.json
+    #    promises. A declared engine range nobody ever runs is a guess; this
+    #    leg turns it into a tested claim.
+    #  * Ubuntu on Node 26, which is what development actually happens on and
+    #    the newest release the package is expected to work with.
+    #  * Windows on Node 24, the LTS in between, on the other operating
+    #    system. This is the leg that would catch the platform-sensitive
+    #    parts: the optional native @napi-rs/canvas used for QR code and PDF
+    #    rendering, and path handling in the archive and container readers.
+    #
+    # macOS is deliberately absent: it is the daily development platform, so
+    # it is continuously covered outside CI, and a hosted macOS runner buys
+    # little for a pure JavaScript package.
+    #
+    # fail-fast is off on purpose: "red on exactly one leg" is the most
+    # valuable signal this matrix produces, so one leg must not cancel the
+    # others.
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            node: '22.13'
+            leg: ubuntu-node-22.13
+          - os: ubuntu-latest
+            node: '26'
+            leg: ubuntu-node-26
+          - os: windows-latest
+            node: '24'
+            leg: windows-node-24
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+
+      # 'npm ci' also runs the 'prepare' script, which builds the package, so a
+      # broken build fails here rather than three steps later.
+      - name: Install dependencies
+        run: npm ci
+
+      # test:browser drives a real headless Chromium through Vitest browser
+      # mode. Without this it fails with "Executable doesn't exist", which reads
+      # like a test failure but is a missing download. --with-deps installs the
+      # system libraries Chromium needs and is Linux-only; the Windows runner
+      # already provides them.
+      - name: Install Playwright Chromium
+        run: npx playwright install ${{ runner.os == 'Linux' && '--with-deps' || '' }} chromium
+
+      # The steps below are 'npm run verify' pulled apart. Same commands, same
+      # order — but as separate steps the Actions UI names the stage that broke
+      # instead of showing one red block, and a type error stops the run before
+      # minutes are spent booting a browser.
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      # The console reporter says whether the suite passed and little else:
+      # which test failed takes grepping the step log, a skip reason never
+      # appears there at all, and reading either needs a signed-in browser
+      # session once the run is not the newest. The JUnit report keeps outcome,
+      # duration and failure message per test, and 'gh run download' fetches it
+      # without a browser. Both reporters run, so the log stays readable.
+      - name: Test (Node)
+        run: npm run test:node -- --reporter=default --reporter=junit --outputFile.junit=artifacts/node-${{ matrix.leg }}.xml
+
+      - name: Build
+        run: npm run build
+
+      # Reads dist/, so it has to follow the build: it asserts that the browser
+      # bundle references only browser PDF.js and the Node bundle only the
+      # legacy build.
+      - name: Test (bundles)
+        run: npm run test:bundle -- --reporter=default --reporter=junit --outputFile.junit=artifacts/bundle-${{ matrix.leg }}.xml
+
+      - name: Test (browser)
+        run: npm run test:browser -- --reporter=default --reporter=junit --outputFile.junit=artifacts/browser-${{ matrix.leg }}.xml
+
+      # !cancelled() rather than success(): a red run is when these files matter
+      # most, so uploading only on green would discard the evidence in exactly
+      # that case. A run that fails before any test step leaves no XML, which
+      # upload-artifact reports as a warning rather than a second failure — the
+      # type or lint error is the finding there.
+      - name: Upload test results
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: test-results-${{ matrix.leg }}
+          path: artifacts/*.xml
