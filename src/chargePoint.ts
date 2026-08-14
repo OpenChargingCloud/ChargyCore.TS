@@ -812,7 +812,7 @@ export class ChargePointCrypt01 extends ACrypt {
 
                 let sha225Value: string|null = null;
                 let sha256Value: string|null = null;
-                let sha385Value: string|null = null;
+                let sha384Value: string|null = null;
                 let sha512Value: string|null = null;
 
                 for (const publicKey of publicKeys)
@@ -847,9 +847,9 @@ export class ChargePointCrypt01 extends ACrypt {
                             break;
 
                         case "secp384r1":
-                            sha385Value          = sha385Value ?? await chargyLib.sha384(plainText);
+                            sha384Value          = sha384Value ?? await chargyLib.sha384(plainText);
                             sessionResult        = this.curve384r1.keyFromPublic(publicKey.value, 'hex').
-                                                                   verify       (sha385Value,
+                                                                   verify       (sha384Value,
                                                                                  chargingSession.signature)
                                                        ? chargyInterfaces.SessionVerificationResult.ValidSignature
                                                        : chargyInterfaces.SessionVerificationResult.InvalidSignature;
@@ -883,7 +883,7 @@ export class ChargePointCrypt01 extends ACrypt {
                                 break;
 
                             case "secp384r1":
-                                chargingSession.hashValue = sha385Value ?? "";
+                                chargingSession.hashValue = sha384Value ?? "";
                                 break;
 
                             case "secp521r1":
