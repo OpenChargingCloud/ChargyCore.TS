@@ -17,10 +17,24 @@
 
 /*
  * Based on: https://github.com/CraigglesO/elliptic-curve-signature-algo
- * 
- * This implementation is for educaitonal purposes only
- * and should not be used in production for obvious reasons.
- * If you would like to contribute, you are more than welcome to.
+ *
+ * secp224k1 is not provided by @noble/curves, so this small implementation
+ * exists to keep verifying the legacy ChargePoint and Alfen charging data that
+ * still uses it. If a vetted secp224k1 implementation becomes available, this
+ * file should be replaced by it.
+ *
+ * Scope and limitations:
+ *
+ *   - validate() is the only method used in production. It verifies signatures,
+ *     so every input is public and there is no secret to leak through timing.
+ *     It is written to fail closed: anything that is not a well-formed point on
+ *     the curve, and any failure while computing, results in 'false'.
+ *
+ *   - Sign() and PublicKeyGenerate() handle private keys and must NOT be used
+ *     in production. The modular arithmetic is not constant time, and Sign()
+ *     takes the nonce from the caller, so it offers no protection against
+ *     nonce reuse, which would disclose the private key. Use @noble/curves for
+ *     anything involving a secret.
  *
  * const GcompressedLE   = BigInt("0xA1455B334DF099DF30FC28A169A467E9E47075A90F7E650EB6B7A45C");
  * const GunCompressedLE = BigInt("0xA1455B334DF099DF30FC28A169A467E9E47075A90F7E650EB6B7A45C7E089FED7FBA344282CAFBD6F7E319F7C0B0BD59E2CA4BDB556D61A5");
@@ -38,7 +52,9 @@ export class secp224k1 {
     private readonly Three  = BigInt("3");
     private readonly Pcurve = BigInt("26959946667150639794667015087019630673637144422540572481099315275117"); // The proven prime
     private readonly N      = BigInt("0x010000000000000000000000000001DCE8D2EC6184CAF0A971769FB1F7"); // Number of points in the field
-    private readonly Acurve = BigInt(0); // Defined on the elliptic curve. y^2 = x^3 + Acurve * x + 5
+    private readonly Acurve = BigInt(0); // Defined on the elliptic curve. y^2 = x^3 + Acurve * x + Bcurve
+    private readonly Bcurve = BigInt(5); // secp224k1 has a = 0 and b = 5, and a cofactor of 1, so every
+                                         // point on the curve except infinity has order N.
     private readonly Gx     = BigInt("0xA1455B334DF099DF30FC28A169A467E9E47075A90F7E650EB6B7A45C");
     private readonly Gy     = BigInt("0x7E089FED7FBA344282CAFBD6F7E319F7C0B0BD59E2CA4BDB556D61A5");
     private readonly GPoint = [this.Gx, this.Gy]; // This is our generator point. Trillions of dif ones possible
@@ -64,24 +80,71 @@ export class secp224k1 {
 
     }
 
+    // Returns true only for a signature that verifies against a public key which
+    // is a valid point on the curve. Every other outcome is false, including a
+    // point off the curve and any failure while computing, so that a caller
+    // trying several candidate keys is never interrupted by an exception.
     public validate(hash:        bigint,
                     signatureR:  bigint,
                     signatureS:  bigint,
                     PublicKey:   Array<bigint>) : boolean
     {
 
-        if (signatureR == this.Zero || signatureR >= this.N)
+        if (signatureR <= this.Zero || signatureR >= this.N)
             throw new Error("Invalid R");
 
-        if (signatureS == this.Zero || signatureS >= this.N)
+        if (signatureS <= this.Zero || signatureS >= this.N)
             throw new Error("Invalid S");
 
-        const w           = this.modInv(signatureS, this.N);
-        const u1          = this.ECmultiply(this.GPoint, this.modulo(w * hash,       this.N));
-        const u2          = this.ECmultiply(PublicKey,   this.modulo(w * signatureR, this.N));
-        const validation  = this.ECadd(u1, u2);
+        // Without this check an attacker-supplied point outside the curve would
+        // be fed straight into the group arithmetic below.
+        if (!this.isOnCurve(PublicKey))
+            return false;
 
-        return validation[0] == signatureR;
+        try
+        {
+
+            const w           = this.modInv(signatureS, this.N);
+            const u1          = this.ECmultiply(this.GPoint, this.modulo(w * hash,       this.N));
+            const u2          = this.ECmultiply(PublicKey,   this.modulo(w * signatureR, this.N));
+            const validation  = this.ECadd(u1, u2);
+            const x           = validation[0];
+
+            if (x === undefined)
+                return false;
+
+            return this.modulo(x, this.N) === signatureR;
+
+        }
+        catch
+        {
+            // u1 + u2 is the point at infinity, or a scalar degenerated to zero:
+            // in every such case the signature simply does not verify.
+            return false;
+        }
+
+    }
+
+    // y^2 == x^3 + Acurve * x + Bcurve (mod Pcurve), with both coordinates
+    // reduced. The point at infinity has no [x, y] representation here and is
+    // therefore rejected along with everything else that is malformed.
+    public isOnCurve(point: Array<bigint>) : boolean
+    {
+
+        const x = point[0];
+        const y = point[1];
+
+        if (x === undefined || y === undefined)
+            return false;
+
+        if (x < this.Zero || x >= this.Pcurve ||
+            y < this.Zero || y >= this.Pcurve)
+        {
+            return false;
+        }
+
+        return this.modulo(y * y,                                    this.Pcurve) ===
+               this.modulo(x * x * x + this.Acurve * x + this.Bcurve, this.Pcurve);
 
     }
 
@@ -107,6 +170,12 @@ export class secp224k1 {
           high  = n,
           low   = this.modulo(a, n);
 
+      // Without this guard the loop below is skipped and 1 is returned, which
+      // silently produces a wrong result instead of reporting that there is no
+      // inverse. Zero is the only non-invertible residue, as n is prime.
+      if (low === this.Zero)
+          throw new Error("Value is not invertible!");
+
       while (low > 1) {
 
           const ratio = high / low,
@@ -131,6 +200,23 @@ export class secp224k1 {
         if (a[0] != undefined && b[0] != undefined &&
             a[1] != undefined && b[1] != undefined)
         {
+
+            // The chord-and-tangent formula below divides by (b.x - a.x) and is
+            // undefined for two points sharing an x coordinate. Such a pair is
+            // either the same point, which needs the doubling formula, or two
+            // opposite points, whose sum is the point at infinity.
+            if (this.modulo(a[0] - b[0], this.Pcurve) === this.Zero)
+            {
+
+                if (this.modulo(a[1] - b[1], this.Pcurve) === this.Zero &&
+                    this.modulo(a[1], this.Pcurve)        !== this.Zero)
+                {
+                    return this.ECdouble(a);
+                }
+
+                throw new Error("EC point addition results in the point at infinity!");
+
+            }
 
             const LamAdd  = this.modulo((b[1]-a[1])*( this.modInv( b[0]-a[0] ) ), this.Pcurve);
             const x       = this.modulo((LamAdd*LamAdd)-a[0]-b[0], this.Pcurve);
