@@ -1,4 +1,4 @@
-# Chargy Core
+# Chargy Core - TypeScript
 
 [![CI](https://github.com/OpenChargingCloud/ChargyCore.TS/actions/workflows/ci.yml/badge.svg)](https://github.com/OpenChargingCloud/ChargyCore.TS/actions/workflows/ci.yml)
 [![Nightly](https://github.com/OpenChargingCloud/ChargyCore.TS/actions/workflows/nightly.yml/badge.svg)](https://github.com/OpenChargingCloud/ChargyCore.TS/actions/workflows/nightly.yml)
