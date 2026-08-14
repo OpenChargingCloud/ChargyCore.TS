@@ -31,6 +31,12 @@ versions and are always listed first below.
   the library and needs no change in consuming code, but applications pinning
   their own `pdfjs-dist` need to move along.
 
+- **The declared minimum Node version is now 22.13**, corrected from 20.19. The
+  old value never held: `pdfjs-dist` requires `>=22.13.0` and `file-type`
+  requires `>=22`, so installing on Node 20 produced `EBADENGINE` warnings and
+  failed outright under `engine-strict`. No code changed, the declaration now
+  states what the dependency tree already demanded.
+
 ### Fixed
 
 - **EMH and GDF signatures no longer depend on the verifying machine's time
