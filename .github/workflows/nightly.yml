@@ -1,0 +1,219 @@
+name: Nightly
+
+# The counterpart to ci.yml. That workflow gates every push and answers one
+# question: does this commit work with the dependency tree we ship? Everything
+# below changes without anyone touching the repository — a newly published
+# advisory, a new upstream release, a refreshed runner image — so none of it
+# belongs in a gate, where a red would block a merge for reasons that have
+# nothing to do with the merge.
+#
+# Two things worth knowing about scheduled workflows: they only ever run on the
+# default branch, and GitHub disables them after 60 days without any repository
+# activity. If this stops reporting, that is the first thing to check.
+on:
+  schedule:
+    # 02:43 UTC. Not on the hour: GitHub's scheduler is busiest then and delays
+    # runs by tens of minutes.
+    - cron: '43 2 * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: nightly-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  # Exactly what the gate runs, on the same three legs. Repeating a suite that
+  # is green and deterministic sounds pointless, but two things do move under
+  # it: a test that only fails sometimes shows up over many runs rather than in
+  # any single one, and GitHub refreshes the ubuntu-latest and windows-latest
+  # images regularly, which is how a runner-side change reaches us on a day
+  # nobody pushed. Fatal: a red here is a real regression.
+  full-suite:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            node: '22.13'
+            leg: ubuntu-node-22.13
+          - os: ubuntu-latest
+            node: '26'
+            leg: ubuntu-node-26
+          - os: windows-latest
+            node: '24'
+            leg: windows-node-24
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright Chromium
+        run: npx playwright install ${{ runner.os == 'Linux' && '--with-deps' || '' }} chromium
+
+      - name: Verify
+        run: npm run typecheck && npm run lint
+
+      - name: Test (Node)
+        run: npm run test:node -- --reporter=default --reporter=junit --outputFile.junit=artifacts/node-${{ matrix.leg }}.xml
+
+      - name: Build
+        run: npm run build
+
+      - name: Test (bundles)
+        run: npm run test:bundle -- --reporter=default --reporter=junit --outputFile.junit=artifacts/bundle-${{ matrix.leg }}.xml
+
+      - name: Test (browser)
+        run: npm run test:browser -- --reporter=default --reporter=junit --outputFile.junit=artifacts/browser-${{ matrix.leg }}.xml
+
+      - name: Upload test results
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: nightly-results-${{ matrix.leg }}
+          path: artifacts/*.xml
+
+  # The same suite, but installed without the lockfile, so every '^' range
+  # resolves to the newest release instead of the version we pinned. This is
+  # the counterpart to Hermod building against Styx master: it notices an
+  # upstream break before a lockfile refresh pulls it in, rather than after.
+  #
+  # That risk is not hypothetical here. PDF.js changed getAttachments() from a
+  # plain object to a Map inside a *minor* release, which silently emptied the
+  # PDF/A-3 path — nothing threw, and only one test noticed. pdfjs-dist is
+  # pinned exactly for that reason and so does not float; everything else does,
+  # including @noble/curves, which carries the signature verification.
+  #
+  # One leg only: what is being tested is the dependency graph, not the
+  # platform. Informational on purpose — a red here means somebody else
+  # published something, which is worth knowing on a Tuesday but must not read
+  # as "our code broke".
+  floating-dependencies:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '26'
+
+      # --no-package-lock so the resolution is not written back, and no 'npm ci'
+      # because that would reinstate exactly the versions this job exists to
+      # ignore.
+      - name: Install newest permitted dependencies
+        run: npm install --no-package-lock
+
+      - name: Report resolved versions
+        run: |
+          {
+            echo '## Dependency versions with the lockfile ignored'
+            echo
+            echo 'Ranges resolved to the newest published release. Drift is expected;'
+            echo 'it becomes interesting when the suite below goes red.'
+            echo
+            echo '| Package | Range | Locked | Resolved |'
+            echo '| --- | --- | --- | --- |'
+          } >> "$GITHUB_STEP_SUMMARY"
+          node -e '
+            const fs = require("fs");
+            const pkg    = JSON.parse(fs.readFileSync("package.json", "utf8"));
+            const lock   = JSON.parse(fs.readFileSync("package-lock.json", "utf8"));
+            for (const [name, range] of Object.entries(pkg.dependencies ?? {})) {
+              let resolved = "(missing)";
+              try { resolved = JSON.parse(fs.readFileSync(`node_modules/${name}/package.json`, "utf8")).version; } catch {}
+              const locked = lock.packages?.[`node_modules/${name}`]?.version ?? "?";
+              const mark   = locked !== resolved ? " **↑**" : "";
+              console.log(`| \`${name}\` | \`${range}\` | ${locked} | ${resolved}${mark} |`);
+            }
+          ' >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Typecheck and lint
+        run: npm run typecheck && npm run lint
+
+      - name: Test (Node)
+        run: npm run test:node -- --reporter=default --reporter=junit --outputFile.junit=artifacts/node-floating.xml
+
+      - name: Build
+        run: npm run build
+
+      - name: Test (bundles)
+        run: npm run test:bundle -- --reporter=default --reporter=junit --outputFile.junit=artifacts/bundle-floating.xml
+
+      - name: Test (browser)
+        run: npm run test:browser -- --reporter=default --reporter=junit --outputFile.junit=artifacts/browser-floating.xml
+
+      # The step summary above says which versions were used; these say which
+      # test disagreed with them. Both are needed to tell "upstream changed
+      # something" from "upstream changed something that matters to us".
+      - name: Upload test results
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: nightly-results-floating
+          path: artifacts/*.xml
+
+  # npm audit against the tree we actually ship. Deliberately not in the gate:
+  # the advisory database changes daily, so this would turn merges red for
+  # findings that have nothing to do with the change being merged.
+  #
+  # Informational for a second reason as well. Some findings have no fix at
+  # all — elliptic has carried GHSA-848j-6mx2-7j84 for a long time and is still
+  # needed for legacy P-192 verification — and a job that is permanently red
+  # stops being read. The counters below are the thing to watch: a number that
+  # moves is the signal, not the number itself.
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '26'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Audit
+        run: |
+          npm audit --omit=dev --json > audit-prod.json  || true
+          npm audit            --json > audit-all.json   || true
+          node -e '
+            const fs = require("fs");
+            const render = (file, title) => {
+              let report;
+              try { report = JSON.parse(fs.readFileSync(file, "utf8")); }
+              catch { return `### ${title}\n\nCould not be read.\n`; }
+              const counts = report.metadata?.vulnerabilities ?? {};
+              const rows   = Object.values(report.vulnerabilities ?? {})
+                                   .map(v => `| \`${v.name}\` | ${v.severity} | ${v.fixAvailable ? "yes" : "**no**"} |`);
+              return `### ${title}\n\n`
+                   + `critical ${counts.critical ?? 0} · high ${counts.high ?? 0} · `
+                   + `moderate ${counts.moderate ?? 0} · low ${counts.low ?? 0}\n\n`
+                   + (rows.length ? `| Package | Severity | Fix available |\n| --- | --- | --- |\n${rows.join("\n")}\n` : `Nothing reported.\n`);
+            };
+            console.log("## npm audit\n");
+            console.log(render("audit-prod.json", "Runtime dependencies"));
+            console.log(render("audit-all.json",  "Including build-time dependencies"));
+          ' >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload audit reports
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: nightly-audit
+          path: audit-*.json
