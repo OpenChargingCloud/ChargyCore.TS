@@ -17,6 +17,13 @@ const config: ReturnType<typeof defineConfig> = defineConfig({
     env: {
       TZ: "UTC"
     },
+    // The QR code and PDF/A-3 cases lazily import pdfjs and the native canvas
+    // binding inside the test body, and that first import is charged to the
+    // test. It costs about 0.2s here and on Linux CI, but the Windows runner
+    // needs well over the 5s default: one run spent 10.9s on imports alone
+    // against 2s for the whole suite on Linux. Raised far enough to absorb
+    // that, while still failing a test that genuinely hangs.
+    testTimeout: 30_000,
     include: [
       "tests/**/*.test.ts",
       "tests/**/*.tests.ts"
