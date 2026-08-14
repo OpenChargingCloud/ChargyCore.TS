@@ -137,6 +137,27 @@ Keeping these paths separate has several advantages:
 When adding runtime-sensitive dependencies, avoid branching on runtime inside shared source code if that would make bundlers see both implementations. Prefer a small adapter under `src/` and let the build or conditional exports select the runtime-specific implementation.
 
 
+### PDF.js Version Pin
+
+> **`pdfjs-dist` is pinned to an exact version, currently `6.2.108`. Always run the PDF/A-3 test when raising it.**
+
+It is the only dependency in `package.json` without a `^`, because PDF.js has shipped a silently breaking attachment API change within a minor release. Going from `6.0.227` to `6.2.108` changed `getDocument().getAttachments()` in two ways:
+
+1. It resolves to a **`Map`** instead of a plain object. Reading the result with `Object.values()` yields an empty array for a `Map`, so every attachment is dropped.
+2. Entries no longer carry the file bytes eagerly. `content` is only set when it happens to be loaded already, otherwise the payload has to be fetched via the new `getAttachmentContent(id)`.
+
+Both are handled in `src/chargy.ts`, which iterates the `Map` and falls back to `getAttachmentContent()` whenever an entry has no inline `content`.
+
+What makes this class of change dangerous is that it fails silently: nothing throws, so the `try`/`catch` around the call never fires. The embedded record simply disappears and verification then reports `InvalidSessionFormat` with *"No charge transparency records found!"*. `npm run typecheck` and `npm run lint` both stay green; only `tests/SAFE.tests.ts` ("SAFE Testdata 02 with XML namespace via PDF/A-3") detects it, by extracting a real embedded XML file from `tests/fixtures/SAFE/SAFE-Testdata-02_withXMLNamespace.pdf`.
+
+So before changing the pin, always run:
+
+```bash
+npm run test:node -- tests/SAFE.tests.ts
+```
+
+Staying on an old version is not a safe default either — `6.0.227` was affected by [GHSA-hq66-cqwq-w95j](https://github.com/advisories/GHSA-hq66-cqwq-w95j) (high severity, arbitrary JavaScript execution when opening a malicious PDF), which is fixed in `6.2.108`.
+
 
 ## Development
 

@@ -69,9 +69,11 @@ type Asn1Schema = {
     decode(data: Uint8Array | ArrayBuffer, encoding: string): unknown;
 };
 
+// PDF.js only fills 'content' when the bytes happen to be loaded already;
+// otherwise they have to be fetched via PDFDocumentProxy.getAttachmentContent().
 type PdfAttachment = {
-    filename: string;
-    content:  ArrayBuffer | Uint8Array;
+    filename:  string;
+    content?:  ArrayBuffer | Uint8Array | null | undefined;
 };
 
 function isPdfAttachment(value: unknown): value is PdfAttachment {
@@ -79,10 +81,17 @@ function isPdfAttachment(value: unknown): value is PdfAttachment {
     if (!chargyLib.isMandatoryJSONObject(value))
         return false;
 
-    return typeof value["filename"] === "string" &&
-           (value["content"] instanceof ArrayBuffer || ArrayBuffer.isView(value["content"]));
+    return typeof value["filename"] === "string";
 
 }
+
+// Which embedded file types are extracted from a PDF/A-3 container.
+const pdfAttachmentTypes: ReadonlyArray<{ extension: string, type: string, info: string }> = [
+    { extension: '.chargy', type: "application/chargy", info: "A CHARGY file extracted from a PDF/A-3 or newer attachment" },
+    { extension: '.xml',    type: "application/xml",    info: "A XML file extracted from a PDF/A-3 or newer attachment"    },
+    { extension: '.json',   type: "application/json",   info: "A JSON file extracted from a PDF/A-3 or newer attachment"   },
+    { extension: '.csv',    type: "text/csv",           info: "A CSV file extracted from a PDF/A-3 or newer attachment"    }
+];
 
 type Asn1Module = {
     define: (name: string, body: (this: Asn1Builder) => void) => Asn1Schema;
@@ -1453,53 +1462,40 @@ export class Chargy {
                         try
                         {
 
-                            const attachmentsUnknown: unknown = await pdfDocument.getAttachments();
+                            // Since PDF.js 6.2 this is a Map, and its entries usually carry
+                            // only metadata: the bytes are fetched lazily per attachment.
+                            const attachments = await pdfDocument.getAttachments();
 
-                            if (chargyLib.isMandatoryJSONObject(attachmentsUnknown))
-                                Object.values(attachmentsUnknown).forEach(attachmentUnknown => {
+                            for (const [attachmentId, attachmentUnknown] of attachments ?? [])
+                            {
 
-                                    if (!isPdfAttachment(attachmentUnknown))
-                                        return;
+                                if (!isPdfAttachment(attachmentUnknown))
+                                    continue;
 
-                                    const attachment = attachmentUnknown;
+                                const attachment     = attachmentUnknown;
 
-                                    if (attachment.filename.endsWith('.chargy'))
-                                        expandedFiles.push({
-                                            name:  attachment.filename,
-                                            path:  FileInfos[0]?.path,
-                                            type:  "application/chargy",
-                                            data:  attachment.content,
-                                            info:  "A CHARGY file extracted from a PDF/A-3 or newer attachment"
-                                        });
+                                const attachmentType = pdfAttachmentTypes.find(
+                                                           candidate => attachment.filename.endsWith(candidate.extension)
+                                                       );
 
-                                    else if (attachment.filename.endsWith('.xml'))
-                                        expandedFiles.push({
-                                            name:  attachment.filename,
-                                            path:  FileInfos[0]?.path,
-                                            type:  "application/xml",
-                                            data:  attachment.content,
-                                            info:  "A XML file extracted from a PDF/A-3 or newer attachment"
-                                        });
+                                if (attachmentType === undefined)
+                                    continue;
 
-                                    else if (attachment.filename.endsWith('.json'))
-                                        expandedFiles.push({
-                                            name:  attachment.filename,
-                                            path:  FileInfos[0]?.path,
-                                            type:  "application/json",
-                                            data:  attachment.content,
-                                            info:  "A JSON file extracted from a PDF/A-3 or newer attachment"
-                                        });
+                                const content        = attachment.content
+                                                           ?? await pdfDocument.getAttachmentContent(attachmentId);
 
-                                    else if (attachment.filename.endsWith('.csv'))
-                                        expandedFiles.push({
-                                            name:  attachment.filename,
-                                            path:  FileInfos[0]?.path,
-                                            type:  "text/csv",
-                                            data:  attachment.content,
-                                            info:  "A CSV file extracted from a PDF/A-3 or newer attachment"
-                                        });
+                                if (content == null)
+                                    continue;
 
+                                expandedFiles.push({
+                                    name:  attachment.filename,
+                                    path:  FileInfos[0]?.path,
+                                    type:  attachmentType.type,
+                                    data:  content,
+                                    info:  attachmentType.info
                                 });
+
+                            }
 
                         } catch (error) {
                             console.error(`Error extracting PDF/A-3 attachments: ${String(error)}`);
