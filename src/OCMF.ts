@@ -1614,10 +1614,45 @@ export class OCMF {
                     if (containerEVSE              !== undefined &&
                         CTR.chargingSessions?.[0]  !== undefined)
                     {
+
                         const chargingSession = CTR.chargingSessions[0];
                         chargingSession.EVSEId ??= containerEVSE["@id"];
+
                         if (chargingSession.EVSEId === containerEVSE["@id"])
-                            chargingSession.EVSE = containerEVSE;
+                        {
+
+                            // What the signed payload states about the meter wins; the
+                            // container only fills what the payload leaves open, such as
+                            // the manufacturer URL or the hardware revision, which OCMF
+                            // has no field for.
+                            const containerEnergyMeter = containerEVSE.energyMeters?.[0];
+
+                            const resolvedEnergyMeter: chargyInterfaces.IEnergyMeter | undefined =
+                                containerEnergyMeter !== undefined || meterSerial !== undefined
+                                    ? {
+                                          ...containerEnergyMeter,
+                                          "@id":         meterSerial ?? containerEnergyMeter?.["@id"] ?? "",
+                                          manufacturer:  {
+                                                             ...containerEnergyMeter?.manufacturer,
+                                                             name: meterVendor ?? containerEnergyMeter?.manufacturer?.name
+                                                         },
+                                          model:         {
+                                                             ...containerEnergyMeter?.model,
+                                                             name: meterModel ?? containerEnergyMeter?.model?.name
+                                                         },
+                                          firmware:      {
+                                                             ...containerEnergyMeter?.firmware,
+                                                             version: meterFirmware ?? containerEnergyMeter?.firmware?.version
+                                                         }
+                                      }
+                                    : undefined;
+
+                            chargingSession.EVSE = resolvedEnergyMeter !== undefined
+                                                       ? { ...containerEVSE, energyMeters: [ resolvedEnergyMeter ] }
+                                                       : containerEVSE;
+
+                        }
+
                     }
 
                     const resolvedConnectorId = signedConnectorId ?? containerConnector?.["@id"];

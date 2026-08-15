@@ -788,6 +788,7 @@ export interface IManufacturer
 {
     "@context"?:                string;
     name:                       string | undefined;
+    url?:                       string | undefined;
     description?:               chargyLib.I18NString;
     contact?:                   IContact;
     support?:                   ISupport;

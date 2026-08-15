@@ -82,8 +82,18 @@ versions and are always listed first below.
   by instant rather than lexically, because the timestamps keep the offset the
   meter reported.
 
+- **OCPI containers no longer drop their EVSE Id and meter information.** The
+  container infos handed to the OCMF parser carried an `EVSEIds` field that does
+  not exist on `IContainerInfos`, so it was silently ignored and the charging
+  session ended up without an `EVSEId`; the `meterInfo` block was not passed on
+  at all. Both are now converted into the `EVSEs` and `energyMeters` the parser
+  actually merges, and what the signed OCMF payload states about the meter takes
+  precedence over the container, which only fills the gaps.
+
 ### Added
 
+- `url` on `IManufacturer`, so that a manufacturer URL supplied by a container
+  survives. OCMF itself has no field for it.
 - `secp224k1.isOnCurve()` for validating a point against the curve equation.
 - `timeZoneOffsetMinutes()` and `meterTimeZone` in `chargyLib`, which resolve a
   daylight-saving-aware offset for an IANA time zone at a given instant.

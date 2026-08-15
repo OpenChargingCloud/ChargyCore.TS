@@ -113,9 +113,44 @@ export class OCPI
                     const geoLat       = chargyLib.asNumber(geoLocation?.["lat"]);
                     const geoLon       = chargyLib.asNumber(geoLocation?.["lon"]);
 
-                    const containerInfos = {
+                    const meterInfo    = chargyLib.asJSONObject(SomeJSON["meterInfo"]);
 
-                        EVSEIds:          [ evseId ],
+                    // The container describes the meter only partially: whatever the
+                    // signed OCMF payload states about it wins, and this fills the gaps.
+                    const containerEnergyMeter = meterInfo !== undefined
+                                                     ? {
+                                                           "@id":          chargyLib.asString(meterInfo["meterId"]) ?? "",
+                                                           manufacturer:   {
+                                                                               name:  chargyLib.asString(meterInfo["manufacturer"]),
+                                                                               url:   chargyLib.asString(meterInfo["manufacturerURL"])
+                                                                           },
+                                                           model:          {
+                                                                               name:  chargyLib.asString(meterInfo["model"]),
+                                                                               url:   chargyLib.asString(meterInfo["modelURL"])
+                                                                           },
+                                                           hardware:       {
+                                                                               revision: chargyLib.asString(meterInfo["hardwareVersion"])
+                                                                           },
+                                                           firmware:       {
+                                                                               version:  chargyLib.asString(meterInfo["firmwareVersion"])
+                                                                           }
+                                                       }
+                                                     : undefined;
+
+                    // Typed rather than inferred on purpose: an unknown property used to
+                    // pass silently here, because excess property checks do not apply to a
+                    // variable handed on to the parser. An 'EVSEIds' field was ignored that
+                    // way, which is why the EVSE Id never reached the charging session.
+                    const containerInfos: chargyInterfaces.IContainerInfos = {
+
+                        EVSEs:             evseId !== undefined
+                                               ? [{
+                                                     "@id":         evseId,
+                                                     energyMeters:  containerEnergyMeter !== undefined
+                                                                        ? [ containerEnergyMeter ]
+                                                                        : undefined
+                                                 }]
+                                               : undefined,
 
                         chargingStations:  [{
                             "@id":        evseIdStr.substring(0, evseIdStr.lastIndexOf("*")),
@@ -131,8 +166,6 @@ export class OCPI
                                                 }
                                               : undefined
                         }]
-
-                        //energyMeter:      chargyLib.asJSONObject(SomeJSON["meterInfo"])
 
                     };
 
