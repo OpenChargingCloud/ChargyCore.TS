@@ -1,0 +1,29 @@
+# Line endings are normalised to LF in the repository and checked out as LF on
+# every platform, Windows included.
+#
+# This is not cosmetic here. Many test fixtures are cryptographically signed, so
+# their bytes are the thing under test, and a checkout that rewrites line
+# endings changes them. The OCMF DZG fixture is pretty-printed JSON spanning 87
+# lines; on a Windows runner it arrived as CRLF and the charging session derived
+# from it came out with a different identifier than everywhere else. Only the
+# Windows CI leg noticed, because signature verification canonicalises the
+# payload first and stayed green.
+*                                   text=auto eol=lf
+
+# Never converted, whatever git's text heuristics decide.
+#
+# The .sign files are raw DER signatures and several of them contain 0x0D as a
+# data byte; secrrct is the signed ChargePoint plaintext, where the signature
+# covers exactly the bytes in the file.
+*.sign                              binary
+secrrct                             binary
+
+# Archives and images.
+*.bz2                               binary
+*.gz                                binary
+*.tar                               binary
+*.zip                               binary
+*.jpg                               binary
+*.jpeg                              binary
+*.png                               binary
+*.pdf                               binary
