@@ -7,7 +7,7 @@ While the version number is below 1.0.0, breaking changes are released in minor
 versions and are always listed first below.
 
 
-## [Unreleased]
+## [0.12.0] - 2026-08-15
 
 ### Breaking
 
@@ -122,13 +122,31 @@ versions and are always listed first below.
 
 ### Internal
 
+Nothing here changes the published package; it is listed for contributors.
+
+- CI and Nightly GitHub Actions workflows. CI gates every push across three legs
+  (Ubuntu on the declared minimum Node 22.13 and on 26, Windows on 24) and
+  uploads JUnit results per leg. Nightly repeats that, additionally installs
+  without the lockfile so an upstream release that breaks us shows up before a
+  lockfile refresh pulls it in, and reports `npm audit`.
 - `pdfjs-dist` stays pinned to an exact version on purpose, since it has shipped
   a silently breaking attachment API change within a minor release. See
   "PDF.js Version Pin" in the README before raising it.
 - The test suite pins `TZ` to `UTC`, deliberately not `Europe/Berlin`, so that
   code reading the time zone from the host fails the suite instead of passing on
   a German workstation.
-- New test files for secp224k1 and for signed timestamps.
+- `CHARGY_UPDATE_FIXTURES=1` regenerates the expected verification reports
+  rather than having a dozen golden files edited by hand.
+- New tests for secp224k1, for signed timestamps, and for the OCMF session
+  identity. The OCPI test is no longer skipped. Three PTB container tests remain
+  skipped: their fixtures were signed over payloads that OCMF rejects, so they
+  have never run and need regenerating.
+- The BSM `ocmf_withoutIF` fixture was a byte-identical copy of its neighbour
+  and is replaced by `ocmf_withIF.xml`, which covers the branch that actually
+  lacked one. Since identification flags sit inside the signed payload, that
+  fixture is generated and signed by a script committed next to it.
+- The `.npmignore` was removed. With a `files` array it had no effect, which
+  packing with and without it confirmed.
 
 
 ## [0.11.3] and earlier
