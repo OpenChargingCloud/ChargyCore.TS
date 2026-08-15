@@ -69,6 +69,19 @@ versions and are always listed first below.
   `@types/node` 26 dropping the `createPublicKey(KeyObject)` overload; the lint
   errors were two nullable booleans in a conditional.
 
+- **OCMF charging sessions no longer all carry the same identifier.** The
+  session `@id` was a string literal, so every record parsed from OCMF — across
+  different meters, containers and charging processes — was labelled
+  `1554181214441:-1965658344385548683:2`. It is now `OCMF-` followed by the
+  SHA-256 of the OCMF documents the session was built from: reproducible for a
+  given record, and distinct between records. The record-level `@id` follows it.
+
+- **OCMF charging sessions report their actual start and end.** `begin` and
+  `end` were the literal `"?"`, both on the session and, since it copies them,
+  on the record. They are now the earliest and latest reading timestamp, ordered
+  by instant rather than lexically, because the timestamps keep the offset the
+  meter reported.
+
 ### Added
 
 - `secp224k1.isOnCurve()` for validating a point against the curve equation.

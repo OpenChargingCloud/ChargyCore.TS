@@ -20,6 +20,7 @@
 
 import type { Chargy }                     from './chargy'
 import { ACrypt }                          from './ACrypt'
+import { sha256 as sha256Sync }            from '@noble/hashes/sha2.js'
 import { createCompatibleCurve,
          getSignatureSuite }               from './SignatureCrypto'
 import type { CompatibleCurve,
@@ -31,6 +32,7 @@ import type * as chargeTransparencyRecord  from './interfaces/IChargeTransparenc
 import type * as publicKeyInfoType         from './interfaces/IPublicKeyInfo'
 import * as publicKeyInfo                  from './interfaces/IPublicKeyInfo'
 import * as chargyLib                      from './interfaces/chargyLib'
+import { canonicalJSONStringify }          from './interfaces/CryptoUtils'
 import * as chargyInterfaces               from './interfaces/chargyInterfaces'
 import {
     ocmfBonnTariffToChargingTariff,
@@ -1418,9 +1420,33 @@ export class OCMF {
                         certainty: 0
                     }
 
+                    // OCMF carries no session identifier of its own, so one is derived from
+                    // the documents themselves: reproducible, because verifying the same
+                    // record twice has to produce the same report, and still distinct for
+                    // two different records.
+                    //
+                    // Deliberately not IOCMFJSONDocument.hashValue, which looks like the
+                    // obvious candidate but follows the signature algorithm: it is SHA-384
+                    // or SHA-512 for some, and an empty string for Ed25519, Ed448 and
+                    // ML-DSA, which sign the message directly instead of a digest.
+                    //
+                    // @noble/hashes is used rather than chargyLib.sha256 because this
+                    // method is synchronous while the latter returns a promise.
+                    const sessionId = "OCMF-" + chargyLib.bytesToHex(
+                                                    sha256Sync(
+                                                        new TextEncoder().encode(
+                                                            OCMFJSONDocuments.map(
+                                                                ocmfJSONDocument => ocmfJSONDocument.raw
+                                                                                 ?? ocmfJSONDocument.rawPayload
+                                                                                 ?? canonicalJSONStringify(ocmfJSONDocument.payload)
+                                                            ).join(" ")
+                                                        )
+                                                    )
+                                                );
+
                     const CTR:IOCMFChargeTransparencyRecord = {
 
-                        "@id":       "?",
+                        "@id":       sessionId,
                         "@context":  "https://open.charging.cloud/contexts/CTR+json",
                         //"@context":  [ "https://open.charging.cloud/contexts/CTR+json", "https://open.charging.cloud/contexts/CTR_OCMF+json" ],
                         "begin":     "?",
@@ -1524,7 +1550,7 @@ export class OCMF {
 
                         "chargingSessions": [{
 
-                            "@id":                  "1554181214441:-1965658344385548683:2",
+                            "@id":                  sessionId,
                             "@context":             "https://open.charging.cloud/contexts/SessionSignatureFormats/OCMFv1.0+json",
                             "begin":                "?",
                             "end":                  "?",
@@ -1826,8 +1852,32 @@ export class OCMF {
                         CTR.chargingSessions[0])
                     {
 
-                        CTR.begin = CTR.chargingSessions[0].begin;
-                        CTR.end   = CTR.chargingSessions[0].end;
+                        const firstChargingSession = CTR.chargingSessions[0];
+
+                        // OCMF states no session start and end of its own, so both are taken
+                        // from the readings: the earliest and the latest measured value.
+                        // Ordered by instant rather than lexically, because the timestamps
+                        // keep the offset the meter reported and would otherwise be sorted by
+                        // their local reading, which is not the same order.
+                        const measurementTimestamps = firstChargingSession.measurements.
+                                                          flatMap(measurement => measurement.values).
+                                                          map    (value       => value.timestamp).
+                                                          filter (timestamp   => chargyLib.isMandatoryString(timestamp) &&
+                                                                                 !Number.isNaN(Date.parse(timestamp))).
+                                                          sort   ((left, right) => Date.parse(left) - Date.parse(right));
+
+                        const firstTimestamp = measurementTimestamps[0];
+                        const lastTimestamp  = measurementTimestamps[measurementTimestamps.length - 1];
+
+                        if (firstTimestamp !== undefined &&
+                            lastTimestamp  !== undefined)
+                        {
+                            firstChargingSession.begin = firstTimestamp;
+                            firstChargingSession.end   = lastTimestamp;
+                        }
+
+                        CTR.begin = firstChargingSession.begin;
+                        CTR.end   = firstChargingSession.end;
 
                         return CTR;
 

@@ -1,6 +1,7 @@
 import { expect, vi }     from 'vitest';
 import { Chargy }         from '@open-charging-cloud/chargy-core';
-import { readFileSync }   from "node:fs";
+import { readFileSync,
+         writeFileSync }  from "node:fs";
 import { DOMParser }      from "@oozcitak/dom";
 import {
     createTestChargy,
@@ -127,7 +128,24 @@ function createVerificationChargy(validationRules?: IValidationRules): Chargy {
 
 }
 
-function expectReportLines(summary: string, expected: string): void {
+// Rewriting a dozen golden files by hand does not scale, so
+// CHARGY_UPDATE_FIXTURES=1 regenerates them from the current output instead:
+//
+//     CHARGY_UPDATE_FIXTURES=1 npm run test:node
+//
+// Always read the resulting diff before committing it. This turns a failing
+// assertion into a changed file, which is only ever right when the change was
+// intended, and a report line that silently starts saying InvalidSignature
+// would be accepted just as readily as an expected one.
+const updateFixtures = process.env["CHARGY_UPDATE_FIXTURES"] === "1";
+
+function expectReportLines(summary: string, expected: string, expectedFixture?: string): void {
+
+    if (updateFixtures && expectedFixture !== undefined)
+    {
+        writeFileSync(new URL("fixtures/" + expectedFixture, import.meta.url), summary + "\n", "utf8");
+        return;
+    }
 
     const summaryLines  = summary. split(/\r?\n/);
     const expectedLines = expected.split(/\r?\n/);
@@ -146,7 +164,7 @@ async function expectVerificationReport(inputFixture: string, expectedFixture: s
     const report   = await verifyChargeData(inputFixture, input);
     const summary  = formatChargeDataVerificationReport(report);
 
-    expectReportLines(summary, expected);
+    expectReportLines(summary, expected, expectedFixture);
 
 }
 
@@ -161,7 +179,7 @@ async function expectVerificationReportWithValidationRules(inputFixture:        
     const report          = await verifyChargeData(inputFixture, input, undefined, validationRules);
     const summary         = formatChargeDataVerificationReport(report);
 
-    expectReportLines(summary, expected);
+    expectReportLines(summary, expected, expectedFixture);
 
 }
 
@@ -187,7 +205,7 @@ async function expectArchiveVerificationReport(archiveFixture: string, expectedF
 
     const summary  = formatChargeDataVerificationReport(report);
 
-    expectReportLines(summary, expected);
+    expectReportLines(summary, expected, expectedFixture);
 
 }
 
@@ -207,7 +225,7 @@ async function expectMultiArchiveVerificationReport(inputFixtures:    string[],
 
     const summary   = formatChargeDataVerificationReport(report);
 
-    expectReportLines(summary, expected);
+    expectReportLines(summary, expected, expectedFixture);
 
 }
 
@@ -226,7 +244,7 @@ async function expectBinaryVerificationReport(inputFixture:     string,
 
     const summary   = formatChargeDataVerificationReport(report);
 
-    expectReportLines(summary, expected);
+    expectReportLines(summary, expected, expectedFixture);
 
 }
 
@@ -253,7 +271,7 @@ async function expectVerificationReportWithPublicKey(inputFixture:      string,
 
     const summary   = formatChargeDataVerificationReport(report);
 
-    expectReportLines(summary, expected);
+    expectReportLines(summary, expected, expectedFixture);
 
 }
 

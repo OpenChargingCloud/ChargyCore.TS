@@ -1,6 +1,6 @@
 format: ctr
 sessions: 1
-session 1: 1554181214441:-1965658344385548683:2
+session 1: OCMF-e52caea270f244f8727c7f55188fc8207e88b028af4f69d7d0fc5b43b3d4abce
 session 1 evseId: unknown
 session 1 meterId: ******240084S
 session 1 status: AtLeastTwoMeasurementsRequired
