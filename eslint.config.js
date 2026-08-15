@@ -114,6 +114,16 @@ export default tseslint.config(
     }
   },
   {
+    // Scripts that regenerate test fixtures. They are run by hand with node,
+    // never imported by the package or the suite.
+    files: ["tests/fixtures/**/*.mjs"],
+    languageOptions: {
+      globals: {
+        ...globals.node
+      }
+    }
+  },
+  {
     files: ["*.config.ts", "*.config.js"],
     languageOptions: {
       globals: {
