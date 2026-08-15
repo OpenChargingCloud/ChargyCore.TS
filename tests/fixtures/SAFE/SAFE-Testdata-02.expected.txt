@@ -1,6 +1,6 @@
 format: ctr
 sessions: 1
-session 1: OCMF-64fdaca454fdb09e73087eb31544752a0c1b4b68fbb1ffa4d4f286d844934a7d
+session 1: OCMF-d1c40681697e12ba1b26617017d7a8ad1570c9d0b0c9b75d4d8e67cb203c2920
 session 1 evseId: unknown
 session 1 meterId: ******240084S
 session 1 status: ValidSignature

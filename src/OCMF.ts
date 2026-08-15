@@ -1430,16 +1430,30 @@ export class OCMF {
                     // or SHA-512 for some, and an empty string for Ed25519, Ed448 and
                     // ML-DSA, which sign the message directly instead of a digest.
                     //
+                    // Hashed over the canonical form of the parsed payload and signature,
+                    // not over the document text. That text carries formatting the record
+                    // does not: DZG data arrives as pretty-printed JSON spanning dozens of
+                    // lines, so a checkout that rewrites line endings, which is the default
+                    // on Windows, gave an otherwise identical record a different identifier.
+                    // Signature verification never noticed, because it canonicalizes the
+                    // payload before checking.
+                    //
+                    // Deliberately not IOCMFJSONDocument.hashValue, which looks like the
+                    // obvious candidate but follows the signature algorithm: it is SHA-384
+                    // or SHA-512 for some, and an empty string for Ed25519, Ed448 and
+                    // ML-DSA, which sign the message directly instead of a digest.
+                    //
                     // @noble/hashes is used rather than chargyLib.sha256 because this
                     // method is synchronous while the latter returns a promise.
                     const sessionId = "OCMF-" + chargyLib.bytesToHex(
                                                     sha256Sync(
                                                         new TextEncoder().encode(
                                                             OCMFJSONDocuments.map(
-                                                                ocmfJSONDocument => ocmfJSONDocument.raw
-                                                                                 ?? ocmfJSONDocument.rawPayload
-                                                                                 ?? canonicalJSONStringify(ocmfJSONDocument.payload)
-                                                            ).join(" ")
+                                                                ocmfJSONDocument => canonicalJSONStringify({
+                                                                    payload:    ocmfJSONDocument.payload,
+                                                                    signature:  ocmfJSONDocument.signature
+                                                                })
+                                                            ).join("\n")
                                                         )
                                                     )
                                                 );

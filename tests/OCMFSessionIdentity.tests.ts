@@ -47,6 +47,31 @@ describe("OCMF session identity", () => {
 
     });
 
+    // The id must describe the record, not the bytes it happened to arrive as.
+    // DZG data is pretty-printed JSON spanning dozens of lines, so a checkout
+    // that rewrites line endings — the default on Windows — used to change it.
+    test("gives the same id whatever the line endings are", async () => {
+
+        const lf   = readFixture("OCMF", "OCMF-DZG-01.ocmf").replace(/\r\n/g, "\n");
+        const crlf = lf.replace(/\n/g, "\r\n");
+
+        expect(crlf).not.toBe(lf);
+
+        const idOf = async (text: string): Promise<string | undefined> => {
+
+            const result = await verifyChargeData("OCMF-DZG-01.ocmf", text);
+
+            if (!IsAChargeTransparencyRecord(result))
+                throw new Error("Did not parse into a charge transparency record!");
+
+            return result.chargingSessions?.[0]?.["@id"];
+
+        };
+
+        expect(await idOf(crlf)).toBe(await idOf(lf));
+
+    });
+
     test("gives different records different ids", async () => {
 
         const testdata = await parseFixture("OCMF", "OCMF-Testdata-01.ocmf");

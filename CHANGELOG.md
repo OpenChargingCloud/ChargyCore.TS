@@ -73,8 +73,11 @@ versions and are always listed first below.
   session `@id` was a string literal, so every record parsed from OCMF — across
   different meters, containers and charging processes — was labelled
   `1554181214441:-1965658344385548683:2`. It is now `OCMF-` followed by the
-  SHA-256 of the OCMF documents the session was built from: reproducible for a
-  given record, and distinct between records. The record-level `@id` follows it.
+  SHA-256 over the canonical form of the payload and signature of each OCMF
+  document the session was built from: reproducible for a given record, and
+  distinct between records. Canonical rather than the document text, so that
+  formatting the record does not carry — pretty-printed JSON, or line endings
+  rewritten by a checkout — cannot change it. The record-level `@id` follows it.
 
 - **OCMF charging sessions report their actual start and end.** `begin` and
   `end` were the literal `"?"`, both on the session and, since it copies them,
