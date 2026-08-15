@@ -101,6 +101,15 @@ versions and are always listed first below.
   ML-DSA-65 was mapped before.
 - Test fixtures for the Porsche Charging Data Format (PCDF).
 
+### Internal dependencies
+
+- The Noble cryptography stack moved to `@noble/curves` 2.3.0,
+  `@noble/hashes` 2.3.0 and `@noble/post-quantum` 0.7.0. The three are updated
+  together on purpose: `@noble/post-quantum` 0.6.1 pins curves and hashes to
+  `~2.2.0`, so raising curves on its own would have installed a second, nested
+  copy of both rather than upgrading them. 0.7.0 asks for `~2.3.0`, which keeps
+  a single deduplicated copy of each.
+
 ### Security
 
 - `pdfjs-dist` 6.0.227 → 6.2.108, closing
