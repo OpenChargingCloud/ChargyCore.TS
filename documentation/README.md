@@ -13,6 +13,12 @@ For the high-level feature overview see the [project README](../README.md).
   sessions, infrastructure, measurements, signatures, public keys, tariffs,
   verifier results, extensions, and legacy compatibility.
 
+## Live discovery formats
+
+- [Charge Transparency LiveLink](ChargeTransparencyLiveLink/README.md) —
+  JSON/JSON-LD discovery document for HTTPS, Server-Sent Events and WebSocket
+  endpoints that provide live charge-transparency data.
+
 ## Signed meter value / signature formats
 
 These formats carry the legally relevant, cryptographically signed meter
