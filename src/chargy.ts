@@ -1814,7 +1814,7 @@ export class Chargy {
                     if (chargeTransparencyLiveLink.IsAChargeTransparencyLiveLink(JSONContent))
                     {
 
-                        JSONContent.timestamp ??= new Date().toISOString();
+                        JSONContent.created ??= new Date().toISOString();
 
                         processedFile.result = JSONContent;
 

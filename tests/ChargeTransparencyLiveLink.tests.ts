@@ -56,7 +56,7 @@ describe("Charge Transparency LiveLink", () => {
 
         expect(IsAChargeTransparencyLiveLink(liveLink)).toBe(true);
         expect(IsAChargeTransparencyLiveLink({ ...liveLink, "@context": "https://example.com/other" })).toBe(false);
-        expect(IsAChargeTransparencyLiveLink({ ...liveLink, transports: [ { type: "ftp", url: "https://example.com" } ] })).toBe(false);
+        expect(IsAChargeTransparencyLiveLink({ ...liveLink, liveTransports: [ { type: "ftp", url: "https://example.com" } ] })).toBe(false);
         expect(IsAChargeTransparencyLiveLink(undefined)).toBe(false);
 
     });
@@ -69,8 +69,8 @@ describe("Charge Transparency LiveLink", () => {
 
         if (IsAChargeTransparencyLiveLink(report))
         {
-            expect(report.timestamp).toBe("2026-06-12T14:03:12Z");
-            expect(report.transports).toHaveLength(3);
+            expect(report.created).toBe("2026-08-28T11:59:59Z");
+            expect(report.liveTransports).toHaveLength(2);
         }
 
     });
@@ -86,7 +86,7 @@ describe("Charge Transparency LiveLink", () => {
             expect(IsAChargeTransparencyLiveLink(report)).toBe(true);
 
             if (IsAChargeTransparencyLiveLink(report))
-                expect(report.timestamp).toBe("2026-06-13T10:11:12.000Z");
+                expect(report.created).toBe("2026-06-13T10:11:12.000Z");
         }
         finally
         {

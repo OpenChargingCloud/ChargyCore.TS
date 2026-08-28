@@ -7,6 +7,22 @@ While the version number is below 1.0.0, breaking changes are released in minor
 versions and are always listed first below.
 
 
+## [0.13.0] - 2026-08-28
+
+### Breaking
+
+- **`IChargeTransparencyLiveLink.timestamp` is now `created`, and
+  `transports` is now `liveTransports`.** The names now say what the properties
+  are: the timestamp records when the link was created rather than some
+  unspecified event, and the transports are the ones carrying the live data,
+  which distinguishes them from any other transport a document may come to
+  describe. `IsAChargeTransparencyLiveLink()` validates the new names, and a
+  live link without a `created` timestamp gets the current UTC time in that
+  property instead. There is no fallback to the old names: a document still
+  using `timestamp` or `transports` is accepted by the type guard, because both
+  properties are optional, but the values are ignored. Consuming code reading
+  either property has to be updated, and so do stored documents.
+
 ## [0.12.0] - 2026-08-15
 
 ### Breaking
