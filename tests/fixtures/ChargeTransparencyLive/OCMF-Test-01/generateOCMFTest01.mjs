@@ -416,7 +416,7 @@ function createOCMFDocument(paginationId, includedReadings, keyPair)
         "IL":  "TRUSTED",
         "IF":  [ "RFID_PLAIN" ],
         "IT":  "ISO14443",
-        "ID":  "GD-CARD-OCMF-TEST-01",
+        "ID":  "04A9B7C21E5D80",
         "CT":  "EVSEID",
         "CI":  "DE*GEF*E12345678*1",
         "CF":  "1.0.0",
