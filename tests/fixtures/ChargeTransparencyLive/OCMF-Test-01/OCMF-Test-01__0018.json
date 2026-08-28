@@ -3,8 +3,8 @@
     "@id":           "5f2c8a10-7b64-4e19-9d3a-1c8e05b4a7f2",
     "@context":      "https://open.charging.cloud/contexts/chargeTransparency/live/link/1.0",
     "created":       "2026-08-28T11:59:59Z",
-    "lastUpdated":   "2026-08-28T12:03:00Z",
-    "updates":       "A5A06E428368D7B10CF3026C6A4022A56901697F6B33661F800390EBF78AAD18",
+    "lastUpdated":   "2026-08-28T12:02:50Z",
+    "updates":       "ABB749920C7F5DA90D3601CAC1E0961E208C8AF5C0DD5A2C66DAFB02049304F9",
     "description":   {
                          "en": "OCMF-Test-01 Transparency Live-Link",
                          "de": "OCMF-Test-01 Transparenz Live-Link"
@@ -164,8 +164,7 @@
             "OCMF|{\"FV\":\"1.4\",\"GI\":\"GraphDefined Charging Station\",\"GS\":\"CS-OCMF-TEST-01\",\"GV\":\"1.0.0\",\"PG\":\"T15\",\"MV\":\"GraphDefined\",\"MM\":\"GD-OCMF-AC22\",\"MS\":\"GD-METER-OCMF-TEST-01\",\"MF\":\"1.0.0\",\"IS\":true,\"IL\":\"TRUSTED\",\"IF\":[\"RFID_PLAIN\"],\"IT\":\"ISO14443\",\"ID\":\"GD-CARD-OCMF-TEST-01\",\"CT\":\"EVSEID\",\"CI\":\"DE*GEF*E12345678*1\",\"CF\":\"1.0.0\",\"RD\":[{\"TM\":\"2026-08-28T14:02:20,000+0200 S\",\"TX\":\"C\",\"RV\":1234.8379,\"RI\":\"1-0:1.8.0*255\",\"RU\":\"kWh\",\"RT\":\"AC\",\"EF\":\"\",\"ST\":\"G\"}]}|{\"SA\":\"ECDSA-secp256r1-SHA256\",\"SE\":\"hex\",\"SM\":\"application/x-der\",\"SD\":\"3046022100A6CD7A8E2A5F02F281629C8BC76DFDB9B178BDBA2A7C8273211539B581FD97000221009A134E25DD7A9CD6E03F127F1709C67D79AEC78CC28747139BAA8F6E3B6489C4\"}",
             "OCMF|{\"FV\":\"1.4\",\"GI\":\"GraphDefined Charging Station\",\"GS\":\"CS-OCMF-TEST-01\",\"GV\":\"1.0.0\",\"PG\":\"T16\",\"MV\":\"GraphDefined\",\"MM\":\"GD-OCMF-AC22\",\"MS\":\"GD-METER-OCMF-TEST-01\",\"MF\":\"1.0.0\",\"IS\":true,\"IL\":\"TRUSTED\",\"IF\":[\"RFID_PLAIN\"],\"IT\":\"ISO14443\",\"ID\":\"GD-CARD-OCMF-TEST-01\",\"CT\":\"EVSEID\",\"CI\":\"DE*GEF*E12345678*1\",\"CF\":\"1.0.0\",\"RD\":[{\"TM\":\"2026-08-28T14:02:30,000+0200 S\",\"TX\":\"C\",\"RV\":1234.8973,\"RI\":\"1-0:1.8.0*255\",\"RU\":\"kWh\",\"RT\":\"AC\",\"EF\":\"\",\"ST\":\"G\"}]}|{\"SA\":\"ECDSA-secp256r1-SHA256\",\"SE\":\"hex\",\"SM\":\"application/x-der\",\"SD\":\"30460221008E6D2291E7EDED90761D868F1DC65EFBD1BF292789F7D2804E175F43497CAD140221008F0EF62DAC4BE3D059FEC399365B0F5761D5347E88CB96CCFDD176E7C5873D8C\"}",
             "OCMF|{\"FV\":\"1.4\",\"GI\":\"GraphDefined Charging Station\",\"GS\":\"CS-OCMF-TEST-01\",\"GV\":\"1.0.0\",\"PG\":\"T17\",\"MV\":\"GraphDefined\",\"MM\":\"GD-OCMF-AC22\",\"MS\":\"GD-METER-OCMF-TEST-01\",\"MF\":\"1.0.0\",\"IS\":true,\"IL\":\"TRUSTED\",\"IF\":[\"RFID_PLAIN\"],\"IT\":\"ISO14443\",\"ID\":\"GD-CARD-OCMF-TEST-01\",\"CT\":\"EVSEID\",\"CI\":\"DE*GEF*E12345678*1\",\"CF\":\"1.0.0\",\"RD\":[{\"TM\":\"2026-08-28T14:02:40,000+0200 S\",\"TX\":\"C\",\"RV\":1234.9561,\"RI\":\"1-0:1.8.0*255\",\"RU\":\"kWh\",\"RT\":\"AC\",\"EF\":\"\",\"ST\":\"G\"}]}|{\"SA\":\"ECDSA-secp256r1-SHA256\",\"SE\":\"hex\",\"SM\":\"application/x-der\",\"SD\":\"3045022100E7985752541A609B40FC522FC371EE876EE0126DADC7B0DC628CE642C020C62A0220425DC2DF05C1397A923CD414658C376113C8B94585FD33B0B2F61ED58BE4AB09\"}",
-            "OCMF|{\"FV\":\"1.4\",\"GI\":\"GraphDefined Charging Station\",\"GS\":\"CS-OCMF-TEST-01\",\"GV\":\"1.0.0\",\"PG\":\"T18\",\"MV\":\"GraphDefined\",\"MM\":\"GD-OCMF-AC22\",\"MS\":\"GD-METER-OCMF-TEST-01\",\"MF\":\"1.0.0\",\"IS\":true,\"IL\":\"TRUSTED\",\"IF\":[\"RFID_PLAIN\"],\"IT\":\"ISO14443\",\"ID\":\"GD-CARD-OCMF-TEST-01\",\"CT\":\"EVSEID\",\"CI\":\"DE*GEF*E12345678*1\",\"CF\":\"1.0.0\",\"RD\":[{\"TM\":\"2026-08-28T14:02:50,000+0200 S\",\"TX\":\"C\",\"RV\":1235.0173,\"RI\":\"1-0:1.8.0*255\",\"RU\":\"kWh\",\"RT\":\"AC\",\"EF\":\"\",\"ST\":\"G\"}]}|{\"SA\":\"ECDSA-secp256r1-SHA256\",\"SE\":\"hex\",\"SM\":\"application/x-der\",\"SD\":\"3045022100EB1CE0DBED2A47C9F551DE678C06369CBD89AA8CA2F04B36E307EEA36234381D02203ED86F7AB3E12D97D7B650F45BE5790E4E9A904E381025FFE2D5BD5D1F6FA2F3\"}",
-            "OCMF|{\"FV\":\"1.4\",\"GI\":\"GraphDefined Charging Station\",\"GS\":\"CS-OCMF-TEST-01\",\"GV\":\"1.0.0\",\"PG\":\"T19\",\"MV\":\"GraphDefined\",\"MM\":\"GD-OCMF-AC22\",\"MS\":\"GD-METER-OCMF-TEST-01\",\"MF\":\"1.0.0\",\"IS\":true,\"IL\":\"TRUSTED\",\"IF\":[\"RFID_PLAIN\"],\"IT\":\"ISO14443\",\"ID\":\"GD-CARD-OCMF-TEST-01\",\"CT\":\"EVSEID\",\"CI\":\"DE*GEF*E12345678*1\",\"CF\":\"1.0.0\",\"RD\":[{\"TM\":\"2026-08-28T14:00:00,000+0200 S\",\"TX\":\"B\",\"RV\":1234.0000,\"RI\":\"1-0:1.8.0*255\",\"RU\":\"kWh\",\"RT\":\"AC\",\"EF\":\"\",\"ST\":\"G\"},{\"TM\":\"2026-08-28T14:03:00,000+0200 S\",\"TX\":\"E\",\"RV\":1235.0433,\"RI\":\"1-0:1.8.0*255\",\"RU\":\"kWh\",\"RT\":\"AC\",\"EF\":\"\",\"ST\":\"G\"}]}|{\"SA\":\"ECDSA-secp256r1-SHA256\",\"SE\":\"hex\",\"SM\":\"application/x-der\",\"SD\":\"304402203EFF174246BD4E03FF3C41A477ED0EB55506A8AFD046AF435CC7FEED2ECFBBD802207ED9C932C3BB54C1FBDAD93CED6F170570068CFEE209D673765621F5276A5174\"}"
+            "OCMF|{\"FV\":\"1.4\",\"GI\":\"GraphDefined Charging Station\",\"GS\":\"CS-OCMF-TEST-01\",\"GV\":\"1.0.0\",\"PG\":\"T18\",\"MV\":\"GraphDefined\",\"MM\":\"GD-OCMF-AC22\",\"MS\":\"GD-METER-OCMF-TEST-01\",\"MF\":\"1.0.0\",\"IS\":true,\"IL\":\"TRUSTED\",\"IF\":[\"RFID_PLAIN\"],\"IT\":\"ISO14443\",\"ID\":\"GD-CARD-OCMF-TEST-01\",\"CT\":\"EVSEID\",\"CI\":\"DE*GEF*E12345678*1\",\"CF\":\"1.0.0\",\"RD\":[{\"TM\":\"2026-08-28T14:02:50,000+0200 S\",\"TX\":\"C\",\"RV\":1235.0173,\"RI\":\"1-0:1.8.0*255\",\"RU\":\"kWh\",\"RT\":\"AC\",\"EF\":\"\",\"ST\":\"G\"}]}|{\"SA\":\"ECDSA-secp256r1-SHA256\",\"SE\":\"hex\",\"SM\":\"application/x-der\",\"SD\":\"3045022100EB1CE0DBED2A47C9F551DE678C06369CBD89AA8CA2F04B36E307EEA36234381D02203ED86F7AB3E12D97D7B650F45BE5790E4E9A904E381025FFE2D5BD5D1F6FA2F3\"}"
         ]
     },
 
@@ -178,7 +177,7 @@
                 "encodings": [ "JSON", "JCS", "UTF-8" ]
             },
             "encodings": [ "Ecdsa-Sig-Value", "DER", "hex" ],
-            "value": "30450220201DC8B114206171FE46ACCE3841EF15C5F41A8A17461F852E657D64612DD074022100D2C2338FB1681A63EFF5F48CA41BDB3CE46C4CA6296F3479164C1CF0E6E2F044"
+            "value": "3044022078D5637294570E6432EE746C2532E6DD1DD717305F91491AE87A9506BFDB6675022041C916175AD112BD633E01DF376A323FDE19820B7CCD4F78E8B6CA65064498FD"
         },
         {
             "keyId": "A2F94A58FB75E25BC2CECDF582819B6D44F3705D0C3BADD6391E9D536D5671E8",
@@ -188,7 +187,7 @@
                 "encodings": [ "JSON", "JCS", "UTF-8" ]
             },
             "encodings": [ "raw", "hex" ],
-            "value": "8BD3CFCA9190421051C1DB51B77CE2166581843EF70DC3D5AD9E0AF2DCCD91C9D9B17941079251BE6426D51B4B040459EC8CD886D5676FD1DCA3685573650503"
+            "value": "8D148F123C8904F70A6D3F57DADDCFFC095E3EAA5CC584D339AF8E4B0CD021619DE90BC8F58EEBA08C8174F3B1B2D3417A0A931E8EE9B852F7D7C5EEE52CBC01"
         }
     ]
 

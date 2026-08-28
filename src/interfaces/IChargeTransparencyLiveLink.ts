@@ -68,12 +68,12 @@ export function IsAChargeTransparencyLiveLink(data: unknown): data is IChargeTra
         return false;
 
     return data["@context"]    === ChargeTransparencyLiveLinkContext &&
-          (data["timestamp"]   === undefined || data["timestamp"] === null || typeof data["timestamp"] === "string") &&
+          (data["created"]     === undefined || data["created"]   === null || typeof data["created"]   === "string") &&
           (data["description"] === undefined || chargyLib.isI18NString(data["description"])) &&
           (data["imageURLs"]   === undefined || (Array.isArray(data["imageURLs"]) && data["imageURLs"].every(value => typeof value === "string"))) &&
           (data["geoLocation"] === undefined || chargyInterfaces.isGeoLocation(data["geoLocation"])) &&
           (data["connector"]   === undefined || isConnector(data["connector"])) &&
-          (data["transports"]  === undefined || (Array.isArray(data["transports"]) && data["transports"].every(isTransport))) &&
+          (data["liveTransports"] === undefined || (Array.isArray(data["liveTransports"]) && data["liveTransports"].every(isTransport))) &&
           (data["signatures"]  === undefined ||  Array.isArray(data["signatures"]));
 
 }
@@ -88,8 +88,8 @@ export interface IChargeTransparencyLiveLink extends chargyLib.JSONObject {
 
     "@context": typeof ChargeTransparencyLiveLinkContext;
 
-    /** ISO 8601 timestamp */
-    timestamp?:     string|null;
+    /** ISO 8601 creation timestamp */
+    created?:       string|null;
 
     /** Multi-language description */
     description?:   chargyLib.I18NString;
@@ -104,7 +104,7 @@ export interface IChargeTransparencyLiveLink extends chargyLib.JSONObject {
     connector?:     IConnector;
 
     /** Available transport methods for live data */
-    transports?:    Transport[];
+    liveTransports?: Transport[];
 
     /** Digital signatures (currently empty or extendable) */
     signatures?:    chargyInterfaces.ISignature[];

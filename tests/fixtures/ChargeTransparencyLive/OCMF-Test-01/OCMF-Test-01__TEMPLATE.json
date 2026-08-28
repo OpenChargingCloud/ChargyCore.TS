@@ -1,0 +1,151 @@
+{
+
+    "@id":           "5f2c8a10-7b64-4e19-9d3a-1c8e05b4a7f2",
+    "@context":      "https://open.charging.cloud/contexts/chargeTransparency/live/link/1.0",
+    "created":       "2026-08-28T11:59:59Z",
+    "lastUpdated":   "{{lastUpdated}}",
+    "updates":       "{{updates}}",
+    "description":   {
+                         "en": "OCMF-Test-01 Transparency Live-Link",
+                         "de": "OCMF-Test-01 Transparenz Live-Link"
+                     },
+
+    "keyIdGeneration":    [ "SubjectPublicKeyInfo", "DER", "SHA-256", "hex" ],
+    "docRefIdGeneration": [ "SHA-256", "hex" ],
+
+    "timeSource": {
+
+        "isLegalTime":          true,
+        "authority":            "Physikalisch-Technische Bundesanstalt",
+        "accuracy":             "+-2 ms",
+        "stratum":              2,
+        "syncInterval":         "PT1H",
+        "lastSynchronization":  "2026-08-28T11:14:27Z",
+        "minServers":           2,
+        "serversURL":           "https://time.ptb.de/files/ptb-ntp-services.json",
+
+        "servers": [
+            { "server": "nts://ptbtime1.ptb.de", "priority": 1 },
+            { "server": "nts://ptbtime2.ptb.de", "priority": 1 },
+            { "server": "ntp://ptbtime3.ptb.de", "priority": 2 }
+        ]
+
+    },
+
+    "operator": {
+        "@id":           "DE*GEF",
+        "name":          "GraphDefined",
+        "publicKeys": [
+            {
+                 "keyUsage":  [ "signCTRs" ],
+                 "algorithm":   "ECDSA-secp256r1",
+                 "encodings": [ "SubjectPublicKeyInfo", "DER", "hex" ],
+                 "value":       "{{publicKey:cpo_signCTRs}}"
+            },
+            {
+                 "keyUsage":  [ "signCTRs" ],
+                 "algorithm":   "EdDSA-Ed25519",
+                 "encodings": [ "raw", "hex" ],
+                 "value":       "{{publicKey:cpo_signCTRs_Ed25519}}"
+            },
+            {
+                 "keyUsage":  [ "signEnergyMeterValues" ],
+                 "algorithm":   "ECDSA-secp256r1",
+                 "encodings": [ "SubjectPublicKeyInfo", "DER", "hex" ],
+                 "value":       "{{publicKey:cpo_signEnergyMeterValues}}"
+            }
+        ]
+    },
+
+    "location": {
+
+        "geoLocation":   {
+                             "lat": 50.387945,
+                             "lng": 10.4304
+                         },
+
+        "address":       {
+                             "street":         "Breitenbergstr. 2",
+                             "town":           "Mindelheim",
+                             "zipCode":        "87719"
+                         }
+
+    },
+
+    "chargingStation": {
+
+        "evseId":        "DE*GEF*E12345678*1",
+
+        "connector":     {
+                             "standard":       "Type 2",
+                             "format":         "Socket",
+                             "powerType":      "AC",
+                             "maxPower":       "22 kW"
+                         },
+
+        "energyMeter":   {
+                             "@id":             "GD-METER-OCMF-TEST-01",
+                             "publicKeys": [
+                                  {
+                                       "keyUsage":  [ "signMeterValues" ],
+                                       "algorithm":   "ECDSA-secp256r1",
+                                       "encodings": [ "SubjectPublicKeyInfo", "DER", "hex" ],
+                                       "value":       "{{publicKey:energyMeter}}"
+                                  }
+                              ],
+                             "manufacturer":    "GraphDefined",
+                             "type":            "GD-OCMF-AC22",
+                             "firmwareVersion": "1.0.0"
+                         }
+
+    },
+
+    "contract": {
+        "id":       "GD-CARD-OCMF-TEST-01",
+        "type":     "rfid"
+    },
+
+
+    "liveTransports": [
+                         {
+                             "type": "https",
+                             "url":  "https://api1.example.com/chargingSessions/OCMF-Test-01/transparency/live?token=abcdef"
+                         },
+                         {
+                             "type": "websocket",
+                             "urls": [
+                                 {
+                                     "url":      "wss://api1.example.com/chargingSessions/OCMF-Test-01/transparency/live",
+                                     "priority":  10,
+                                     "weight":    60
+                                 },
+                                 {
+                                     "url":      "wss://api2.example.com/chargingSessions/OCMF-Test-01/transparency/live",
+                                     "priority":  10,
+                                     "weight":    40
+                                 }
+                             ],
+                             "totp": {
+                                 "initialSharedSecret": "abcdefghijklmnopqrstuvwxyz1234567890",
+                                 "timeStep":             10
+                             }
+                         },
+                         {
+                             "type": "httpSSE",
+                             "urls": [
+                                 "https://api1.example.com/chargingSessions/OCMF-Test-01/transparency/live",
+                                 "https://api2.example.com/chargingSessions/OCMF-Test-01/transparency/live"
+                             ],
+                             "totp": {
+                                 "initialSharedSecret": "abcdefghijklmnopqrstuvwxyz1234567890",
+                                 "timeStep":             10
+                             }
+                         }
+    ],
+
+
+    "signedMeterValues": "{{signedMeterValues}}",
+
+    "signatures":    [ ]
+
+}
