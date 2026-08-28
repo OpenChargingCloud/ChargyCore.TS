@@ -129,6 +129,17 @@
                                  "initialSharedSecret": "abcdefghijklmnopqrstuvwxyz1234567890",
                                  "timeStep":             10
                              }
+                         },
+                         {
+                             "type": "httpSSE",
+                             "urls": [
+                                 "https://api1.example.com/chargingSessions/OCMF-Test-01/transparency/live",
+                                 "https://api2.example.com/chargingSessions/OCMF-Test-01/transparency/live"
+                             ],
+                             "totp": {
+                                 "initialSharedSecret": "abcdefghijklmnopqrstuvwxyz1234567890",
+                                 "timeStep":             10
+                             }
                          }
     ],
 

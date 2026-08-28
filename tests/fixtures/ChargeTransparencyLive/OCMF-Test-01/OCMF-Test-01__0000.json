@@ -128,6 +128,17 @@
                                  "initialSharedSecret": "abcdefghijklmnopqrstuvwxyz1234567890",
                                  "timeStep":             10
                              }
+                         },
+                         {
+                             "type": "httpSSE",
+                             "urls": [
+                                 "https://api1.example.com/chargingSessions/OCMF-Test-01/transparency/live",
+                                 "https://api2.example.com/chargingSessions/OCMF-Test-01/transparency/live"
+                             ],
+                             "totp": {
+                                 "initialSharedSecret": "abcdefghijklmnopqrstuvwxyz1234567890",
+                                 "timeStep":             10
+                             }
                          }
     ],
 
@@ -142,7 +153,7 @@
                 "encodings": [ "JSON", "JCS", "UTF-8" ]
             },
             "encodings": [ "Ecdsa-Sig-Value", "DER", "hex" ],
-            "value": "3045022100861F72654987EF94096588E7F6C2FBCF2A0A400FCB407AB6BE86AA77A3C9F4710220109114C6CF60DC8959FFA5512431D8CAF2BECBCF56A9077ED93D49475C8D5141"
+            "value": "3046022100B262A638B5F986EC776F7F245077C4D994A8C1207A0CB76396BEDB9066F5058D022100C6E41E1AD1E0DB2125219B1EDF82E2625C42382DB8B83DB0C35C590A9C347F6C"
         },
         {
             "keyId": "A2F94A58FB75E25BC2CECDF582819B6D44F3705D0C3BADD6391E9D536D5671E8",
@@ -152,7 +163,7 @@
                 "encodings": [ "JSON", "JCS", "UTF-8" ]
             },
             "encodings": [ "raw", "hex" ],
-            "value": "E3F1BB0EE0083987A1B53142EF995DD7B8F1893E4F4AEAF116FCF568C9926B57959F7EA891C61F6EFBC95D1AB23F349F21F9B54AD490483C5D158973DA18F203"
+            "value": "1C07E150E4A60171F9DA795924FCD8FAB87770F57B1CE82D639A2120D086189BD4AFFC67E8102B4E4FE633C0C6CD3657B472C23E4DEB22CC682F73F559E37C05"
         }
     ]
 

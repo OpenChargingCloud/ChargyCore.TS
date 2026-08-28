@@ -70,7 +70,7 @@ describe("Charge Transparency LiveLink", () => {
         if (IsAChargeTransparencyLiveLink(report))
         {
             expect(report.created).toBe("2026-08-28T11:59:59Z");
-            expect(report.liveTransports).toHaveLength(2);
+            expect(report.liveTransports).toHaveLength(3);
         }
 
     });
