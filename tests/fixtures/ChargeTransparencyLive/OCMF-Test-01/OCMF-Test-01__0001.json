@@ -4,7 +4,7 @@
     "@context":      "https://open.charging.cloud/contexts/chargeTransparency/live/link/1.0",
     "created":       "2026-08-28T11:59:59Z",
     "lastUpdated":   "2026-08-28T12:00:00Z",
-    "updates":       "0F466EACA58B5EAEFB00C514CA61AAF3F39AA5A53D84980E4B7212D7D6423AA6",
+    "updates":       "397A39E8FC3EA60650C6DD056E8AA45A4C42493C4C9E2F960EEFAF3F813CC46E",
     "description":   {
                          "en": "OCMF-Test-01 Transparency Live-Link",
                          "de": "OCMF-Test-01 Transparenz Live-Link"
@@ -27,6 +27,7 @@
         "servers": [
             { "server": "nts://ptbtime1.ptb.de", "priority": 1 },
             { "server": "nts://ptbtime2.ptb.de", "priority": 1 },
+            { "server": "nts://ptbtime4.ptb.de", "priority": 1 },
             { "server": "ntp://ptbtime3.ptb.de", "priority": 2 }
         ]
 
@@ -147,7 +148,7 @@
     "signedMeterValues": {
         "encodings": [ "OCMF", "plain" ],
         "values": [
-            "OCMF|{\"FV\":\"1.4\",\"GI\":\"GraphDefined Charging Station\",\"GS\":\"CS-OCMF-TEST-01\",\"GV\":\"1.0.0\",\"PG\":\"T1\",\"MV\":\"GraphDefined\",\"MM\":\"GD-OCMF-AC22\",\"MS\":\"GD-METER-OCMF-TEST-01\",\"MF\":\"1.0.0\",\"IS\":true,\"IL\":\"TRUSTED\",\"IF\":[\"RFID_PLAIN\"],\"IT\":\"ISO14443\",\"ID\":\"GD-CARD-OCMF-TEST-01\",\"CT\":\"EVSEID\",\"CI\":\"DE*GEF*E12345678*1\",\"CF\":\"1.0.0\",\"RD\":[{\"TM\":\"2026-08-28T14:00:00,000+0200 S\",\"TX\":\"B\",\"RV\":1234.0000,\"RI\":\"1-0:1.8.0*255\",\"RU\":\"kWh\",\"RT\":\"AC\",\"EF\":\"\",\"ST\":\"G\"}]}|{\"SA\":\"ECDSA-secp256r1-SHA256\",\"SE\":\"hex\",\"SM\":\"application/x-der\",\"SD\":\"3045022100D698D2AE3205C00BA2532C79426DFD51B1661633E38F2E22D177DF8FCD5A7B0102204C7FD2C594E846DA306975FFD7FA3CB4F1972D438A56AF2BACC9B262FB019C95\"}"
+            "OCMF|{\"FV\":\"1.4\",\"GI\":\"GraphDefined Charging Station\",\"GS\":\"CS-OCMF-TEST-01\",\"GV\":\"1.0.0\",\"PG\":\"T1\",\"MV\":\"GraphDefined\",\"MM\":\"GD-OCMF-AC22\",\"MS\":\"GD-METER-OCMF-TEST-01\",\"MF\":\"1.0.0\",\"IS\":true,\"IL\":\"TRUSTED\",\"IF\":[\"RFID_PLAIN\"],\"IT\":\"ISO14443\",\"ID\":\"GD-CARD-OCMF-TEST-01\",\"CT\":\"EVSEID\",\"CI\":\"DE*GEF*E12345678*1\",\"CF\":\"1.0.0\",\"RD\":[{\"TM\":\"2026-08-28T14:00:00,000+0200 S\",\"TX\":\"B\",\"RV\":1234.0000,\"RI\":\"1-0:1.8.0*255\",\"RU\":\"kWh\",\"RT\":\"AC\",\"EF\":\"\",\"ST\":\"G\"}]}|{\"SA\":\"ECDSA-secp256r1-SHA256\",\"SE\":\"hex\",\"SM\":\"application/x-der\",\"SD\":\"3046022100F7B4086D5CF8274CE548BF4346870F616AFC5BED2E40599F581B122CD4864091022100A02DFDAE48D37FC3A1F2401B1088DB03FADAF14A89879C95AB1784B2FB709520\"}"
         ]
     },
 
@@ -160,7 +161,7 @@
                 "encodings": [ "JSON", "JCS", "UTF-8" ]
             },
             "encodings": [ "Ecdsa-Sig-Value", "DER", "hex" ],
-            "value": "3045022100861A657DC8D46A65F213F5BD5C9F3C9C5D2D600D084E386D402360281BFD85A502205562D70238588F5C2429A9A5777CE8C73742D40EF49A5A7938AAEBAE9C87CF96"
+            "value": "3045022100CE7CC660DC1621BF2183D2787E64261FD6B2FF98DD62FE79E74DD803D85B74BC02206F1D3A29232AF45BD28E11DA5BD8EAA9A0E79EFE845BD5F8D1FD1758DB1BD6F2"
         },
         {
             "keyId": "A2F94A58FB75E25BC2CECDF582819B6D44F3705D0C3BADD6391E9D536D5671E8",
@@ -170,7 +171,7 @@
                 "encodings": [ "JSON", "JCS", "UTF-8" ]
             },
             "encodings": [ "raw", "hex" ],
-            "value": "B520A87602737DA8809381CB0C88772CE84E2CCE271FD37397F7356C5082B6F8E915A94EA3DB70BD6FC6A300229435F2014423A1C9459BAFCFDEDF59849DCB04"
+            "value": "604C1F781F33B1847500A4BAA78B01A91FA67A42CBFBF5D81B284FBF72E6F725F1397097BD31F59267A9A91A75426C871D451B8786C446B0D9B739371ED0B507"
         }
     ]
 

@@ -26,6 +26,7 @@
         "servers": [
             { "server": "nts://ptbtime1.ptb.de", "priority": 1 },
             { "server": "nts://ptbtime2.ptb.de", "priority": 1 },
+            { "server": "nts://ptbtime4.ptb.de", "priority": 1 },
             { "server": "ntp://ptbtime3.ptb.de", "priority": 2 }
         ]
 
@@ -153,7 +154,7 @@
                 "encodings": [ "JSON", "JCS", "UTF-8" ]
             },
             "encodings": [ "Ecdsa-Sig-Value", "DER", "hex" ],
-            "value": "3046022100B262A638B5F986EC776F7F245077C4D994A8C1207A0CB76396BEDB9066F5058D022100C6E41E1AD1E0DB2125219B1EDF82E2625C42382DB8B83DB0C35C590A9C347F6C"
+            "value": "3045022100F377F87E3FC87580433E072770B47A2E0AB030BA2B471093B6842552107EA1F402203E6766387F476A6B6252701F8E25821FC8103BD387AD9895E39F2DDFE624216D"
         },
         {
             "keyId": "A2F94A58FB75E25BC2CECDF582819B6D44F3705D0C3BADD6391E9D536D5671E8",
@@ -163,7 +164,7 @@
                 "encodings": [ "JSON", "JCS", "UTF-8" ]
             },
             "encodings": [ "raw", "hex" ],
-            "value": "1C07E150E4A60171F9DA795924FCD8FAB87770F57B1CE82D639A2120D086189BD4AFFC67E8102B4E4FE633C0C6CD3657B472C23E4DEB22CC682F73F559E37C05"
+            "value": "421E61F8897881928058E7CFD414D2740116AB72ED5B46B2D4E22CDC163BF009083ADA584D7608481975C0D061AD64FEF2D5C2F8B10639DE6E00C7D23D56E102"
         }
     ]
 

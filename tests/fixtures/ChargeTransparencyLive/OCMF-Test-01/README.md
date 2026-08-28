@@ -32,11 +32,13 @@ Everything else — identifiers, location, connector, transports, time source �
 is taken from the template unchanged, including its layout: the generator
 substitutes textually and only re-indents the blocks it inserts.
 
-The time source names the three PTB servers as `nts://ptbtime1.ptb.de`,
-`nts://ptbtime2.ptb.de` and `ntp://ptbtime3.ptb.de` — the first two as the
-authenticated pair `minServers: 2` asks for, the third as an unauthenticated
-fallback at a lower priority, and `serversURL` points at PTB's own service
-list at `https://time.ptb.de/files/ptb-ntp-services.json`.
+The time source names four PTB servers: `nts://ptbtime1.ptb.de`,
+`nts://ptbtime2.ptb.de` and `nts://ptbtime4.ptb.de` share priority 1, so any
+two of them satisfy `minServers: 2`, and `ntp://ptbtime3.ptb.de` is the
+unauthenticated last resort at priority 2. `ptbtime4` is the one in Berlin,
+which keeps the primary set from sitting in a single building. `serversURL`
+points at PTB's own service list at
+`https://time.ptb.de/files/ptb-ntp-services.json`.
 
 ## The series
 

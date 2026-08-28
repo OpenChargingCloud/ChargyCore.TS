@@ -397,6 +397,7 @@ the document states where that clock comes from:
     "servers": [
         { "server": "nts://ptbtime1.ptb.de", "priority": 1 },
         { "server": "nts://ptbtime2.ptb.de", "priority": 1 },
+        { "server": "nts://ptbtime4.ptb.de", "priority": 1 },
         { "server": "ntp://ptbtime3.ptb.de", "priority": 2 }
     ]
 }
@@ -468,9 +469,16 @@ resulting time is considered valid; it defaults to **2**. One source cannot be
 checked against anything, so a single reachable server is not enough to detect
 a falseticker — that is why NTP clients traditionally want several.
 
-The priorities follow from it: `ptbtime1` and `ptbtime2` share priority 1
-because they are the pair meant to be used together, and `ptbtime3` at priority
-2 is the fallback that steps in when one of them is unreachable.
+The priorities follow from it: three servers share priority 1, so any two of
+them satisfy `minServers` and one may drop out without the time becoming
+unusable. `ptbtime3` at priority 2 is the last resort, and it is the
+unauthenticated one — reaching for it is a visible degradation, not a silent
+one.
+
+Where those servers stand matters as much as how many there are. `ptbtime1`,
+`ptbtime2` and `ptbtime3` sit at PTB in Braunschweig, `ptbtime4` in Berlin, so
+the primary set is not concentrated in one location. Three servers in one
+building would satisfy `minServers: 2` on paper and fail together in practice.
 
 `accuracy` uses the same value-with-unit string style as `maxPower` elsewhere
 in the document.
