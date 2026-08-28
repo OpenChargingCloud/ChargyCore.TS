@@ -27,6 +27,7 @@
         "servers": [
             { "server": "nts://ptbtime1.ptb.de", "priority": 1 },
             { "server": "nts://ptbtime2.ptb.de", "priority": 1 },
+            { "server": "nts://ptbtime4.ptb.de", "priority": 1 },
             { "server": "ntp://ptbtime3.ptb.de", "priority": 2 }
         ]
 
