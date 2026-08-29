@@ -37,6 +37,12 @@ versions and are always listed first below.
   link carries no meter values yet, which is the normal state of the first
   document of a series.
 
+- **An https transport may say how often to ask for the document again.**
+  `TransportHTTPS.refresh` is a number of seconds, and
+  `IsAChargeTransparencyLiveLink()` validates it. It belongs to https alone: a
+  websocket or a server-sent event stream delivers a new document when there is
+  one. Its absence means: do not poll.
+
 - **`OCMF.TryToParseOCMFDocuments()` and `TryToParseOCMFDocument()` accept an
   array of public keys.** A single key stays valid and behaves as before. This
   is needed because a session is regularly signed by more than one key: many
