@@ -2879,7 +2879,7 @@ export class OCMF {
     //#region TryToParseOCMFDocument (OCMFDocument,  PublicKey?, PublicKeyEncoding?, ContainerInfos?)
 
     public async TryToParseOCMFDocument(OCMFDocument:        string,
-                                        PublicKey?:          string|publicKeyInfoType.IPublicKeyXY,
+                                        PublicKey?:          OCMFPublicKeys,
                                         PublicKeyEncoding?:  string,
                                         ContainerInfos?:     chargyInterfaces.IContainerInfos)
 
