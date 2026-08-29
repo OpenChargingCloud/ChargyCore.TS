@@ -17,7 +17,8 @@ For the high-level feature overview see the [project README](../README.md).
 
 - [Charge Transparency LiveLink](ChargeTransparencyLiveLink/README.md) —
   JSON/JSON-LD discovery document for HTTPS, Server-Sent Events and WebSocket
-  endpoints that provide live charge-transparency data.
+  endpoints that provide live charge-transparency data, optionally carrying the
+  signed meter values of the running session.
 
 ## Signed meter value / signature formats
 

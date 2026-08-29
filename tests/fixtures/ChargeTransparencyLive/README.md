@@ -326,6 +326,38 @@ plain list of documents:
 Format and encoding do not change from one meter value to the next, which is
 the same hoisting criterion as for `keyIdGeneration`.
 
+### What ChargyCore reads
+
+Recognizing a live link does not touch this section: `signedMeterValues` is not
+part of `IChargeTransparencyLiveLink` and `IsAChargeTransparencyLiveLink()`
+never looks at it. It is read on request, by
+`Chargy.TryToParseLiveLinkMeterValues()`, which returns the values as an
+ordinary charge transparency record — verified with the public keys of the
+very same document, and leaving the live link a live link.
+
+The candidate keys are collected from `chargingStationOperator.publicKeys` and
+`chargingStation.EVSE.energyMeter.publicKeys`, keeping the entries whose
+`keyUsage`, if stated at all, contains `signMeterValues` or
+`signEnergyMeterValues`. That is why the meter key and the operator's
+`signEnergyMeterValues` key both have to be listed: between them they cover the
+start, the intermediate and the end values, and a session signed by two keys
+cannot be verified from one of them.
+
+Two of the conventions above are load-bearing for that path, and a document
+that ignores either still verifies by hand but yields nothing through
+ChargyCore:
+
+- only `encodings[0] == "OCMF"` is read. A value carried as `base64`, or in
+  another meter value format, is left alone rather than guessed at.
+- a public key whose `encodings` do not end in `hex` is skipped, because `hex`
+  is what is passed on to the OCMF parser. This is a real limit on the freedom
+  [hex is a convention here, not a rule](#hex-is-a-convention-here-not-a-rule)
+  describes: the choice is per value in the format, but not yet in this reader.
+
+Neither is reported. A live link whose keys are written in `base64` is a valid
+live link with working transports whose meter values simply do not verify, so
+the two limits are worth knowing before a producer exercises the freedom.
+
 ## Live transports
 
 A live link describes a charging session that is still running, so it says
@@ -359,6 +391,65 @@ whose `@id` names a different session changes nothing. Neither does a request
 that fails: the transports belong to the operator, and a station that cannot be
 reached for a while is not a reason to drop a document that was loaded
 successfully.
+
+### What operators must provide: CORS
+
+Transparency software runs in browsers, and a browser only lets a page read a
+cross-origin answer when the server allows it. Endpoints behind `https` and
+`httpSSE` transports therefore **must** answer with
+
+    Access-Control-Allow-Origin: *
+
+Clients fetch anonymously — no cookies, no ambient credentials; the access
+token travels in the URL — so the wildcard is safe and correct here. Without
+this header no browser-based verifier can ever read the answer, whatever its
+user allows: this is the one thing no client can fix on its own side.
+`websocket` transports are not subject to CORS; a server that cares should
+check the `Origin` header itself.
+
+### What a client may do with these URLs
+
+The URLs arrive inside a document from outside, and the signatures do not make
+them benign — a malicious operator signs a malicious document flawlessly (see
+[What the signatures do not prove](#what-the-signatures-do-not-prove)). A
+client is therefore expected to guard the connection:
+
+- only encrypted transports are contacted (`https`, `wss`),
+- hosts that are not on the public internet are refused, so a document cannot
+  turn the reader's browser into a probe for the network behind their router,
+- the `refresh` period is clamped from below — the Chargy WebApp polls no
+  faster than every 5 seconds, whatever the document says — and answers are
+  capped in size,
+- and endpoints the installation has not pre-approved are only contacted with
+  the **user's consent**, asked once per origin and remembered: trust on first
+  use, revocable at any time. The consent is **per origin**, decided one origin
+  at a time even when a single document lists several: approving the operator's
+  server a reader recognises does not carry along an attacker's server listed
+  beside it.
+
+Two gates decide this, and they are independent. `externalURLs.conf` is what
+the application consults: an origin listed there is polled without a dialog,
+and so is the installation's own origin; any other origin prompts the user.
+The Content-Security-Policy is what the browser enforces: `connect-src` bounds
+which hosts the page may reach at all. A deployment that lists an operator's
+hosts in `externalURLs.conf` therefore gives its users no dialog for those
+hosts, and one that additionally narrows `connect-src` to the same hosts lets
+the browser refuse everything else — including, then, the very origins a trust
+dialog might otherwise offer, so on such a deployment approving one has no
+effect. The two gates have to agree: a prefix allowed in `externalURLs.conf`
+but missing from `connect-src` is refused by the browser rather than by Chargy.
+
+A self-hosting operator whose documents only ever point at its own servers can
+close the dialog off entirely with a `mode strict` line in `externalURLs.conf`.
+In strict mode an origin no prefix covers is never offered and never polled —
+only the listed prefixes and the app's own origin reload — so a driver is never
+asked a trust question they cannot judge, and the deployment behaves the same
+in every browser regardless of what any user answered before. The operator then
+has to list every server its documents reach; an unlisted one simply does not
+reload, with only a console message to show for it. The default is `mode open`:
+the trust dialog as described above. This shapes only whether Chargy *asks*;
+what the browser *permits* is still the `connect-src` gate, and the two are set
+independently.
 
 ## A series of documents
 
