@@ -23,6 +23,28 @@ versions and are always listed first below.
   properties are optional, but the values are ignored. Consuming code reading
   either property has to be updated, and so do stored documents.
 
+### Added
+
+- **`Chargy.TryToParseLiveLinkMeterValues()`** turns the `signedMeterValues` of
+  a charge transparency live link into a verified charge transparency record.
+  Until now that property was never read: the meter values were not parsed, not
+  verified and not displayed anywhere. They are fed through the OCMF parser
+  together with the public keys the very same document carries, and through the
+  same verification every other record goes through. The live link itself stays
+  a live link - it describes a session that is still running, a record a
+  collection of finished ones - so the meter values are produced on demand and
+  shown next to it rather than in its place. Returns `undefined` when a live
+  link carries no meter values yet, which is the normal state of the first
+  document of a series.
+
+- **`OCMF.TryToParseOCMFDocuments()` and `TryToParseOCMFDocument()` accept an
+  array of public keys.** A single key stays valid and behaves as before. This
+  is needed because a session is regularly signed by more than one key: many
+  meters sign their start and end values with a different key than the
+  intermediate ones, and an operator may hold several keys at once while
+  rotating them. Each document is tried against every candidate and keeps the
+  first signature that verifies.
+
 ## [0.12.0] - 2026-08-15
 
 ### Breaking
