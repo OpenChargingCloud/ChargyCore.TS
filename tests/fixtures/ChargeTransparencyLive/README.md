@@ -12,6 +12,34 @@ Fixtures for the charge transparency live link format
 This file collects the conventions that apply to **all** of them. Everything
 below is about the format, not about one particular fixture.
 
+## Names shared with a charge transparency record
+
+A live link and a charge transparency record describe different things — one
+charging session that is still running against a collection of finished ones —
+but they describe them with the same words:
+
+| Property | |
+| -------- | - |
+| `chargingStationOperator`             | who runs the station, with its `publicKeys` |
+| `chargingStation`                     | `@id`, `geoLocation`, `address`, and the devices below it |
+| `chargingStation.EVSE`                | `@id`, `powerType`, `maxPower` |
+| `chargingStation.EVSE.energyMeter`    | `@id`, `manufacturer`, `model`, `hardware`, `firmware`, `signatureFormat`, `publicKeys` |
+| `chargingStation.EVSE.connector`      | `standard`, `format`, `powerType`, `maxPower`, `cable` |
+| `contract`                            | `@id` and `type` of the identification that started the session |
+
+An identifier is `@id` here as it is there, and the containment follows the
+hardware: the meter and the connector below the EVSE, the EVSE below the
+station, the position on the station rather than in a location of its own.
+
+The cardinality is the one difference that remains. A live link describes
+exactly one of each, so these are single objects where a record carries lists
+(`chargingStationOperators`, `chargingStations`). The two stay separate
+document types, and merging them would be wrong: a live link is one session
+that has not finished, a record a collection of sessions that have. What the
+shared names buy is that nothing has to be renamed when one is read next to the
+other, and that an application can show a running session with the code it
+already has for a finished one.
+
 ## Describing the encodings
 
 A key or a signature is never just "hex". It is a **structure**, put into bytes
@@ -150,9 +178,9 @@ serialization layer.
 ## Public keys
 
 Public keys are listed where they belong: the operator ones under
-`operator.publicKeys`, the meter one under
-`chargingStation.energyMeter.publicKeys`. Each entry states its `keyUsage`,
-its `algorithm`, its `encodings` and its `value`.
+`chargingStationOperator.publicKeys`, the meter one under
+`chargingStation.EVSE.energyMeter.publicKeys`. Each entry states its
+`keyUsage`, its `algorithm`, its `encodings` and its `value`.
 
 The `encodings` of the individual keys are deliberately **not** hoisted to the
 document level although they are often identical, because they legitimately may
@@ -297,6 +325,40 @@ plain list of documents:
 
 Format and encoding do not change from one meter value to the next, which is
 the same hoisting criterion as for `keyIdGeneration`.
+
+## Live transports
+
+A live link describes a charging session that is still running, so it says
+where the next version of itself can be had. `liveTransports` lists the ways,
+each with a `type` of `https`, `websocket` or `httpSSE`, and either a single
+`url` or a list of `urls` with a `priority` and a `weight` per entry. A
+`totp` gives the shared secret and the time step for the one-time password
+those endpoints expect.
+
+An `https` transport has to be asked, where the other two deliver on their own,
+so it may state how often to ask:
+
+```json
+{
+    "type":    "https",
+    "url":     "https://api1.example.com/chargingSessions/OCMF-Test-01/transparency/live?token=abcdef",
+    "refresh":  10
+}
+```
+
+`refresh` is a number of **seconds**. Its absence means: do not poll.
+
+The request says which version the client already has, as
+`lastUpdated=<timestamp>` next to whatever the URL already carries, so a server
+that keeps track of it can answer with less than the whole document instead of
+sending everything again. A server that does not care ignores the parameter.
+
+What comes back replaces the document on screen only if it is **newer**, and
+`lastUpdated` is what decides that — the same document, an older one, or one
+whose `@id` names a different session changes nothing. Neither does a request
+that fails: the transports belong to the operator, and a station that cannot be
+reached for a while is not a reason to drop a document that was loaded
+successfully.
 
 ## A series of documents
 

@@ -28,9 +28,9 @@ The generator fills the template once per document of the series:
 4. **two signatures over the whole document**, into the empty `signatures`
    array — one ECDSA, one Ed25519.
 
-Everything else — identifiers, location, connector, transports, time source —
-is taken from the template unchanged, including its layout: the generator
-substitutes textually and only re-indents the blocks it inserts.
+Everything else — identifiers, position, address, connector, transports, time
+source — is taken from the template unchanged, including its layout: the
+generator substitutes textually and only re-indents the blocks it inserts.
 
 The time source names four PTB servers: `nts://ptbtime1.ptb.de`,
 `nts://ptbtime2.ptb.de` and `nts://ptbtime4.ptb.de` share priority 1, so any

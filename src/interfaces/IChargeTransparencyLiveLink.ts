@@ -56,6 +56,15 @@ function isTransport(data: unknown): data is Transport {
         return false;
     }
 
+    // Only https declares a refresh period, so only there is it validated.
+    // On the other two it is an unknown property like any other.
+    if (type === "https"                 &&
+        data["refresh"]    !== undefined &&
+        typeof data["refresh"] !== "number")
+    {
+        return false;
+    }
+
     return (data["url"]  === undefined || typeof data["url"] === "string") &&
            (data["urls"] === undefined || (Array.isArray(data["urls"]) && data["urls"].every(isTransportURL))) &&
            (data["totp"] === undefined || isTOTPConfig(data["totp"]));
@@ -136,6 +145,16 @@ export interface ITransport {
 
 export interface TransportHTTPS     extends ITransport {
     type: "https";
+
+    /**
+     * How often to ask for the document again, in seconds.
+     *
+     * This belongs to https alone: a websocket or a server-sent event stream
+     * delivers a new document when there is one, and if either ever needs a
+     * period of its own it will mean something else than asking again. Absent
+     * means: do not poll.
+     */
+    refresh?: number;
 }
 
 export interface TransportHTTPSSE   extends ITransport {

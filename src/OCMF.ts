@@ -1188,6 +1188,12 @@ export interface IOCMFChargeTransparencyRecord extends chargeTransparencyRecord.
 
 //#endregion
 
+// A charging session can be signed by more than one key: some meters sign
+// their start and end values with a different key than the intermediate ones,
+// and an operator may hold several keys at once while rotating them.
+export type OCMFPublicKeys = string | publicKeyInfoType.IPublicKeyXY |
+                             Array<string | publicKeyInfoType.IPublicKeyXY>;
+
 export class OCMF {
 
     private readonly chargy: Chargy;
@@ -2140,6 +2146,45 @@ export class OCMF {
 
     }
 
+    //#region (private) validateOCMFSignatureWithAnyOf(OCMFJSONDocument, PublicKeys, PublicKeyEncoding?)
+
+    // Tries the document against every candidate key and keeps the first
+    // signature that verifies. Without this a session whose start and end
+    // values are signed by a different key than its intermediate values could
+    // never validate as a whole.
+    private async validateOCMFSignatureWithAnyOf(OCMFJSONDocument:    IOCMFJSONDocument,
+                                                 PublicKeys:          OCMFPublicKeys,
+                                                 PublicKeyEncoding?:  string)
+
+        : Promise<chargyInterfaces.VerificationResult>
+
+    {
+
+        const candidates  = Array.isArray(PublicKeys) ? PublicKeys : [ PublicKeys ];
+
+        let   lastResult  = chargyInterfaces.VerificationResult.Unvalidated;
+
+        for (const publicKey of candidates)
+        {
+
+            // A failed attempt must not leave its verdict behind for the next one.
+            OCMFJSONDocument.validationStatus  = chargyInterfaces.VerificationResult.Unvalidated;
+            OCMFJSONDocument.validationErrors  = undefined;
+            OCMFJSONDocument.publicKey         = undefined;
+
+            lastResult = await this.validateOCMFSignature(OCMFJSONDocument, publicKey, PublicKeyEncoding);
+
+            if (lastResult === chargyInterfaces.VerificationResult.ValidSignature)
+                return lastResult;
+
+        }
+
+        return lastResult;
+
+    }
+
+    //#endregion
+
     //#region (private) validateOCMFSignature(OCMFJSONDocument, PublicKey, PublicKeyEncoding?)
 
     private async validateOCMFSignature(OCMFJSONDocument:    IOCMFJSONDocument,
@@ -2480,7 +2525,7 @@ export class OCMF {
     //#region (private) parseOCMFJSONDocuments(OCMFDocuments, PublicKey?, PublicKeyEncoding?)
 
     private async parseOCMFJSONDocuments(OCMFDocuments:       string[],
-                                         PublicKey?:          string|publicKeyInfoType.IPublicKeyXY,
+                                         PublicKey?:          OCMFPublicKeys,
                                          PublicKeyEncoding?:  string)
 
         : Promise<IOCMFJSONDocument[] |
@@ -2709,7 +2754,9 @@ export class OCMF {
                                         signature:          ocmfSignature,
                                         hashAlgorithm:      hashAlgorithm,
                                         hashValue:          hashValue,
-                                        publicKey:          PublicKey,
+                                        // With several candidates the key is only known once one of
+                                        // them has verified, so it is left to the validation step.
+                                        publicKey:          Array.isArray(PublicKey) ? undefined : PublicKey,
                                         publicKeyEncoding:  PublicKeyEncoding,
                                         validationStatus:   validationStatus ?? (PublicKey != null
                                                                                      ? chargyInterfaces.VerificationResult.Unvalidated
@@ -2778,9 +2825,9 @@ export class OCMF {
                                     //#endregion
 
                                     if (PublicKey != null && ocmfJSONDocument.validationStatus === chargyInterfaces.VerificationResult.Unvalidated)
-                                        await this.validateOCMFSignature(ocmfJSONDocument,
-                                                                         PublicKey,
-                                                                         PublicKeyEncoding);
+                                        await this.validateOCMFSignatureWithAnyOf(ocmfJSONDocument,
+                                                                                  PublicKey,
+                                                                                  PublicKeyEncoding);
 
                                     ocmfJSONDocuments.push(ocmfJSONDocument);
 
@@ -2855,7 +2902,7 @@ export class OCMF {
     //#region TryToParseOCMFDocuments(OCMFDocuments, PublicKey?, PublicKeyEncoding?, ContainerInfos?)
 
     public async TryToParseOCMFDocuments(OCMFDocuments:       string[],
-                                         PublicKey?:          string|publicKeyInfoType.IPublicKeyXY,
+                                         PublicKey?:          OCMFPublicKeys,
                                          PublicKeyEncoding?:  string,
                                          ContainerInfos?:     chargyInterfaces.IContainerInfos)
 
@@ -2941,7 +2988,7 @@ export class OCMF {
                 if (PublicKey != null)
                     for (const ocmfJSONDocument of ocmfJSONDocumentGroup)
                         if (ocmfJSONDocument.validationStatus === chargyInterfaces.VerificationResult.Unvalidated)
-                            await this.validateOCMFSignature(ocmfJSONDocument, PublicKey);
+                            await this.validateOCMFSignatureWithAnyOf(ocmfJSONDocument, PublicKey);
 
                 // Switch over the Format Version of the first OCMF document within the group
                 if (ocmfJSONDocumentGroup[0])

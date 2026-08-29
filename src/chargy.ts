@@ -2085,6 +2085,125 @@ export class Chargy {
 
     //#endregion
 
+    //#region TryToParseLiveLinkMeterValues(LiveLink)
+
+    /**
+     * The signed meter values a live link carries, parsed and verified with the
+     * public keys of the very same document, as an ordinary charge transparency
+     * record.
+     *
+     * A live link is not turned into one: it describes a charging session that
+     * is still running, a charge transparency record a collection of finished
+     * ones, and an application shows the two differently. The meter values are
+     * an optional part of the live link view, so they are only produced when
+     * they are asked for.
+     *
+     * Returns undefined when the live link carries no meter values yet, or none
+     * that are understood here.
+     */
+    public async TryToParseLiveLinkMeterValues(LiveLink: chargeTransparencyLiveLink.IChargeTransparencyLiveLink)
+
+        : Promise<chargeTransparencyRecord.IChargeTransparencyRecord|undefined>
+
+    {
+
+        const signedMeterValues  = chargyLib.asJSONObject(LiveLink["signedMeterValues"]);
+
+        if (signedMeterValues === undefined)
+            return undefined;
+
+        const encodings          = signedMeterValues["encodings"];
+        const values             = signedMeterValues["values"];
+
+        // Only the plain textual OCMF form is understood here. Anything else -
+        // base64, a different meter value format - is left alone rather than
+        // guessed at.
+        if (!Array.isArray(encodings) || encodings[0] !== "OCMF"                ||
+            !Array.isArray(values)    || values.length === 0                    ||
+            !values.every(value => typeof value === "string" && value !== ""))
+        {
+            return undefined;
+        }
+
+        const publicKeys = this.collectLiveLinkMeterValueKeys(LiveLink);
+
+        const ctr        = await new OCMF(this).TryToParseOCMFDocuments(
+                                     values as string[],
+                                     publicKeys.length > 0 ? publicKeys : undefined,
+                                     "hex"
+                                 );
+
+        // A meter value section that cannot be parsed must not cost us the live
+        // link itself: the transports still work, there is just nothing to show.
+        if (!chargeTransparencyRecord.IsAChargeTransparencyRecord(ctr))
+            return undefined;
+
+        // The very same verification every other charge transparency record
+        // goes through, so the meter values arrive with their crypto results.
+        const verifiedCTR = await this.processChargeTransparencyRecord(ctr);
+
+        return chargeTransparencyRecord.IsAChargeTransparencyRecord(verifiedCTR)
+                   ? verifiedCTR
+                   : undefined;
+
+    }
+
+    //#endregion
+
+    //#region (private) collectLiveLinkMeterValueKeys(LiveLink)
+
+    // Every public key of the document that is allowed to sign meter values.
+    // A charging session is regularly signed by more than one of them: the
+    // meter signs its start and end values, the operator the intermediate ones.
+    private collectLiveLinkMeterValueKeys(LiveLink: chargeTransparencyLiveLink.IChargeTransparencyLiveLink): Array<string>
+    {
+
+        const publicKeys  = new Array<string>();
+
+        const collectFrom = (candidates: unknown): void => {
+
+            if (!Array.isArray(candidates))
+                return;
+
+            for (const candidate of candidates)
+            {
+
+                const entry     = chargyLib.asJSONObject(candidate);
+                const value     = chargyLib.asString(entry?.["value"]);
+                const keyUsage  = entry?.["keyUsage"];
+                const encodings = entry?.["encodings"];
+
+                if (value === undefined || value === "")
+                    continue;
+
+                // The key has to be hexadecimal, because that is what is passed
+                // on as the encoding below.
+                if (Array.isArray(encodings) && encodings[encodings.length - 1] !== "hex")
+                    continue;
+
+                if (Array.isArray(keyUsage) &&
+                    !keyUsage.some(usage => usage === "signMeterValues" ||
+                                            usage === "signEnergyMeterValues"))
+                    continue;
+
+                publicKeys.push(value);
+
+            }
+
+        };
+
+        const chargingStation = chargyLib.asJSONObject(LiveLink["chargingStation"]);
+        const evse            = chargyLib.asJSONObject(chargingStation?.["EVSE"]);
+
+        collectFrom(chargyLib.asJSONObject(LiveLink["chargingStationOperator"])?.["publicKeys"]);
+        collectFrom(chargyLib.asJSONObject(evse?.["energyMeter"])?.["publicKeys"]);
+
+        return publicKeys;
+
+    }
+
+    //#endregion
+
     //#region (private) processChargeTransparencyRecord(CTR)
 
     private async processChargeTransparencyRecord(CTR: chargeTransparencyRecord.IChargeTransparencyRecord): Promise<chargeTransparencyRecord.IChargeTransparencyRecord|chargyInterfaces.ISessionCryptoResult>

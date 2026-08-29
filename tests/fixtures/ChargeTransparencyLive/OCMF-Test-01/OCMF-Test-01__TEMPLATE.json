@@ -1,14 +1,14 @@
 {
 
-    "@id":           "5f2c8a10-7b64-4e19-9d3a-1c8e05b4a7f2",
-    "@context":      "https://open.charging.cloud/contexts/chargeTransparency/live/link/1.0",
-    "created":       "2026-08-28T11:59:59Z",
-    "lastUpdated":   "{{lastUpdated}}",
-    "updates":       "{{updates}}",
-    "description":   {
-                         "en": "OCMF-Test-01 Transparency Live-Link",
-                         "de": "OCMF-Test-01 Transparenz Live-Link"
-                     },
+    "@id":                "5f2c8a10-7b64-4e19-9d3a-1c8e05b4a7f2",
+    "@context":           "https://open.charging.cloud/contexts/chargeTransparency/live/link/1.0",
+    "created":            "2026-08-28T11:59:59Z",
+    "lastUpdated":        "{{lastUpdated}}",
+    "updates":            "{{updates}}",
+    "description":        {
+                              "en": "OCMF-Test-01 Transparency Live-Link",
+                              "de": "OCMF-Test-01 Transparenz Live-Link"
+                          },
 
     "keyIdGeneration":    [ "SubjectPublicKeyInfo", "DER", "SHA-256", "hex" ],
     "docRefIdGeneration": [ "SHA-256", "hex" ],
@@ -33,7 +33,7 @@
 
     },
 
-    "operator": {
+    "chargingStationOperator": {
         "@id":           "DE*GEF",
         "name":          "GraphDefined",
         "publicKeys": [
@@ -58,59 +58,92 @@
         ]
     },
 
-    "location": {
-
-        "geoLocation":   {
-                             "lat": 50.387945,
-                             "lng": 10.4304
-                         },
-
-        "address":       {
-                             "street":         "Breitenbergstr. 2",
-                             "town":           "Mindelheim",
-                             "zipCode":        "87719"
-                         }
-
-    },
-
     "chargingStation": {
 
-        "evseId":        "DE*GEF*E12345678*1",
+        "@id":              "DE*GEF*S12345678",
+        "@context":         "",
+        "description":      {},
 
-        "connector":     {
-                             "standard":       "Type 2",
-                             "format":         "Socket",
-                             "powerType":      "AC",
-                             "maxPower":       "22 kW"
-                         },
+        "manufacturer":     {},
+        "model":            {},
+        "hardware":         {},
+        "firmware":         {},
+        "legalCompliance":  {},
 
-        "energyMeter":   {
-                             "@id":             "GD-METER-OCMF-TEST-01",
-                             "publicKeys": [
-                                  {
-                                       "keyUsage":  [ "signMeterValues" ],
-                                       "algorithm":   "ECDSA-secp256r1",
-                                       "encodings": [ "SubjectPublicKeyInfo", "DER", "hex" ],
-                                       "value":       "{{publicKey:energyMeter}}"
-                                  }
-                              ],
-                             "manufacturer":    "GraphDefined",
-                             "type":            "GD-OCMF-AC22",
-                             "firmwareVersion": "1.0.0"
-                         }
+        "geoLocation":      {
+                                "lat": 50.9279287,
+                                "lng": 11.5731785
+                            },
+
+        "address":          {
+                                "street":         "Biberweg 18",
+                                "town":           "Jena",
+                                "zipCode":        "04479"
+                            },
+
+        "EVSE":             {
+
+                                "@id":              "DE*GEF*E12345678*1",
+                                "@context":         "",
+
+                                "powerType":        "AC",
+                                "maxPower":         "22 kW",
+
+                                "energyMeter":      {
+                                                        "@id":               "GD-METER-OCMF-TEST-01",
+                                                        "@context":          "",
+
+                                                        "manufacturer":      {
+                                                                                 "name": "GraphDefined"
+                                                                             },
+                                                        "model":             {
+                                                                                 "name": "GD-OCMF-AC22"
+                                                                             },
+                                                        "hardware":          {
+                                                                                 "revision": "1.0.0"
+                                                                             },
+                                                        "firmware":          {
+                                                                                 "version": "1.0.0"
+                                                                             },
+                                                        "legalCompliance":   {},
+                                                        "signatureInfos":    {},
+                                                        "signatureFormat":   "https://open.charging.cloud/contexts/EnergyMeterSignatureFormats/OCMF",
+                                                        "publicKeys": [
+                                                            {
+                                                                "keyUsage":  [ "signMeterValues" ],
+                                                                "algorithm":   "ECDSA-secp256r1",
+                                                                "encodings": [ "SubjectPublicKeyInfo", "DER", "hex" ],
+                                                                "value":       "{{publicKey:energyMeter}}"
+                                                            }
+                                                        ]
+                                                    },
+
+                                "connector":        {
+                                                        "@id":            "1",
+                                                        "standard":       "Type 2",
+                                                        "format":         "Socket",
+                                                        "powerType":      "AC",
+                                                        "maxPower":       "22 kW",
+                                                        "cable": {
+                                                            "length": 1
+                                                        }
+                                                    }
+
+                            }
 
     },
 
     "contract": {
-        "id":       "04A9B7C21E5D80",
+        "@id":      "04A9B7C21E5D80",
         "type":     "rfid"
     },
 
 
     "liveTransports": [
                          {
-                             "type": "https",
-                             "url":  "https://api1.example.com/chargingSessions/OCMF-Test-01/transparency/live?token=abcdef"
+                             "type":    "https",
+                             "url":     "https://api1.example.com/chargingSessions/OCMF-Test-01/transparency/live?token=abcdef",
+                             "refresh":  10
                          },
                          {
                              "type": "websocket",
