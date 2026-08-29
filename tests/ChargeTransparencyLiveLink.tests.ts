@@ -69,8 +69,15 @@ describe("Charge Transparency LiveLink", () => {
 
         expect(IsAChargeTransparencyLiveLink(liveLink)).toBe(true);
         expect(IsAChargeTransparencyLiveLink({ ...liveLink, "@context": "https://example.com/other" })).toBe(false);
-        expect(IsAChargeTransparencyLiveLink({ ...liveLink, liveTransports: [ { type: "ftp", url: "https://example.com" } ] })).toBe(false);
         expect(IsAChargeTransparencyLiveLink(undefined)).toBe(false);
+
+        // A malformed optional field does not un-recognise a live link: the
+        // context identifies it, and a broken transport is dropped where the
+        // transports are read, not by turning the whole document into an
+        // "unknown format".
+        expect(IsAChargeTransparencyLiveLink({ ...liveLink, liveTransports: [ { type: "ftp", url: "https://example.com" } ] })).toBe(true);
+        expect(IsAChargeTransparencyLiveLink({ ...liveLink, liveTransports: "not an array" })).toBe(true);
+        expect(IsAChargeTransparencyLiveLink({ ...liveLink, connector: 42 })).toBe(true);
 
     });
 

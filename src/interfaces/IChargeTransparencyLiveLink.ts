@@ -15,14 +15,14 @@
  * limitations under the License.
  */
 
-import * as chargyInterfaces  from './chargyInterfaces'
-import * as chargyLib         from './chargyLib'
+import type * as chargyInterfaces  from './chargyInterfaces'
+import * as chargyLib              from './chargyLib'
 
 
 export const ChargeTransparencyLiveLinkContext = "https://open.charging.cloud/contexts/chargeTransparency/live/link/1.0";
 
 
-function isConnector(data: unknown): data is IConnector {
+export function isConnector(data: unknown): data is IConnector {
     if (!chargyLib.isObject(data))
         return false;
 
@@ -42,7 +42,10 @@ function isTransportURL(data: unknown): data is ITransportURL|string {
 
 }
 
-function isTransport(data: unknown): data is Transport {
+// Whether one entry of liveTransports is a well-formed transport. Exported so a
+// consumer can drop the entries that are not, keeping the good ones, rather than
+// discarding the whole live link over one bad transport.
+export function isTransport(data: unknown): data is Transport {
 
     if (!chargyLib.isObject(data))
         return false;
@@ -73,17 +76,14 @@ function isTransport(data: unknown): data is Transport {
 
 export function IsAChargeTransparencyLiveLink(data: unknown): data is IChargeTransparencyLiveLink {
 
-    if (!chargyLib.isMandatoryJSONObject(data))
-        return false;
-
-    return data["@context"]    === ChargeTransparencyLiveLinkContext &&
-          (data["created"]     === undefined || data["created"]   === null || typeof data["created"]   === "string") &&
-          (data["description"] === undefined || chargyLib.isI18NString(data["description"])) &&
-          (data["imageURLs"]   === undefined || (Array.isArray(data["imageURLs"]) && data["imageURLs"].every(value => typeof value === "string"))) &&
-          (data["geoLocation"] === undefined || chargyInterfaces.isGeoLocation(data["geoLocation"])) &&
-          (data["connector"]   === undefined || isConnector(data["connector"])) &&
-          (data["liveTransports"] === undefined || (Array.isArray(data["liveTransports"]) && data["liveTransports"].every(isTransport))) &&
-          (data["signatures"]  === undefined ||  Array.isArray(data["signatures"]));
+    // A live link is identified by its context alone. Everything below it is
+    // optional, so a malformed optional field - a broken transport most of all -
+    // must not turn the document into an unrecognised one that then fails as an
+    // "unknown format". Each such field is read defensively where it is used,
+    // and an entry that does not hold up is dropped there, not here: see
+    // isConnector and isTransport for the per-field shape a reader can filter by.
+    return chargyLib.isMandatoryJSONObject(data) &&
+           data["@context"] === ChargeTransparencyLiveLinkContext;
 
 }
 
