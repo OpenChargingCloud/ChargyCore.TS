@@ -427,6 +427,52 @@ client is therefore expected to guard the connection:
   server a reader recognises does not carry along an attacker's server listed
   beside it.
 
+### How the remembered decisions are stored
+
+The remembered decisions are themselves worth protecting, and the Chargy WebApp
+stores them the way OpenSSH stores a hashed `known_hosts`: **the origin is not
+written down**. Each entry keeps a fresh random salt and the keyed hash of the
+origin (`HMAC-SHA-256`, the salt as key), together with the decision, its date,
+and the operator name the user saw in the consent dialog as a human-readable
+label. The store can still answer *"have I seen this origin?"* — the candidate
+arrives in plain text with every live link — but a copy of the store answers
+little on its own. The label is the document's claim, not a verified identity
+— it is what the user consented under, kept for recognition, and a label that
+contains the origin's own hostname is not stored at all, so no name can smuggle
+the plain text back in:
+
+- It no longer reveals **where its owner charges**. A list of consented
+  live-data origins is a movement profile: which operators, since when. A
+  synced browser profile, a backup, or a moment of access to the machine
+  should not hand that out.
+- It is worthless as a **harvesting target against the operators**. A clear
+  text store would double as a curated list of CPO live-data endpoints,
+  exactly what address-harvesting attacks collect; a hashed one names no
+  server. This is the same reasoning that put hashing into OpenSSH's
+  `known_hosts`, where the file had turned into a road map for worms.
+- The **per-entry salt** prevents precomputed tables and correlation: the same
+  origin hashes differently in every entry and every installation, so two
+  stores cannot be matched against each other, and nobody can tell whether two
+  readers charge with the same operator.
+- The honest limit, the same one OpenSSH has: endpoints on **public lists**
+  can still be tested against each entry, one guess at a time. The protection
+  is real for what is not publicly enumerable, and it turns "read the file"
+  into "brute-force every entry" for everything else.
+
+The hash **algorithm is stored per entry**, so a future switch — say, to
+HMAC-SHA512 — needs no migration: new entries simply use the new algorithm,
+old ones keep matching with theirs, and an entry whose algorithm a version
+does not know is preserved rather than deleted.
+
+Decisions also **expire on disuse**, after six months without use by default;
+the settings screen accepts anything from 1 to 120 months, or turns expiry off.
+Every time a decision actually decides something — an allowed origin is polled,
+a denied one is blocked — its clock restarts, so an entry in regular use never
+expires and nobody is asked to re-confirm what they demonstrably still rely on.
+What fades is what stopped being used: a stale "always" whose server no longer
+appears in any document, entries for endpoints an operator has long since
+retired. Idle expiry, not forced re-consent.
+
 Two gates decide this, and they are independent. `externalURLs.conf` is what
 the application consults: an origin listed there is polled without a dialog,
 and so is the installation's own origin; any other origin prompts the user.
