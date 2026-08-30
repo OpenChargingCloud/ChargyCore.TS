@@ -185,6 +185,12 @@ describe("Charge Transparency LiveLink", () => {
 
             expect(warnings.length).toBeGreaterThan(0);
             expect(warnings.some(warning => warning.message["en"]?.includes("does not match its content") === true)).toBe(true);
+
+            // Both signatures fail the same way, which is one thing worth
+            // saying, not two. Deduplication has to compare the message keys:
+            // the messages themselves are freshly built objects and would
+            // never compare equal.
+            expect(warnings).toHaveLength(1);
         }
 
     });

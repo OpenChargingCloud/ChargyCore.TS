@@ -2176,14 +2176,20 @@ export class Chargy {
 
         const result   = documentSignatures.verifyDocumentSignatures(LiveLink);
         const warnings = new Array<chargyInterfaces.IWarning>();
+        const reported = new Set<string>();
 
+        // Two signatures that fail the same way are one thing worth saying, not
+        // two. Deduplicated by the message key: GetMultilanguageText() builds a
+        // fresh object on every call, so comparing the messages themselves would
+        // compare object identity and never match.
         const warn     = (messageKey: string,
                           level:      chargyInterfaces.WarningLevel): void => {
 
-            const message = this.GetMultilanguageText(messageKey);
+            if (reported.has(messageKey))
+                return;
 
-            if (!warnings.some(warning => warning.message === message))
-                warnings.push({ level, message });
+            reported.add(messageKey);
+            warnings.push({ level, message: this.GetMultilanguageText(messageKey) });
 
         };
 
