@@ -7,6 +7,50 @@ While the version number is below 1.0.0, breaking changes are released in minor
 versions and are always listed first below.
 
 
+## [0.14.0] - 2026-08-30
+
+### Added
+
+- **The signatures over a whole document are verified.** A charge transparency
+  live link may be signed as a whole by its operator, and that signature is what
+  ties the transport URLs and the listed public keys to whoever signed them.
+  Until now the `signatures` array was carried around but never read. Every
+  entry is checked now: the properties it excludes are removed, what remains is
+  canonicalized and read as UTF-8, the key is resolved by the `keyId` the entry
+  names - following the document's own `keyIdGeneration` - and the signature is
+  verified with it. ECDSA over P-256, P-384 and P-521, Ed25519, Ed448 and
+  ML-DSA-44/65/87 are understood.
+
+  A key id is defined over the canonical `SubjectPublicKeyInfo` form of a key,
+  no matter which form the document stores the key in. A key stored as bare key
+  material - as Ed25519 keys usually are - is therefore wrapped before its id is
+  computed: hashing the raw bytes would yield a different id for the same key,
+  and the signature would look as though no key of the document had signed it.
+
+- **`verifyDocumentSignatures()` and `collectDocumentPublicKeys()`** do this for
+  any JSON document, for callers who want to check one without going through
+  `DetectAndConvertContentFormat()`. Neither throws: a document that is
+  unsigned, signed by an unknown key or signed badly is reported as such.
+
+### Changed
+
+- **A live link says what its signatures did, and stays usable either way.**
+  `IChargeTransparencyLiveLink.signatureVerification` carries the outcome per
+  signature, and anything short of "all valid" also adds a `warning`. None of it
+  is fatal: an unsigned document, an unknown key and even a signature that
+  demonstrably does not match are all warnings, never a reason to refuse the
+  document. Its transports still work, and its signed meter values carry their
+  own signatures, which are verified separately. The warnings are graded by what
+  they actually say - that nothing was claimed (unsigned), that the claim cannot
+  be judged here (unknown key, unsupported algorithm, malformed), or that the
+  claim is demonstrably false (the signature does not match).
+
+  Verification runs before anything is added to the document, because the
+  signatures cover every property but their own: a timestamp defaulted into
+  `created` first would become part of what is verified and would turn a good
+  signature into a bad one.
+
+
 ## [0.13.0] - 2026-08-28
 
 ### Breaking

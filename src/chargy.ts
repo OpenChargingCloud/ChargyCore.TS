@@ -43,6 +43,7 @@ import defaultValidationRules               from '../validationRules.json'
 import seekBzip                             from 'seek-bzip';
 import type moment                          from 'moment';
 import { createCompatibleCurve }            from './SignatureCrypto'
+import * as documentSignatures              from './DocumentSignatures'
 import type { CompatibleCurve,
               CompatiblePublicKey,
               LegacyEllipticModule }        from './SignatureCrypto'
@@ -1814,6 +1815,12 @@ export class Chargy {
                     if (chargeTransparencyLiveLink.IsAChargeTransparencyLiveLink(JSONContent))
                     {
 
+                        // Before anything at all is added to the document: the
+                        // signatures cover every property but their own, so a
+                        // timestamp defaulted first would become part of what is
+                        // verified and would turn a good signature into a bad one.
+                        this.verifyLiveLinkSignatures(JSONContent);
+
                         JSONContent.created ??= new Date().toISOString();
 
                         processedFile.result = JSONContent;
@@ -2145,6 +2152,81 @@ export class Chargy {
         return chargeTransparencyRecord.IsAChargeTransparencyRecord(verifiedCTR)
                    ? verifiedCTR
                    : undefined;
+
+    }
+
+    //#endregion
+
+    //#region (private) verifyLiveLinkSignatures(LiveLink)
+
+    // A live link may be signed as a whole by the operator, which is what ties
+    // the transport URLs and the listed public keys to whoever signed them.
+    // Those signatures are verified whenever the document carries any.
+    //
+    // Nothing here rejects a document. An unsigned live link, an unknown key or
+    // even a signature that does not match is reported as a warning and the
+    // document stays usable: its transports still work, and its signed meter
+    // values carry their own signatures, which are verified separately. What a
+    // reader makes of the warning is the reader's decision.
+    //
+    // Must run before anything is added to the document - see the note at the
+    // call site.
+    private verifyLiveLinkSignatures(LiveLink: chargeTransparencyLiveLink.IChargeTransparencyLiveLink): void
+    {
+
+        const result   = documentSignatures.verifyDocumentSignatures(LiveLink);
+        const warnings = new Array<chargyInterfaces.IWarning>();
+
+        const warn     = (messageKey: string,
+                          level:      chargyInterfaces.WarningLevel): void => {
+
+            const message = this.GetMultilanguageText(messageKey);
+
+            if (!warnings.some(warning => warning.message === message))
+                warnings.push({ level, message });
+
+        };
+
+        if (result.status === "unsigned")
+            // Nothing is claimed here, so nothing is broken - but a reader who
+            // expects a signed document should be able to tell the difference.
+            warn("DocumentSignature_Missing", chargyInterfaces.WarningLevel.low);
+
+        for (const signature of result.signatures)
+        {
+            switch (signature.status)
+            {
+
+                case "validSignature":
+                    break;
+
+                // A signature that demonstrably does not match its document is
+                // the one case that says something is actually wrong.
+                case "invalidSignature":
+                    warn("DocumentSignature_Mismatch",             chargyInterfaces.WarningLevel.high);
+                    break;
+
+                // The rest mean "cannot be judged here", which is a weaker
+                // statement than "is wrong".
+                case "unknownPublicKey":
+                    warn("DocumentSignature_UnknownPublicKey",     chargyInterfaces.WarningLevel.medium);
+                    break;
+
+                case "unsupportedAlgorithm":
+                    warn("DocumentSignature_UnsupportedAlgorithm", chargyInterfaces.WarningLevel.medium);
+                    break;
+
+                case "malformed":
+                    warn("DocumentSignature_Malformed",            chargyInterfaces.WarningLevel.medium);
+                    break;
+
+            }
+        }
+
+        LiveLink.signatureVerification = result;
+
+        if (warnings.length > 0)
+            LiveLink.warnings = [ ...(LiveLink.warnings ?? []), ...warnings ];
 
     }
 

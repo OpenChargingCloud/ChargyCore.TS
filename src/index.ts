@@ -45,6 +45,15 @@ export {
     type TransportHTTPSSE,
     type TransportWebsocket
 } from "./interfaces/IChargeTransparencyLiveLink";
+export {
+    collectDocumentPublicKeys,
+    verifyDocumentSignatures,
+    type DocumentSignatureStatus,
+    type DocumentSignaturesStatus,
+    type IDocumentPublicKey,
+    type IDocumentSignatureResult,
+    type IDocumentSignaturesResult
+} from "./DocumentSignatures";
 
 export * as ChargyInterfaces from "./interfaces/chargyInterfaces";
 export * as ChargeTransparencyLiveLink from "./interfaces/IChargeTransparencyLiveLink";

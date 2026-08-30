@@ -15,8 +15,9 @@
  * limitations under the License.
  */
 
-import type * as chargyInterfaces  from './chargyInterfaces'
-import * as chargyLib              from './chargyLib'
+import type * as chargyInterfaces        from './chargyInterfaces'
+import * as chargyLib                    from './chargyLib'
+import type { IDocumentSignaturesResult } from '../DocumentSignatures'
 
 
 export const ChargeTransparencyLiveLinkContext = "https://open.charging.cloud/contexts/chargeTransparency/live/link/1.0";
@@ -117,6 +118,23 @@ export interface IChargeTransparencyLiveLink extends chargyLib.JSONObject {
 
     /** Digital signatures (currently empty or extendable) */
     signatures?:    chargyInterfaces.ISignature[];
+
+    /**
+     * How the signatures over this whole document came out, filled in when the
+     * document was read.
+     *
+     * The signatures cover every property except their own, so this - like
+     * every other property added after reading - must be set only *after* the
+     * document has been verified. Adding it first would change the very bytes
+     * that are verified.
+     */
+    signatureVerification?: IDocumentSignaturesResult;
+
+    /**
+     * Non-fatal findings about this document, e.g. that it is unsigned or that
+     * a signature did not verify. None of these make the document unusable.
+     */
+    warnings?:      Array<chargyInterfaces.IWarning>;
 
 }
 

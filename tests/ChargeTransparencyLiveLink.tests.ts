@@ -140,6 +140,81 @@ describe("Charge Transparency LiveLink", () => {
 
     });
 
+    test("verifies the signatures over the whole document", async () => {
+
+        const report = await verifyChargeTransparencyLiveLink("ChargeTransparencyLive/ChargeTransparencyLiveLink_1.json");
+
+        expect(IsAChargeTransparencyLiveLink(report)).toBe(true);
+
+        if (IsAChargeTransparencyLiveLink(report))
+        {
+            expect(report.signatureVerification?.status).toBe("allValid");
+            expect(report.signatureVerification?.validCount).toBe(2);
+
+            // Everything verified, so there is nothing to warn about.
+            expect(report.warnings ?? []).toHaveLength(0);
+        }
+
+    });
+
+    test("warns about a broken document signature, but still reads the document", async () => {
+
+        // A live link whose content was changed after signing: the transports,
+        // the meter values and the station data are all still there and still
+        // usable - only the signature no longer matches, which is worth saying
+        // but not worth refusing the document over.
+        const tampered = JSON.parse(readFixture("ChargeTransparencyLive/ChargeTransparencyLiveLink_1.json")) as Record<string, unknown>;
+        tampered["description"] = { "en": "Something else entirely" };
+
+        const fileInfo: IFileInfo = {
+            name: "tampered.json",
+            type: "application/json",
+            data: new TextEncoder().encode(JSON.stringify(tampered))
+        };
+
+        const report = await createTestChargy(Chargy, { i18n: coreI18n }).DetectAndConvertContentFormat([ fileInfo ]);
+
+        expect(IsAChargeTransparencyLiveLink(report)).toBe(true);
+
+        if (IsAChargeTransparencyLiveLink(report))
+        {
+            expect(report.signatureVerification?.status).toBe("noneValid");
+            expect(report.liveTransports).toHaveLength(3);
+
+            const warnings = report.warnings ?? [];
+
+            expect(warnings.length).toBeGreaterThan(0);
+            expect(warnings.some(warning => warning.message["en"]?.includes("does not match its content") === true)).toBe(true);
+        }
+
+    });
+
+    test("warns about an unsigned document, but still reads it", async () => {
+
+        // The signatures are optional: a live link without any is read exactly
+        // as before, it just cannot be verified as a whole.
+        const unsigned = JSON.parse(readFixture("ChargeTransparencyLive/ChargeTransparencyLiveLink_1.json")) as Record<string, unknown>;
+        delete unsigned["signatures"];
+
+        const fileInfo: IFileInfo = {
+            name: "unsigned.json",
+            type: "application/json",
+            data: new TextEncoder().encode(JSON.stringify(unsigned))
+        };
+
+        const report = await createTestChargy(Chargy, { i18n: coreI18n }).DetectAndConvertContentFormat([ fileInfo ]);
+
+        expect(IsAChargeTransparencyLiveLink(report)).toBe(true);
+
+        if (IsAChargeTransparencyLiveLink(report))
+        {
+            expect(report.signatureVerification?.status).toBe("unsigned");
+            expect(report.liveTransports).toHaveLength(3);
+            expect((report.warnings ?? []).some(warning => warning.message["en"]?.includes("not signed") === true)).toBe(true);
+        }
+
+    });
+
     test("adds the current UTC timestamp when a live link has none", async () => {
         vi.useFakeTimers();
         vi.setSystemTime(new Date("2026-06-13T10:11:12.000Z"));
