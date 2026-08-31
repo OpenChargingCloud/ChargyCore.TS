@@ -286,6 +286,13 @@ That is what makes the signature independent of the layout of the JSON file, so
 these fixtures can stay readable and hand-formatted. ChargyCore's
 `canonicalJSONStringify()` produces exactly these bytes.
 
+Since ChargyCore 0.14.0 this check is built in: reading a live link through
+`DetectAndConvertContentFormat()` verifies every signature the document
+carries — resolving each key by its id, wrapping a raw-stored key into its
+`SubjectPublicKeyInfo` form for that — and attaches the outcome to the document
+as `signatureVerification` plus non-fatal `warnings`. An unsigned or badly
+signed document is reported, never refused.
+
 ### Why the key id, and why nothing else
 
 - A structural path such as *"the operator key with key usage `signCTRs`"* is

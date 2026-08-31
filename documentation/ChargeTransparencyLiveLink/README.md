@@ -14,14 +14,16 @@ and connector metadata, and the signed meter values measured so far.
 The LiveLink itself is not a signed meter-value format and does not define the
 payloads sent by the discovered endpoints. ChargyCore recognizes and returns the
 discovery document, and on request parses and verifies the signed meter values
-the document carries. It does not connect to the endpoints, generate TOTP values
-or verify the optional LiveLink signatures.
+the document carries. When the document is signed as a whole, those signatures
+are verified as well, and the outcome travels with the returned document. It
+does not connect to the endpoints and does not generate TOTP values.
 
 The TypeScript implementation lives in:
 
 ```text
 src/interfaces/IChargeTransparencyLiveLink.ts
 src/chargy.ts                                  (recognition, meter values)
+src/DocumentSignatures.ts                      (signatures over the whole document)
 ```
 
 ## Renamed in 0.13.0 — read this before copying an older document
@@ -220,7 +222,13 @@ the repeated blocks abbreviated:
 
 ## Top-Level Properties
 
-### Validated by `IsAChargeTransparencyLiveLink()`
+### Declared top-level properties
+
+Recognition checks nothing but `@context` — see
+[Recognition and Processing](#recognition-and-processing). A malformed optional
+property never turns the document into an "unknown format": each one is read
+defensively where it is used, and whatever fails its shape there is simply
+dropped. The declared properties are:
 
 | Property | Required | Format | Meaning |
 |----------|----------|--------|---------|
@@ -231,16 +239,29 @@ the repeated blocks abbreviated:
 | `geoLocation` | no | object with `lat` and `lng` numbers | Geographic position — **superseded**, see [Position, address and hardware](#position-address-and-hardware). |
 | `connector` | no | connector object | Connector information — **superseded**, see below. |
 | `liveTransports` | no | array of transport objects | Available live-data access methods. |
-| `signatures` | no | array | Digital signatures over the LiveLink. Only the array itself is checked. |
+| `signatures` | no | array of signature entries | Digital signatures over the whole document — verified when present, see [Signatures](#signatures). |
+
+### Attached after reading
+
+`DetectAndConvertContentFormat()` attaches two properties of its own once the
+document has been read. They are results, not producer properties — and they
+are added only after the signatures were verified, because the signatures cover
+every property except themselves:
+
+| Property | Meaning |
+|----------|---------|
+| `signatureVerification` | How the signatures over the whole document came out, per entry and as a whole. |
+| `warnings` | Non-fatal findings, e.g. that the document is unsigned or that a signature did not match. |
 
 ### Carried by the fixtures, not validated by the guard
 
 These properties are part of the format as the fixtures write it, but
 `IChargeTransparencyLiveLink` does not declare them and the runtime guard does
 not look at them. They are reachable because the interface extends
-`chargyLib.JSONObject`, and the only one any ChargyCore code reads today is
-`signedMeterValues` together with the public keys under `chargingStation` and
-`chargingStationOperator`.
+`chargyLib.JSONObject`. ChargyCore reads `signedMeterValues` together with the
+public keys under `chargingStation` and `chargingStationOperator` — and, when
+the document carries `signatures`, also `keyIdGeneration` and those same public
+keys to verify them.
 
 | Property | Meaning |
 |----------|---------|
@@ -255,9 +276,8 @@ not look at them. They are reachable because the interface extends
 | `contract` | `@id` and `type` of the identification that started the session. |
 | `signedMeterValues` | The signed meter values measured so far — see below. |
 
-Unknown properties are preserved in the parsed JSON object. They do not affect
-LiveLink recognition unless they replace one of the validated properties with an
-invalid value.
+Unknown properties are preserved in the parsed JSON object and never affect
+recognition: only `@context` decides it.
 
 ### `created` handling
 
@@ -270,11 +290,14 @@ preferably `Z` for UTC:
 ```
 
 When `created` is absent or `null`, `DetectAndConvertContentFormat` inserts the
-current time using JavaScript's `Date.prototype.toISOString()`. The original
-object is otherwise returned unchanged.
+current time using JavaScript's `Date.prototype.toISOString()` — after the
+document's signatures were verified, never before: the signatures cover every
+property except themselves, so a timestamp defaulted first would turn a good
+signature into a bad one. Apart from that and the two attached result
+properties, the object is returned as it was read.
 
-The current recognizer checks only that a supplied `created` is a string or
-`null`; it does not validate the ISO 8601 syntax.
+Recognition does not look at `created` at all, and its syntax is not
+validated.
 
 In a series of documents describing the same session, `created` is when the
 series began and is identical in every document; `lastUpdated` is what
@@ -353,10 +376,10 @@ the station block. Aligning them is a change to
 | `lat` | `-90` through `90` |
 | `lng` | `-180` through `180` |
 
-Both properties are required by `IGeoLocation`. The runtime guard
-(`isGeoLocation()`) only checks the type of properties that are present; it does
-not require both coordinates or enforce finite values and geographic ranges.
-Producers should nevertheless emit a complete, valid WGS 84 coordinate pair.
+Both properties are required by `IGeoLocation`. Recognition does not validate
+them — it checks only `@context` — so nothing enforces finite values or
+geographic ranges. Producers should nevertheless emit a complete, valid WGS 84
+coordinate pair.
 
 The same object shape is used at `chargingStation.geoLocation`, where it is not
 validated at all.
@@ -389,8 +412,9 @@ values:
 | `websocket` | WebSocket endpoint |
 
 The type names are case-sensitive. Values such as `ftp`, `sse`, `ws` or
-`WebSocket` are not recognized, and an unrecognized type makes the whole
-document fail recognition.
+`WebSocket` are not recognized — such a transport is dropped where the
+transports are read, and the rest of the document keeps working. Recognition
+checks only `@context`, so no transport can make the document fail it.
 
 Every transport can contain:
 
@@ -403,7 +427,7 @@ Every transport can contain:
 | `refresh` | no | number | `https` only — how often to ask again, in seconds. |
 
 For interoperability, a transport should contain `url` or at least one entry
-in `urls`. The current recognizer permits both properties together and also
+in `urls`. The transport reader permits both properties together and also
 permits a transport containing only `type`.
 
 ### `refresh`
@@ -562,33 +586,46 @@ entry instead:
 }
 ```
 
-Both pass, because the LiveLink recognizer validates only that `signatures` is
-an **array**. It does not validate individual entries, define canonicalization
-or covered properties, resolve public keys, or verify a signature. Consumers
-must not interpret the presence of this array as proof of authenticity.
+Both are accepted structurally — recognition does not look at the entries. But
+since 0.14.0 the entries **are verified** whenever the document carries any:
+`verifyDocumentSignatures()` removes the properties an entry excludes,
+canonicalizes the rest per RFC 8785, resolves the signing key by the `keyId`
+the entry names — following the document's own `keyIdGeneration`, wrapping a
+raw-stored key into its `SubjectPublicKeyInfo` form first — and verifies the
+signature with it. ECDSA over P-256, P-384 and P-521, Ed25519, Ed448 and
+ML-DSA-44/65/87 are understood.
 
-The fixture shape — key id, excluded properties, JCS canonicalization, one
-signature per key and algorithm — is documented in
+None of this is fatal. An unsigned document, an unknown key and even a
+signature that demonstrably does not match are reported — as
+`signatureVerification` and as graded `warnings` on the returned document —
+never a reason to refuse it: its transports still work, and its signed meter
+values carry their own signatures, which are verified separately.
+
+The signature scheme itself — key id, excluded properties, JCS canonicalization,
+one signature per key and algorithm — is documented in
 [`tests/fixtures/ChargeTransparencyLive/README.md`](../../tests/fixtures/ChargeTransparencyLive/README.md).
-Note that it is a fixture convention that ChargyCore does not yet verify, and
-that the declared `ISignature[]` does not describe it.
+The declared `ISignature[]` still does not describe this richer entry shape;
+the verifier reads the entries defensively instead.
 
 ## Recognition and Processing
 
 ChargyCore recognizes a LiveLink when:
 
-1. the parsed value is a non-null object and not an array;
-2. `@context` exactly equals the version 1.0 context;
-3. every validated optional property has the expected basic shape; and
-4. every entry of `liveTransports` has a `type` of `https`, `httpSSE` or
-   `websocket`, and — on `https` — a `refresh` that is a number if present.
+1. the parsed value is a non-null JSON object; and
+2. `@context` exactly equals the version 1.0 context.
 
-Note that the nested guards (`isConnector`, `isTransport`, `isTransportURL`,
-`isTOTPConfig`, `isI18NString`) use `chargyLib.isObject()`, which accepts arrays
-as well as objects; only the top level rejects an array.
+Nothing else decides recognition. A malformed optional property — a broken
+transport, a numeric `connector` — never turns the document into an "unknown
+format": the context identifies it, and whatever fails its shape is dropped
+where it is read. The guards for those shapes (`isConnector`, `isTransport`,
+`isTOTPConfig`, …) are exported for exactly that point-of-use filtering; note
+that they use `chargyLib.isObject()`, which accepts arrays as well as objects.
 
 When a single LiveLink is passed to `DetectAndConvertContentFormat`, ChargyCore
-returns the same object after adding a missing `created`. It does not download
+first verifies the signatures the document carries over itself — see
+[Signatures](#signatures) — attaches the outcome as `signatureVerification`
+plus `warnings`, and then adds a missing `created`; in that order, because the
+signatures cover every property except themselves. It does not download
 `imageURLs` and does not open transport endpoints, and it does not convert the
 LiveLink into a Charge Transparency Record — but the signed meter values it
 carries can be parsed and verified on request with
@@ -642,8 +679,12 @@ input.
   person's location or charging activity.
 - Endpoint data remains untrusted even when the discovery document was obtained
   from a trusted source.
-- The current `signatures` property provides no authenticity guarantee because
-  ChargyCore does not yet verify it.
+- The `signatures` over the document are verified, but against the public keys
+  the very same document carries: a good result proves the document is
+  internally consistent and untampered since signing, not that the signer is
+  who the document claims to be. Authenticity needs a trust anchor outside the
+  document. A missing or broken signature is reported as a warning, never by
+  refusing the document.
 - A verified `signedMeterValues` section proves that the values are consistent
   with the keys in the same document. It does not prove that those keys belong
   to a calibrated meter — that needs a trust anchor outside the document.
@@ -685,6 +726,9 @@ const result = await chargy.DetectAndConvertContentFormat([{
 
 if (IsAChargeTransparencyLiveLink(result)) {
   console.log(result.created);
+
+  // How the signatures over the whole document came out.
+  console.log(result.signatureVerification?.status, result.warnings ?? []);
 
   // The meter values are a separate, optional view onto the same document.
   const ctr = await chargy.TryToParseLiveLinkMeterValues(result);
@@ -736,8 +780,10 @@ tests/fixtures/ChargeTransparencyLive/README.md
 tests/fixtures/ChargeTransparencyLive/OCMF-Test-01/README.md
 ```
 
-Recognition, `created` handling and meter-value parsing are covered by:
+Recognition, `created` handling, meter-value parsing and the signatures over
+the whole document are covered by:
 
 ```text
 tests/ChargeTransparencyLiveLink.tests.ts
+tests/DocumentSignatures.tests.ts
 ```
