@@ -7,6 +7,22 @@ While the version number is below 1.0.0, breaking changes are released in minor
 versions and are always listed first below.
 
 
+## [0.14.4] - 2026-09-05
+
+### Changed
+
+- **An https transport without a `refresh` is polled at the default period.**
+  Absent used to mean "do not poll"; it now means `defaultRefreshSeconds`,
+  which is 10. An https transport exists to be asked, and a document that names
+  one without saying how often still wants its readers to see what the session
+  does next. A client is still expected to clamp what a document states.
+
+- **`customHeaders` moved from `TransportHTTPS` to `ITransport`.** An https
+  poll, the opening request of a server-sent event stream and the handshake of
+  a websocket are all HTTP requests, and all three can face an endpoint that
+  expects a header - so all three may state them, and all three are validated.
+  A document that stated them on https alone is unaffected.
+
 ## [0.14.3] - 2026-09-05
 
 ### Added

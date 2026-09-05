@@ -22,6 +22,16 @@ import type { IDocumentSignaturesResult } from '../DocumentSignatures'
 
 export const ChargeTransparencyLiveLinkContext = "https://open.charging.cloud/contexts/chargeTransparency/live/link/1.0";
 
+/**
+ * How often an https transport is asked again when it does not say, in
+ * seconds. A charging session that is still running changes every few seconds,
+ * so "it did not say" means "the usual period", not "never ask again".
+ *
+ * A client is expected to clamp what a document states rather than obey it -
+ * this default is what it uses when there is nothing to clamp.
+ */
+export const defaultRefreshSeconds = 10;
+
 
 export function isConnector(data: unknown): data is IConnector {
     if (!chargyLib.isObject(data))
@@ -96,18 +106,10 @@ export function isTransport(data: unknown): data is Transport {
         return false;
     }
 
-    // The same for the custom headers: only https declares them, so only there
-    // are they validated.
-    if (type === "https"                    &&
-        data["customHeaders"] !== undefined &&
-        !isCustomHeaders(data["customHeaders"]))
-    {
-        return false;
-    }
-
     return (data["url"]  === undefined || typeof data["url"] === "string") &&
            (data["urls"] === undefined || (Array.isArray(data["urls"]) && data["urls"].every(isTransportURL))) &&
-           (data["totp"] === undefined || isTOTPConfig(data["totp"]));
+           (data["totp"] === undefined || isTOTPConfig(data["totp"])) &&
+           (data["customHeaders"] === undefined || isCustomHeaders(data["customHeaders"]));
 
 }
 
@@ -192,9 +194,25 @@ export type Transport =
 
 
 export interface ITransport {
+
     url?:  string;
     urls?: Array<ITransportURL|string>;
     totp?: TOTPConfig;
+
+    /**
+     * Additional HTTP headers to send with every request to this transport,
+     * e.g. an API key or a tenant selector its endpoint expects.
+     *
+     * Every transport can carry them: an https poll, the opening request of a
+     * server-sent event stream, and the handshake of a websocket are all HTTP
+     * requests, and all three can face an endpoint that expects a header.
+     *
+     * They belong to the transport that states them and to no other: a header
+     * meant for the operator's polling endpoint has no business being sent to
+     * some other transport's URLs.
+     */
+    customHeaders?: CustomHeaders;
+
 }
 
 export interface TransportHTTPS     extends ITransport {
@@ -205,22 +223,13 @@ export interface TransportHTTPS     extends ITransport {
      *
      * This belongs to https alone: a websocket or a server-sent event stream
      * delivers a new document when there is one, and if either ever needs a
-     * period of its own it will mean something else than asking again. Absent
-     * means: do not poll.
+     * period of its own it will mean something else than asking again.
+     *
+     * Absent means defaultRefreshSeconds - an https transport is there to be
+     * asked, and a document that names one without saying how often still
+     * wants its readers to see what the session does next.
      */
     refresh?: number;
-
-    /**
-     * Additional HTTP headers to send with every request to this transport,
-     * e.g. an API key or a tenant selector its endpoint expects.
-     *
-     * They belong to this transport and to no other: a header meant for the
-     * operator's polling endpoint has no business being sent to some other
-     * transport's URLs. Like refresh, they are declared - and validated - on
-     * https alone; the other two transports do not open a request a client
-     * shapes header by header.
-     */
-    customHeaders?: CustomHeaders;
 }
 
 export interface TransportHTTPSSE   extends ITransport {

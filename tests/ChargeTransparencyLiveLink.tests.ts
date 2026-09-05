@@ -9,6 +9,7 @@ import type {
 import { Chargy } from "../src/chargy";
 import { IsAChargeTransparencyRecord } from "../src/interfaces/IChargeTransparencyRecord";
 import {
+    defaultRefreshSeconds,
     IsAChargeTransparencyLiveLink,
     isCustomHeaderValue,
     isCustomHeaders,
@@ -274,19 +275,32 @@ describe("Charge Transparency LiveLink", () => {
 
     });
 
-    test("validates the custom headers on https alone", () => {
+    test("validates the custom headers on every transport", () => {
 
-        // Malformed where they are declared: not a transport.
-        expect(isTransport({ type: "https", url: "https://api.example.com/live", customHeaders: "X-Key1: v" })).toBe(false);
-        expect(isTransport({ type: "https", url: "https://api.example.com/live", customHeaders: { "X-Key1": 42 } })).toBe(false);
+        // An SSE stream is opened with an HTTP request and a websocket with an
+        // HTTP handshake, so all three transports can carry headers - and all
+        // three are validated.
+        for (const type of [ "https", "httpSSE", "websocket" ])
+        {
+            expect(isTransport({ type, url: "https://api.example.com/live", customHeaders: { "X-Key1": "v" } })).toBe(true);
+            expect(isTransport({ type, url: "https://api.example.com/live", customHeaders: "X-Key1: v"        })).toBe(false);
+            expect(isTransport({ type, url: "https://api.example.com/live", customHeaders: { "X-Key1": 42 }   })).toBe(false);
+            expect(isTransport({ type, url: "https://api.example.com/live"                                    })).toBe(true);
+        }
 
-        // Absent: still a transport, exactly as before.
+    });
+
+    test("leaves an https transport without a refresh period pollable", () => {
+
+        // Absent no longer means "never ask again" but defaultRefreshSeconds:
+        // a document that names a polling endpoint without saying how often
+        // still wants its readers to see what the session does next.
         expect(isTransport({ type: "https", url: "https://api.example.com/live" })).toBe(true);
+        expect(defaultRefreshSeconds).toBe(10);
 
-        // And on the other two transports customHeaders is an unknown property
-        // like any other - neither type-checked nor rejected.
-        expect(isTransport({ type: "websocket", url: "wss://api.example.com/live", customHeaders: "nonsense" })).toBe(true);
-        expect(isTransport({ type: "httpSSE",   url: "https://api.example.com/live", customHeaders: 42 })).toBe(true);
+        // What it does say is still type-checked, and still only on https.
+        expect(isTransport({ type: "https",     url: "https://api.example.com/live", refresh: "10" })).toBe(false);
+        expect(isTransport({ type: "websocket", url: "wss://api.example.com/live",   refresh: "10" })).toBe(true);
 
     });
 

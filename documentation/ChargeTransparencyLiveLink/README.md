@@ -431,8 +431,8 @@ Every transport can contain:
 | `url` | conditionally | string | One endpoint. |
 | `urls` | conditionally | array of strings and/or endpoint objects | Multiple alternative endpoints. |
 | `totp` | no | TOTP configuration object | Shared configuration for access to this transport. |
+| `customHeaders` | no | object of header values | Headers to send with every request to this transport. |
 | `refresh` | no | number | `https` only — how often to ask again, in seconds. |
-| `customHeaders` | no | object of header values | `https` only — headers to send with every request to this transport. |
 
 For interoperability, a transport should contain `url` or at least one entry
 in `urls`. The transport reader permits both properties together and also
@@ -451,7 +451,11 @@ so only `https` says how often to ask:
 }
 ```
 
-`refresh` is a number of **seconds**. **Its absence means: do not poll.**
+`refresh` is a number of **seconds**. **Its absence means
+`defaultRefreshSeconds`, which is 10** — not "do not poll": an `https`
+transport exists to be asked, and a document that names one without saying how
+often still wants its readers to see what the session does next. A value that
+is not a positive number is treated as absent.
 
 It belongs to `TransportHTTPS` alone, and `IsAChargeTransparencyLiveLink()`
 validates it only there — on `httpSSE` and `websocket` a `refresh` property is
@@ -464,8 +468,10 @@ Chargy WebApp polls no faster than every 5 seconds, whatever the document says.
 
 ### `customHeaders`
 
-An `https` transport may state HTTP headers to be sent with every request to
-it — an API key its endpoint expects, a tenant selector:
+Every transport may state HTTP headers to be sent with every request to it — an
+API key its endpoint expects, a tenant selector. An `https` poll, the opening
+request of an `httpSSE` stream and the handshake of a `websocket` are all HTTP
+requests, and all three can face an endpoint that expects a header:
 
 ```json
 {
@@ -482,12 +488,24 @@ it — an API key its endpoint expects, a tenant selector:
 }
 ```
 
-The property names are the header names. A value is one of two things:
+The property names are the header names, and a header name is an HTTP field
+name: RFC 9110 defines it as a `token`, one or more of
+
+    A-Z  a-z  0-9  ! # $ % & ' * + - . ^ _ ` | ~
+
+and nothing else. HTTP compares them case-insensitively, so `X-Key` and `x-key`
+are one header; which spelling wins is the client's rule, not this format's.
+
+**A value is always a string: the literal text to send.** A JSON object in a
+value position is never a value — it is always a call to a value provider:
 
 | Value | Meaning |
 |-------|---------|
 | a string | The literal value to send. |
 | an object with `valueProvider` and optional `parameters` | The value is computed per request. |
+
+Anything else — a number, a boolean, an array, `null` — is a mistake, and
+`isCustomHeaders()` rejects it.
 
 A provider exists because some values cannot be written into a document at all:
 a one-time password would be stale the moment it was. Version 1.0 defines the
@@ -497,11 +515,17 @@ configuration](#totp-configuration). ChargyCore validates the shape and computes
 no values; a client that does not know a provider sends no header for it rather
 than sending the description of one.
 
-Like `refresh`, `customHeaders` belongs to `TransportHTTPS` alone and is
-validated only there — on `httpSSE` and `websocket` it is an unknown property
-like any other. The headers also belong to the transport that states them: a
-header meant for the operator's polling endpoint has no business being sent to
-another transport's URLs.
+Unlike `refresh`, `customHeaders` belongs to `ITransport` and is validated on
+all three transport types. The headers belong to the transport that states
+them: a header meant for the operator's polling endpoint has no business being
+sent to another transport's URLs.
+
+The provider names are not defined by version 1.0, with one convention worth
+following: the Chargy WebApp implements `"TOTP"`, computing the value with
+[`@open-charging-cloud/totp`](https://www.npmjs.com/package/@open-charging-cloud/totp)
+for every single request, from `sharedSecret` (required), `validityTime`,
+`totpLength`, `alphabet` and `hashAlgorithm`. The moment is deliberately not a
+parameter — a timestamp out of a document would freeze the password.
 
 What HTTP itself requires of a header — that a name is a token, that a value
 carries no line break — is not checked here but by the client that sends it.
@@ -509,6 +533,35 @@ The Chargy WebApp drops the individual entries it cannot send — a malformed
 name, a control character, an implausibly long value — and caps how many
 headers one document may add to every request, rather than dropping the
 transport over one bad entry.
+
+Custom headers also change what the **endpoint** has to answer. A custom header
+is not on the CORS safelist, so a browser-based client asks first, with an
+`OPTIONS` request to the same URL that carries nothing of the actual request
+but its description:
+
+```http
+OPTIONS /chargingSessions/1234567890/transparency/live?token=abcdef HTTP/1.1
+Origin: https://chargy.charging.cloud
+Access-Control-Request-Method: GET
+Access-Control-Request-Headers: x-key1
+```
+
+```http
+HTTP/1.1 204 No Content
+Access-Control-Allow-Origin:  *
+Access-Control-Allow-Methods: GET, OPTIONS
+Access-Control-Allow-Headers: X-Key1
+Access-Control-Max-Age:       600
+```
+
+The answer must be a 2xx and no redirect, and it must not require
+authentication — the preflight has nothing to authenticate with, neither
+cookies nor the header it is asking about. `Access-Control-Allow-Headers` has
+to name every header the document states (compared case-insensitively; `*` is
+valid because the request carries no credentials), and `Access-Control-Max-Age`
+is what keeps a ten-second poll from paying for a preflight every time. The
+answer to the actual `GET` still needs its own `Access-Control-Allow-Origin`: a
+preflight permits the request, it does not make the response readable.
 
 ### Multiple endpoints
 
@@ -706,11 +759,13 @@ should use the stricter rules below:
 - use RFC 3339 timestamps with an explicit offset;
 - use absolute `https://` endpoints for `https` and `httpSSE`;
 - use `wss://` endpoints for `websocket`;
-- state `refresh` on `https` transports that should be polled, and omit it on
-  those that should not — and never on the other two transport types;
-- state `customHeaders` only on `https` transports, use header names that are
-  valid HTTP tokens and values a client can send unchanged, and state a header
-  only where its endpoint actually needs it;
+- state `refresh` on an `https` transport whose period differs from the default
+  of 10 seconds, and never on the other two transport types;
+- use header names that are valid HTTP tokens, never one a browser refuses to
+  set (`Host`, `Origin`, `Cookie`, `Sec-*`, …), and state a header only on the
+  transport whose endpoint actually needs it;
+- state a header value as a string, and use an object only to call a value
+  provider;
 - put the position, the address, the meter and the connector on
   `chargingStation`, and omit the top-level `geoLocation` and `connector`;
 - emit both coordinates and keep them within their geographic ranges;

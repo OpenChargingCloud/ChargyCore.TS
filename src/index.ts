@@ -35,6 +35,7 @@ export {
 } from "./interfaces/IURL";
 export {
     ChargeTransparencyLiveLinkContext,
+    defaultRefreshSeconds,
     IsAChargeTransparencyLiveLink,
     isCustomHeaderValue,
     isCustomHeaderValueProvider,
