@@ -43,6 +43,33 @@ function isTransportURL(data: unknown): data is ITransportURL|string {
 
 }
 
+// Whether one value of customHeaders is a provider that computes the header
+// value per request, rather than the literal value to send.
+export function isCustomHeaderValueProvider(data: unknown): data is ICustomHeaderValueProvider {
+
+    return chargyLib.isMandatoryJSONObject(data) &&
+           typeof data["valueProvider"] === "string" &&
+           (data["parameters"] === undefined || chargyLib.isMandatoryJSONObject(data["parameters"]));
+
+}
+
+// Whether one value of customHeaders is one of the two things a header value
+// may be: the literal string, or a provider computing it.
+export function isCustomHeaderValue(data: unknown): data is CustomHeaderValue {
+    return typeof data === "string" || isCustomHeaderValueProvider(data);
+}
+
+// Whether customHeaders is a well-formed set of header values. What a name and
+// a value additionally have to look like before they may go into an actual
+// request - HTTP has rules of its own about that - is the sending client's
+// question, not this one.
+export function isCustomHeaders(data: unknown): data is CustomHeaders {
+
+    return chargyLib.isMandatoryJSONObject(data) &&
+           Object.values(data).every(isCustomHeaderValue);
+
+}
+
 // Whether one entry of liveTransports is a well-formed transport. Exported so a
 // consumer can drop the entries that are not, keeping the good ones, rather than
 // discarding the whole live link over one bad transport.
@@ -65,6 +92,15 @@ export function isTransport(data: unknown): data is Transport {
     if (type === "https"                 &&
         data["refresh"]    !== undefined &&
         typeof data["refresh"] !== "number")
+    {
+        return false;
+    }
+
+    // The same for the custom headers: only https declares them, so only there
+    // are they validated.
+    if (type === "https"                    &&
+        data["customHeaders"] !== undefined &&
+        !isCustomHeaders(data["customHeaders"]))
     {
         return false;
     }
@@ -173,6 +209,18 @@ export interface TransportHTTPS     extends ITransport {
      * means: do not poll.
      */
     refresh?: number;
+
+    /**
+     * Additional HTTP headers to send with every request to this transport,
+     * e.g. an API key or a tenant selector its endpoint expects.
+     *
+     * They belong to this transport and to no other: a header meant for the
+     * operator's polling endpoint has no business being sent to some other
+     * transport's URLs. Like refresh, they are declared - and validated - on
+     * https alone; the other two transports do not open a request a client
+     * shapes header by header.
+     */
+    customHeaders?: CustomHeaders;
 }
 
 export interface TransportHTTPSSE   extends ITransport {
@@ -193,4 +241,35 @@ export interface ITransportURL {
 export interface TOTPConfig {
     initialSharedSecret:   string;
     timeStep:              number;
+}
+
+/**
+ * The custom HTTP headers of a transport, by header name.
+ *
+ * The names are the header names as they are to be sent; HTTP compares them
+ * case-insensitively, so a document that names one header twice in different
+ * spellings names one header - which one wins is the sending client's rule,
+ * not this format's.
+ */
+export type CustomHeaders = Record<string, CustomHeaderValue>;
+
+/**
+ * What a custom header carries: either the literal string to send, or a
+ * provider that computes the value per request - a one-time password, say,
+ * which would be stale the moment it was written into a document.
+ */
+export type CustomHeaderValue = string | ICustomHeaderValueProvider;
+
+/**
+ * A value computed per request rather than stated.
+ *
+ * Version 1.0 defines the shape, not the providers: what "TOTP" means, and
+ * what its parameters are called, needs an external profile or agreement, the
+ * same way the TOTP configuration does. ChargyCore validates the shape and
+ * computes no values - a client that does not know a provider sends no header
+ * for it rather than sending the description of one.
+ */
+export interface ICustomHeaderValueProvider {
+    valueProvider:         string;
+    parameters?:           chargyLib.JSONObject;
 }

@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+﻿import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, test, vi } from "vitest";
@@ -10,6 +10,9 @@ import { Chargy } from "../src/chargy";
 import { IsAChargeTransparencyRecord } from "../src/interfaces/IChargeTransparencyRecord";
 import {
     IsAChargeTransparencyLiveLink,
+    isCustomHeaderValue,
+    isCustomHeaders,
+    isTransport,
     type IChargeTransparencyLiveLink
 } from "../src/interfaces/IChargeTransparencyLiveLink";
 import {
@@ -238,6 +241,53 @@ describe("Charge Transparency LiveLink", () => {
         {
             vi.useRealTimers();
         }
+    });
+
+    test("reads the custom headers of an https transport", () => {
+
+        // A literal value and a value computed per request are the two shapes
+        // a header value may have.
+        expect(isTransport({
+            type:           "https",
+            url:            "https://api.example.com/live",
+            refresh:         10,
+            customHeaders:  {
+                                "X-Key1": "headerValue1",
+                                "X-TOTP": {
+                                              valueProvider: "TOTP",
+                                              parameters:    { sharedSecret: "abcdefghijklmnopqrstuvwxyz1234567890" }
+                                          }
+                            }
+        })).toBe(true);
+
+        expect(isCustomHeaderValue("headerValue1")).toBe(true);
+        expect(isCustomHeaderValue({ valueProvider: "TOTP" })).toBe(true);
+        expect(isCustomHeaderValue({ parameters: { sharedSecret: "s" } })).toBe(false);
+        expect(isCustomHeaderValue(42)).toBe(false);
+
+        // The header names are not the format's business, the shape of what
+        // they carry is.
+        expect(isCustomHeaders({})).toBe(true);
+        expect(isCustomHeaders({ "X-Key1": [ "headerValue1" ] })).toBe(false);
+        expect(isCustomHeaders([ "X-Key1" ])).toBe(false);
+        expect(isCustomHeaders("X-Key1: headerValue1")).toBe(false);
+
+    });
+
+    test("validates the custom headers on https alone", () => {
+
+        // Malformed where they are declared: not a transport.
+        expect(isTransport({ type: "https", url: "https://api.example.com/live", customHeaders: "X-Key1: v" })).toBe(false);
+        expect(isTransport({ type: "https", url: "https://api.example.com/live", customHeaders: { "X-Key1": 42 } })).toBe(false);
+
+        // Absent: still a transport, exactly as before.
+        expect(isTransport({ type: "https", url: "https://api.example.com/live" })).toBe(true);
+
+        // And on the other two transports customHeaders is an unknown property
+        // like any other - neither type-checked nor rejected.
+        expect(isTransport({ type: "websocket", url: "wss://api.example.com/live", customHeaders: "nonsense" })).toBe(true);
+        expect(isTransport({ type: "httpSSE",   url: "https://api.example.com/live", customHeaders: 42 })).toBe(true);
+
     });
 
 });

@@ -1,4 +1,4 @@
-export * from "./ACrypt";
+﻿export * from "./ACrypt";
 export * from "./Alfen";
 export * from "./BSMCrypt01";
 export * from "./EDL40";
@@ -36,7 +36,13 @@ export {
 export {
     ChargeTransparencyLiveLinkContext,
     IsAChargeTransparencyLiveLink,
+    isCustomHeaderValue,
+    isCustomHeaderValueProvider,
+    isCustomHeaders,
+    type CustomHeaderValue,
+    type CustomHeaders,
     type IChargeTransparencyLiveLink,
+    type ICustomHeaderValueProvider,
     type ITransport,
     type ITransportURL,
     type TOTPConfig,

@@ -7,6 +7,26 @@ While the version number is below 1.0.0, breaking changes are released in minor
 versions and are always listed first below.
 
 
+## [0.14.3] - 2026-09-05
+
+### Added
+
+- **An https transport can state the HTTP headers to send with it.**
+  `TransportHTTPS.customHeaders` names them - an API key the operator's endpoint
+  expects, a tenant selector - and a value is either the literal string to send
+  or an object naming a `valueProvider` that computes it per request, because a
+  one-time password would be stale the moment it was written into a document.
+  Version 1.0 defines that shape, not the providers: what `"TOTP"` means needs
+  an external profile, the same way the TOTP configuration does, and ChargyCore
+  computes no values.
+
+  Like `refresh`, the headers belong to `https` alone and are validated only
+  there; on the other two transports the property is unknown like any other.
+  `isCustomHeaders()`, `isCustomHeaderValue()` and
+  `isCustomHeaderValueProvider()` are exported for point-of-use filtering. What
+  HTTP itself requires of a name and a value is the sending client's business:
+  a document says what it wants sent, it does not get to write the request.
+
 ## [0.14.0] - 2026-08-30
 
 ### Added

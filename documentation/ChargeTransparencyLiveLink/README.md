@@ -176,7 +176,14 @@ the repeated blocks abbreviated:
     {
       "type": "https",
       "url": "https://api1.example.com/chargingSessions/OCMF-Test-01/transparency/live?token=abcdef",
-      "refresh": 10
+      "refresh": 10,
+      "customHeaders": {
+        "X-Key1": "headerValue1",
+        "X-TOTP": {
+          "valueProvider": "TOTP",
+          "parameters": { "sharedSecret": "abcdefghijklmnopqrstuvwxyz1234567890" }
+        }
+      }
     },
     {
       "type": "websocket",
@@ -425,6 +432,7 @@ Every transport can contain:
 | `urls` | conditionally | array of strings and/or endpoint objects | Multiple alternative endpoints. |
 | `totp` | no | TOTP configuration object | Shared configuration for access to this transport. |
 | `refresh` | no | number | `https` only — how often to ask again, in seconds. |
+| `customHeaders` | no | object of header values | `https` only — headers to send with every request to this transport. |
 
 For interoperability, a transport should contain `url` or at least one entry
 in `urls`. The transport reader permits both properties together and also
@@ -453,6 +461,54 @@ than asking again, which is why the name is not shared.
 
 A client is expected to clamp the period from below rather than obey it: the
 Chargy WebApp polls no faster than every 5 seconds, whatever the document says.
+
+### `customHeaders`
+
+An `https` transport may state HTTP headers to be sent with every request to
+it — an API key its endpoint expects, a tenant selector:
+
+```json
+{
+  "type": "https",
+  "url": "https://api1.example.com/chargingSessions/1234567890/transparency/live",
+  "refresh": 10,
+  "customHeaders": {
+    "X-Key1": "headerValue1",
+    "X-TOTP": {
+      "valueProvider": "TOTP",
+      "parameters": { "sharedSecret": "abcdefghijklmnopqrstuvwxyz1234567890" }
+    }
+  }
+}
+```
+
+The property names are the header names. A value is one of two things:
+
+| Value | Meaning |
+|-------|---------|
+| a string | The literal value to send. |
+| an object with `valueProvider` and optional `parameters` | The value is computed per request. |
+
+A provider exists because some values cannot be written into a document at all:
+a one-time password would be stale the moment it was. Version 1.0 defines the
+shape, not the providers — what `"TOTP"` means and what its parameters are
+called needs an external profile or agreement, exactly like the [TOTP
+configuration](#totp-configuration). ChargyCore validates the shape and computes
+no values; a client that does not know a provider sends no header for it rather
+than sending the description of one.
+
+Like `refresh`, `customHeaders` belongs to `TransportHTTPS` alone and is
+validated only there — on `httpSSE` and `websocket` it is an unknown property
+like any other. The headers also belong to the transport that states them: a
+header meant for the operator's polling endpoint has no business being sent to
+another transport's URLs.
+
+What HTTP itself requires of a header — that a name is a token, that a value
+carries no line break — is not checked here but by the client that sends it.
+The Chargy WebApp drops the individual entries it cannot send — a malformed
+name, a control character, an implausibly long value — and caps how many
+headers one document may add to every request, rather than dropping the
+transport over one bad entry.
 
 ### Multiple endpoints
 
@@ -618,8 +674,9 @@ Nothing else decides recognition. A malformed optional property — a broken
 transport, a numeric `connector` — never turns the document into an "unknown
 format": the context identifies it, and whatever fails its shape is dropped
 where it is read. The guards for those shapes (`isConnector`, `isTransport`,
-`isTOTPConfig`, …) are exported for exactly that point-of-use filtering; note
-that they use `chargyLib.isObject()`, which accepts arrays as well as objects.
+`isTOTPConfig`, `isCustomHeaders`, `isCustomHeaderValue`, …) are exported for
+exactly that point-of-use filtering; note that some of them use
+`chargyLib.isObject()`, which accepts arrays as well as objects.
 
 When a single LiveLink is passed to `DetectAndConvertContentFormat`, ChargyCore
 first verifies the signatures the document carries over itself — see
@@ -651,6 +708,9 @@ should use the stricter rules below:
 - use `wss://` endpoints for `websocket`;
 - state `refresh` on `https` transports that should be polled, and omit it on
   those that should not — and never on the other two transport types;
+- state `customHeaders` only on `https` transports, use header names that are
+  valid HTTP tokens and values a client can send unchanged, and state a header
+  only where its endpoint actually needs it;
 - put the position, the address, the meter and the connector on
   `chargingStation`, and omit the top-level `geoLocation` and `connector`;
 - emit both coordinates and keep them within their geographic ranges;
@@ -667,7 +727,9 @@ input.
 - URL query parameters can be bearer credentials. Do not persist or log them
   unless necessary.
 - `initialSharedSecret` is sensitive authentication material. Encoding a
-  LiveLink in a publicly visible QR code also publishes that secret.
+  LiveLink in a publicly visible QR code also publishes that secret. A literal
+  `customHeaders` value — an API key — and the parameters of a value provider
+  are just as sensitive, and just as published.
 - Credentials should be short-lived, limited to one charging session and
   revocable.
 - Clients should require TLS (`https://` or `wss://`) and validate the server
@@ -675,6 +737,10 @@ input.
 - A client that automatically opens arbitrary LiveLink URLs needs normal SSRF,
   redirect and local-network protections, and should clamp `refresh` from below
   rather than trust it.
+- `customHeaders` is a document telling a client what to put into a request.
+  A client should validate every name and value before sending it, cap how many
+  it accepts, send them only to the URLs of the transport that stated them, and
+  not follow redirects with them.
 - Descriptions, locations, station identifiers and session URLs can reveal a
   person's location or charging activity.
 - Endpoint data remains untrusted even when the discovery document was obtained

@@ -140,9 +140,19 @@
 
     "liveTransports": [
                          {
-                             "type":    "https",
-                             "url":     "https://api1.example.com/chargingSessions/OCMF-Test-01/transparency/live?token=abcdef",
-                             "refresh":  10
+                             "type":         "https",
+                             "url":          "https://api1.example.com/chargingSessions/OCMF-Test-01/transparency/live?token=abcdef",
+                             "refresh":       10,
+                             "customHeaders": {
+
+                                 "X-Key1":  "headerValue1",
+
+                                 "X-TOTP":  {
+                                                "valueProvider":  "TOTP",
+                                                "parameters":   { "sharedSecret": "abcdefghijklmnopqrstuvwxyz1234567890" }
+                                            }
+
+                             }
                          },
                          {
                              "type": "websocket",
@@ -187,7 +197,7 @@
                 "encodings": [ "JSON", "JCS", "UTF-8" ]
             },
             "encodings": [ "Ecdsa-Sig-Value", "DER", "hex" ],
-            "value": "3045022100C1714FDC4912FF4F118935A941B966A550C6D636CBB6C5191C1467394CEAB5C50220638369A662024AA0B2C40D17EA51A5BFC27DF555A9DC76EABD03074146147DBD"
+            "value": "30450220291E95BA0386F4FDA5E43C732FAE0CEEC8B51BF9A1984AF9CEB61C7872457213022100F1B99441818CF7D787645712F6195D1C1E643B87963D5BCA5704F660950FF683"
         },
         {
             "keyId": "A2F94A58FB75E25BC2CECDF582819B6D44F3705D0C3BADD6391E9D536D5671E8",
@@ -197,7 +207,7 @@
                 "encodings": [ "JSON", "JCS", "UTF-8" ]
             },
             "encodings": [ "raw", "hex" ],
-            "value": "62C8A18D79E80A88E28AA7FE90D8F7DC9AFF8CABE43931ED0D25F2B99B9E6F5AAED162F70ED119D5A5CC46D95E2C03322D89D5DC483E61DF74204340C485A500"
+            "value": "7FC66A87EDD987CB12C47A81CA1B4FF0FE76F505206C21D4136C92913E0EA68F45A9D1AF319399406AA9853DE09DDF2EE22FBDB8321010437F1F736565CDE807"
         }
     ]
 
