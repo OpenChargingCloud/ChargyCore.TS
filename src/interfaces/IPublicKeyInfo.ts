@@ -201,6 +201,7 @@ export function IsAPublicKeySignature(data: unknown): data is IPublicKeySignatur
 
 export interface IPublicKey extends chargyLib.JSONObject
 {
+
     "@context"?:                string | Array<string>                        | undefined;
     subject?:                   string | Array<string> | chargyLib.JSONObject | undefined;
     algorithm:                  string | chargyLib.IOIDInfo;
@@ -210,6 +211,16 @@ export interface IPublicKey extends chargyLib.JSONObject
     value:                      string;
     signatures?:                Array<IPublicKeySignature>;
     certainty?:                 number                                        | undefined;
+
+
+    // NEW!!!!!!!!!!!!!
+
+    /** The allowed key usage for this public key */
+    keyUsage:                     Array<string>;
+
+    /** The ordered encoding procedure */
+    encodings?:                   Array<string>;
+
 }
 
 // export interface IPublicKeyInfo extends chargyLib.JSONObject

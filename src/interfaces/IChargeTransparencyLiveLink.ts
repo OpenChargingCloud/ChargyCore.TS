@@ -33,7 +33,7 @@ export const ChargeTransparencyLiveLinkContext = "https://open.charging.cloud/co
 export const defaultRefreshSeconds = 10;
 
 
-export function isConnector(data: unknown): data is IConnector {
+export function isConnector(data: unknown): data is chargyInterfaces.IConnector {
     if (!chargyLib.isObject(data))
         return false;
 
@@ -83,7 +83,7 @@ export function isCustomHeaders(data: unknown): data is CustomHeaders {
 // Whether one entry of liveTransports is a well-formed transport. Exported so a
 // consumer can drop the entries that are not, keeping the good ones, rather than
 // discarding the whole live link over one bad transport.
-export function isTransport(data: unknown): data is Transport {
+export function isTransport(data: unknown): data is LiveTransports {
 
     if (!chargyLib.isObject(data))
         return false;
@@ -132,30 +132,85 @@ function isTOTPConfig(data: unknown): data is TOTPConfig {
            typeof data["timeStep"]            === "number";
 }
 
+
+/** A charging transparency live link document,
+ *  which is a single still ongoing charging session
+ *  with links to receive live updates on energy metering data
+ *  and legally relevant events like errors, power reductions
+ *  or tariff changes. */
 export interface IChargeTransparencyLiveLink extends chargyLib.JSONObject {
 
-    "@context": typeof ChargeTransparencyLiveLinkContext;
-
-    /** ISO 8601 creation timestamp */
-    created?:       string|null;
+    "@context"?:                   string | Array<string> | undefined;
 
     /** Multi-language description */
-    description?:   chargyLib.I18NString;
+    description?:                  chargyLib.I18NString;
 
-    /** URLs to images / logos */
-    imageURLs?:     string[];
 
-    /** Geographic position of the charging station */
-    geoLocation?:   chargyInterfaces.IGeoLocation;
+    /** The (legal) time source used */
+    timeSource?:                   chargyInterfaces.ITimeSource;
 
-    /** Technical connector data */
-    connector?:     IConnector;
+    /** The timestamp of the document creation (ISO 8601) */
+    created:                       string;
 
-    /** Available transport methods for live data */
-    liveTransports?: Transport[];
+    /** The timestamp of the last document update (ISO 8601) */
+    lastUpdated?:                  string;
 
-    /** Digital signatures (currently empty or extendable) */
-    signatures?:    chargyInterfaces.ISignature[];
+    /** The way document reference ids are generated within this document, default: [ "SHA-256", "hex" ] */
+    docRefIdGeneration?:           Array<string> | undefined;
+
+    /** The reference identification (crypto hash) of the document that was updated */
+    updates?:                      string;
+
+
+    /** The charging station operator */
+    chargingStationOperator:       chargyInterfaces.IChargingStationOperator;
+
+    /** The charging station */
+    chargingStation:               chargyInterfaces.IChargingStation;
+
+    /** The charging session identification at the station/operator */
+    chargingSessionId?:            string | undefined;
+
+
+    /** The e-mobility provider */
+    eMobilityProvider?:            chargyInterfaces.IEMobilityProvider;
+
+    /** EV driver contract information */
+    contract:                      chargyInterfaces.IContract;
+
+
+    /** Available transport methods for live transparency data */
+    liveTransports:                Array<LiveTransports>;
+
+    /** Signed metering values */
+    signedMeterValues?:            Array<LiveTransports>                              | undefined;
+
+    /** Charging periods define tariffs and costs. Start-/stop timestamps should match a signed metering value timestamp. */
+    chargingPeriods?:              Array<chargyInterfaces.IChargingPeriod>            | undefined;
+
+    /** Legally relevant log messages, e.g. time sync, grid power reduction, ... */
+    legallyRelevantLogMessages?:   Array<chargyInterfaces.ILegallyRelevantLogMessage> | undefined;
+
+    /** Support messages between e.g. the EV driver and the CPO */
+    supportMessages?:              Array<chargyInterfaces.ISupportMessage>            | undefined;
+
+
+
+    /** The way crypto key ids are generated within this document */
+    keyIdGeneration?:              Array<string>                                      | undefined;  // [ "SubjectPublicKeyInfo", "DER", "SHA-256", "hex" ]
+
+    /** Digital document signatures, e.g. signed by the charging station operator */
+    signatures?:                   Array<chargyInterfaces.ISignature>                 | undefined;
+
+
+
+    // Chargy internals!
+
+    /**
+     * Non-fatal findings about this document, e.g. that it is unsigned or that
+     * a signature did not verify. None of these make the document unusable.
+     */
+    warnings?:                     Array<chargyInterfaces.IWarning>;
 
     /**
      * How the signatures over this whole document came out, filled in when the
@@ -166,38 +221,22 @@ export interface IChargeTransparencyLiveLink extends chargyLib.JSONObject {
      * document has been verified. Adding it first would change the very bytes
      * that are verified.
      */
-    signatureVerification?: IDocumentSignaturesResult;
-
-    /**
-     * Non-fatal findings about this document, e.g. that it is unsigned or that
-     * a signature did not verify. None of these make the document unusable.
-     */
-    warnings?:      Array<chargyInterfaces.IWarning>;
+    signatureVerification?:        IDocumentSignaturesResult;
 
 }
-
-/** Connector information */
-export interface IConnector {
-    standard?:             string;
-    format?:               string;
-    powerType?:            string;
-    maxPower?:             string;
-}
-
 
 
 /** Union type for the different transport variants */
-export type Transport =
-  | TransportHTTPS
-  | TransportHTTPSSE
-  | TransportWebsocket;
+export type LiveTransports = TransportHTTPS   |
+                             TransportHTTPSSE |
+                             TransportWebsocket;
 
 
-export interface ITransport {
+export interface ILiveTransport {
 
-    url?:  string;
-    urls?: Array<ITransportURL|string>;
-    totp?: TOTPConfig;
+    url?:   string;
+    urls?:  Array<ITransportURL|string>;
+    totp?:  TOTPConfig;
 
     /**
      * Additional HTTP headers to send with every request to this transport,
@@ -211,11 +250,11 @@ export interface ITransport {
      * meant for the operator's polling endpoint has no business being sent to
      * some other transport's URLs.
      */
-    customHeaders?: CustomHeaders;
+    customHeaders?:  CustomHeaders;
 
 }
 
-export interface TransportHTTPS     extends ITransport {
+export interface TransportHTTPS     extends ILiveTransport {
     type: "https";
 
     /**
@@ -232,11 +271,11 @@ export interface TransportHTTPS     extends ITransport {
     refresh?: number;
 }
 
-export interface TransportHTTPSSE   extends ITransport {
+export interface TransportHTTPSSE   extends ILiveTransport {
     type: "httpSSE";
 }
 
-export interface TransportWebsocket extends ITransport {
+export interface TransportWebsocket extends ILiveTransport {
     type: "websocket";
 }
 

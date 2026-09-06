@@ -21,6 +21,14 @@ import type { IPublicKey }        from './IPublicKeyInfo';
 import type { IChargingSession }  from './IChargeTransparencyRecord';
 
 
+//type Volt       = string;
+type Watt       = string;
+type Ohm        = string;
+type Meter      = string;
+type Timestamp  = string;
+type PowerType  = "AC"|"DC";
+
+
 export function isGeoLocation(data: unknown): data is IGeoLocation {
     if (!chargyLib.isObject(data))
         return false;
@@ -71,23 +79,33 @@ export interface IKeyInfo
     value:                      string;
 }
 
+
+/** A charging station operator */
 export interface IChargingStationOperator
 {
+
     "@id":                      string;
     "@context"?:                string                   | undefined;
-    subCSOIds?:                 Array<string>            | undefined;
+    name:                       chargyLib.I18NString;
     description?:               chargyLib.I18NString     | undefined;
+
+    subCSOIds?:                 Array<string>            | undefined;
     contact:                    IContact;
     support:                    ISupport;
     privacy:                    IPrivacyContact;
     geoLocation?:               IGeoLocation             | undefined;
+
+    /** URLs to images / logos */
+    imageURLs?:                 string[]                 | undefined;
+
     chargingPools?:             Array<IChargingPool>     | undefined;
     chargingStations?:          Array<IChargingStation>  | undefined;
     EVSEs?:                     Array<IEVSE>             | undefined;
-    publicKeys?:                Array<IPublicKey>        | undefined;
 
     chargingTariffs?:           Array<IChargingTariff>   | undefined;
     parkingTariffs?:            Array<IParkingTariff>    | undefined;
+
+    publicKeys?:                Array<IPublicKey>        | undefined;
 
 }
 
@@ -135,99 +153,282 @@ export interface ISignature
 
 export interface ISignatureRS extends ISignature
 {
-    r:                          string;
-    s:                          string;
+    r:                            string;
+    s:                            string;
 }
 
+
+/** A charging pool */
 export interface IChargingPool
 {
-    "@id":                      string;
-    "@context"?:                string                   | undefined;
-    description?:               chargyLib.I18NString     | undefined;
-    address?:                   IAddress                 | undefined;
-    geoLocation?:               IGeoLocation             | undefined;
-    chargingStationOperator?:   IChargingStationOperator | undefined;
-    chargingStations?:          Array<IChargingStation>  | undefined;
-    chargingTariffs?:           Array<IChargingTariff>   | undefined;
-    publicKeys?:                Array<IPublicKey>        | undefined;
+
+    "@id":                        string;
+    "@context"?:                  string                    | undefined;
+    description?:                 chargyLib.I18NString      | undefined;
+
+    address?:                     IAddress                  | undefined;
+    geoLocation?:                 IGeoLocation              | undefined;
+
+    publicKeys?:                  Array<IPublicKey>         | undefined;
+
+
+    // Internal references
+    chargingStationOperatorId?:   string                    | undefined;
+    chargingStationOperator?:     IChargingStationOperator  | undefined;
+    chargingPoolId?:              string                    | undefined;
+    chargingPool?:                IChargingPool             | undefined;
+    chargingStationIds?:          Array<string>             | undefined;
+    chargingStations?:            Array<IChargingStation>   | undefined;
+    chargingTariffIds?:           Array<string>             | undefined;
+    chargingTariffs?:             Array<IChargingTariff>    | undefined;
+
 }
 
+
+/** A local controller within a charging pool controlling multiple
+ *  charging stations for e.g. load balancing.
+ *  Can have its own energy meters e.g. at the grid connection point.
+ */
+export interface ILocalController
+{
+
+    "@id":                        string;
+    "@context"?:                  string | Array<string>    | undefined;
+    description?:                 chargyLib.I18NString      | undefined;
+
+    manufacturer?:                IManufacturer             | undefined;
+    model?:                       IDeviceModel              | undefined;
+    hardware?:                    IHardware                 | undefined;
+    firmware?:                    IFirmware                 | undefined;
+    legalCompliance?:             ILegalCompliance          | undefined;
+
+    /** URLs to images / logos */
+    imageURLs?:                   string[]                  | undefined;
+
+    energyMeterIds?:              Array<string>             | undefined;
+    energyMeters?:                Array<IEnergyMeter>       | undefined;
+    temperaturSensorIds?:         Array<string>             | undefined;
+    temperaturSensors?:           Array<ITemperatureSensor> | undefined;
+
+    publicKeys?:                  Array<IPublicKey>         | undefined;
+
+
+    // Internal references
+    chargingStationOperatorId?:   string                    | undefined;
+    chargingStationOperator?:     IChargingStationOperator  | undefined;
+    chargingPoolId?:              string                    | undefined;
+    chargingPool?:                IChargingPool             | undefined;
+
+}
+
+
+/** A charging station */
 export interface IChargingStation
 {
-    "@id":                      string;
-    "@context"?:                string                   | undefined;
-    description?:               chargyLib.I18NString     | undefined;
-    manufacturer?:              IManufacturer            | undefined;
-    model?:                     IDeviceModel             | undefined;
-    hardware?:                  IHardware                | undefined;
-    firmware?:                  IFirmware                | undefined;
-    legalCompliance?:           ILegalCompliance         | undefined;
-    address?:                   IAddress                 | undefined;
-    geoLocation?:               IGeoLocation             | undefined;
-    chargingStationOperator?:   IChargingStationOperator | undefined;
-    chargingPool?:              IChargingPool            | undefined;
-    chargingPoolId?:            string                   | undefined;
-    EVSEs?:                     Array<IEVSE>             | undefined;
-    EVSEIds?:                   Array<string>            | undefined;
-    energyMeters?:              Array<IEnergyMeter>      | undefined;
-    chargingTariffs?:           Array<IChargingTariff>   | undefined;
-    publicKeys?:                Array<IPublicKey>        | undefined;
+
+    "@id":                        string;
+    "@context"?:                  string | Array<string>    | undefined;
+    description?:                 chargyLib.I18NString      | undefined;
+
+    manufacturer?:                IManufacturer             | undefined;
+    model?:                       IDeviceModel              | undefined;
+    hardware?:                    IHardware                 | undefined;
+    firmware?:                    IFirmware                 | undefined;
+    legalCompliance?:             ILegalCompliance          | undefined;
+
+    /** The address of the charging station, when different from the charging pool */
+    address?:                     IAddress                  | undefined;
+
+    /** The geographic position of the charging station, when different from the charging pool */
+    geoLocation?:                 IGeoLocation              | undefined;
+
+    /** URLs to images / logos */
+    imageURLs?:                   string[]                  | undefined;
+
+
+    EVSEIds?:                     Array<string>             | undefined;
+    EVSEs?:                       Array<IEVSE>              | undefined;
+    energyMeterIds?:              Array<string>             | undefined;
+    energyMeters?:                Array<IEnergyMeter>       | undefined;
+    chargingTariffIds?:           Array<string>             | undefined;
+    chargingTariffs?:             Array<IChargingTariff>    | undefined;
+    temperaturSensorIds?:         Array<string>             | undefined;
+    temperaturSensors?:           Array<ITemperatureSensor> | undefined;
+
+    publicKeys?:                  Array<IPublicKey>         | undefined;
+
+
+    // Internal references
+    chargingStationOperatorId?:   string                    | undefined;
+    chargingStationOperator?:     IChargingStationOperator  | undefined;
+    chargingPoolId?:              string                    | undefined;
+    chargingPool?:                IChargingPool             | undefined;
+
 }
 
+
+/** A energy circuit within a charging station */
 export interface IEVSE
 {
-    "@id":                      string;
-    "@context"?:                string                   | undefined;
-    description?:               chargyLib.I18NString     | undefined;
-    chargingPoolId?:            string                   | undefined;
-    chargingStation?:           IChargingStation         | undefined;
-    chargingStationId?:         string                   | undefined;
-    energyMeters?:              Array<IEnergyMeter>      | undefined;
-    connectors?:                Array<IConnector>        | undefined;
-    publicKeys?:                Array<IPublicKey>        | undefined;
-    chargingTariffs?:           Array<IChargingTariff>   | undefined;
+
+    "@id":                        string;
+    "@context"?:                  string | Array<string>    | undefined;
+    description?:                 chargyLib.I18NString      | undefined;
+
+    /** The power type, e.g. "AC" or "DC" */
+    powerType?:                   PowerType                 | undefined;
+
+    /** The maximum electrical power as metrological value with unit, e.g. "22 kW" */
+    maxPower?:                    Meter                     | undefined;
+
+    connectorIds?:                Array<string>             | undefined;
+    connectors?:                  Array<IConnector>         | undefined;
+    energyMeterIds?:              Array<string>             | undefined;
+    energyMeters?:                Array<IEnergyMeter>       | undefined;
+    chargingTariffIds?:           Array<string>             | undefined;
+    chargingTariffs?:             Array<IChargingTariff>    | undefined;
+    temperaturSensorIds?:         Array<string>             | undefined;
+    temperaturSensors?:           Array<ITemperatureSensor> | undefined;
+
+    publicKeys?:                  Array<IPublicKey>         | undefined;
+
+
+    // Internal references
+    chargingStationOperatorId?:   string                    | undefined;
+    chargingStationOperator?:     IChargingStationOperator  | undefined;
+    chargingPoolId?:              string                    | undefined;
+    chargingPool?:                IChargingPool             | undefined;
+    chargingStationId?:           string                    | undefined;
+    chargingStation?:             IChargingStation          | undefined;
+
 }
 
+
+/** A engery meter */
 export interface IEnergyMeter
 {
-    "@id":                      string;
-    "@context"?:                string                   | undefined;
-    description?:               chargyLib.I18NString     | undefined;
-    manufacturer?:              IManufacturer            | undefined;
-    model?:                     IDeviceModel             | undefined;
-    firmware?:                  IFirmware                | undefined;
-    hardware?:                  IHardware                | undefined;
-    legalCompliance?:           ILegalCompliance         | undefined;
-    chargingPoolId?:            string                   | undefined;
-    chargingPool?:              IChargingPool            | undefined;
-    chargingStationId?:         string                   | undefined;
-    chargingStation?:           IChargingStation         | undefined;
-    EVSEId?:                    string                   | undefined;
-    EVSE?:                      IEVSE                    | undefined;
-    signatureInfos?:            ISignatureInfos          | undefined;
-    signatureFormat?:           string                   | undefined;
-    publicKeys?:                Array<IPublicKey>        | undefined;
+
+    "@id":                        string;
+    "@context"?:                  string | Array<string>    | undefined;
+    description?:                 chargyLib.I18NString      | undefined;
+
+    /** URLs to images / logos */
+    imageURLs?:                   string[];
+
+    manufacturer?:                IManufacturer             | undefined;
+    model?:                       IDeviceModel              | undefined;
+    firmware?:                    IFirmware                 | undefined;
+    hardware?:                    IHardware                 | undefined;
+    legalCompliance?:             ILegalCompliance          | undefined;
+
+    /** The power type, e.g. "AC" or "DC" */
+    powerType?:                   PowerType                 | undefined;
+
+    temperaturSensorIds?:         Array<string>             | undefined;
+    temperaturSensors?:           Array<ITemperatureSensor> | undefined;
+
+    signatureInfos?:              ISignatureInfos           | undefined;
+    signatureFormat?:             string                    | undefined;
+    publicKeys?:                  Array<IPublicKey>         | undefined;
+
+
+    // Internal references
+    chargingPoolId?:              string                    | undefined;
+    chargingPool?:                IChargingPool             | undefined;
+    chargingStationId?:           string                    | undefined;
+    chargingStation?:             IChargingStation          | undefined;
+    EVSEId?:                      string                    | undefined;
+    EVSE?:                        IEVSE                     | undefined;
+    cableId?:                     string                    | undefined;
+    cable?:                       ICable                    | undefined;
+
 }
 
+
+/** A charging connector */
 export interface IConnector {
-    "@id"?:                     string | undefined;
-    type?:                      string | undefined;
-    cable?:                     ICable | undefined;
+
+    /** The internal id of the connector, e.g. used by OCPI */
+    "@id"?:                       string                    | undefined;
+
+    /** The visible label of the connector */
+    visibleLabel?:                string                    | undefined;
+
+    standard?:                    string                    | undefined;
+    format?:                      string                    | undefined;
+    type?:                        string                    | undefined;  // What was this again???!
+
+    /** The metrological power with unit, e.g. "22 kW" */
+    maxPower?:                    Watt;
+
+    temperaturSensors?:           Array<ITemperatureSensor> | undefined;
+    cable?:                       ICable                    | undefined;
+
 }
 
+
+/** A charging cable, maybe with a plug full of (ISO 15118-20) electronics */
 export interface ICable {
-    length?:                    number | undefined;
-    lossCompensation?:          string | undefined;
-    lossCompensationId?:        string | undefined;
-    resistance?:                number | undefined;
-    resistanceUnit?:            string | undefined;
+
+    "@id"?:                       string                    | undefined;
+    "@context"?:                  string | Array<string>    | undefined;
+    description?:                 chargyLib.I18NString      | undefined;
+
+    /** URLs to images / logos */
+    imageURLs?:                   string[];
+
+    manufacturer?:                IManufacturer             | undefined;
+    model?:                       IDeviceModel              | undefined;
+    firmware?:                    IFirmware                 | undefined;
+    hardware?:                    IHardware                 | undefined;
+    legalCompliance?:             ILegalCompliance          | undefined;
+
+    length?:                      Meter                     | undefined; // metrological unit!
+    resistance?:                  Ohm                       | undefined; // metrological unit!
+    lossCompensation?:            string                    | undefined;
+    lossCompensationId?:          string                    | undefined;
+
+    temperaturSensors?:           Array<ITemperatureSensor> | undefined;
+
 }
+
+
+/** A temperature sensor */
+export interface ITemperatureSensor {
+
+    "@id":                        string;
+    "@context"?:                  string | Array<string>   | undefined;
+    description?:                 chargyLib.I18NString     | undefined;
+
+    /** URLs to images / logos */
+    imageURLs?:                   string[];
+
+    manufacturer?:                IManufacturer            | undefined;
+    model?:                       IDeviceModel             | undefined;
+    firmware?:                    IFirmware                | undefined;
+    hardware?:                    IHardware                | undefined;
+    legalCompliance?:             ILegalCompliance         | undefined;
+
+    chargingStationId?:           string                   | undefined;
+    chargingStation?:             IChargingStation         | undefined;
+    EVSEId?:                      string                   | undefined;
+    EVSE?:                        IEVSE                    | undefined;
+    cableId?:                     string                   | undefined;
+    cable?:                       ICable                   | undefined;
+
+    signatureInfos?:              ISignatureInfos          | undefined;
+    signatureFormat?:             string                   | undefined;
+    publicKeys?:                  Array<IPublicKey>        | undefined;
+
+}
+
+
 
 export interface IConformity {
     certificateId:              string;
     url?:                       string;
-    notBefore:                  string;
-    notAfter:                   string;
+    notBefore:                  Timestamp;
+    notAfter:                   Timestamp;
     officialSoftware?:          Array<ITransparencySoftware>;  // The transparency software that is officially part of the charging station.
     compatibleSoftware?:        Array<ITransparencySoftware>;  // Other transparency softwares, that can verify the transparency record, but are not officially part of the charging station.
     freeText:                   string;
@@ -236,8 +437,8 @@ export interface IConformity {
 export interface ICalibration {
     certificateId:              string;
     url?:                       string;
-    notBefore:                  string;
-    notAfter:                   string;
+    notBefore:                  Timestamp;
+    notAfter:                   Timestamp;
     freeText:                   string;
 }
 
@@ -658,19 +859,19 @@ export function isIFileInfo(obj: unknown): obj is IFileInfo {
 
 export interface IFileInfo {
     name:           string,
-    path?:          string | undefined,
-    type?:          string | undefined,
-    data?:          ArrayBuffer|Uint8Array | undefined,
-    info?:          string | undefined,
-    error?:         string | undefined,
+    path?:          string                   | undefined,
+    type?:          string                   | undefined,
+    data?:          ArrayBuffer | Uint8Array | undefined,
+    info?:          string                   | undefined,
+    error?:         string                   | undefined,
     exception?:     unknown
 }
 
 export interface IChargingPeriod
 {
-    startTimestamp:                 string,
-    stopTimestamp?:                 string,
-    endTimestamp?:                  string,
+    startTimestamp:                 Timestamp,
+    stopTimestamp?:                 Timestamp,
+    endTimestamp?:                  Timestamp,
     chargingTariffId:               string,
     activeChargingTariffElement?:   IChargingTariffElement,
     costs:                          IChargingCosts
@@ -688,17 +889,17 @@ export enum DayOfWeek
 }
 
 export interface ITariffRestriction {
-    start_time?:            string           | undefined,
-    end_time?:              string           | undefined,
-    start_date?:            string           | undefined,
-    end_date?:              string           | undefined,
-    min_kwh?:               Decimal          | undefined,
-    max_kwh?:               Decimal          | undefined,
-    min_power?:             Decimal          | undefined,
-    max_power?:             Decimal          | undefined,
-    min_duration?:          number           | undefined,
-    max_duration?:          number           | undefined,
-    day_of_week?:           Array<DayOfWeek> | undefined
+    start_time?:                string           | undefined,
+    end_time?:                  string           | undefined,
+    start_date?:                string           | undefined,
+    end_date?:                  string           | undefined,
+    min_kwh?:                   Decimal          | undefined,
+    max_kwh?:                   Decimal          | undefined,
+    min_power?:                 Decimal          | undefined,
+    max_power?:                 Decimal          | undefined,
+    min_duration?:              number           | undefined,
+    max_duration?:              number           | undefined,
+    day_of_week?:               Array<DayOfWeek> | undefined
 }
 
 export interface IPriceComponent {
@@ -721,7 +922,7 @@ export interface IDisplayText {
 export interface IChargingTariff {
 
     "@id":                      string;
-    "@context"?:                string|Array<string>,
+    "@context"?:                string | Array<string> | undefined;
     country_code?:              string,
     party_id?:                  string,
     shortName?:                 chargyLib.I18NString;
@@ -745,7 +946,7 @@ export interface IChargingTariff {
 export interface IParkingTariff {
 
     "@id":                      string;
-    "@context"?:                string|Array<string>,
+    "@context"?:                string | Array<string> | undefined;
     country_code?:              string,
     party_id?:                  string,
     description?:               chargyLib.I18NString;
@@ -786,9 +987,9 @@ export type IssueReportPayload = {
 
 export interface IManufacturer
 {
-    "@context"?:                string;
-    name:                       string | undefined;
-    url?:                       string | undefined;
+    "@context"?:                string | Array<string> | undefined;
+    name:                       string                 | undefined;
+    url?:                       string                 | undefined;
     description?:               chargyLib.I18NString;
     contact?:                   IContact;
     support?:                   ISupport;
@@ -798,36 +999,36 @@ export interface IManufacturer
 }
 
 export interface IDeviceModel {
-    "@context"?:                string;
-    name?:                      string     | undefined;
-    url?:                       string     | undefined;
+    "@context"?:                string | Array<string> | undefined;
+    name?:                      string                 | undefined;
+    url?:                       string                 | undefined;
 }
 
 export interface IHardware {
-    revision?:                  string     | undefined;
-    "@context"?:                string;
-    url?:                       string     | undefined;
-    serialNumber?:              string     | undefined;
+    revision?:                  string                 | undefined;
+    "@context"?:                string | Array<string> | undefined;
+    url?:                       string                 | undefined;
+    serialNumber?:              string                 | undefined;
 }
 
 export interface IFirmware {
-    version?:                   string               | undefined;
-    "@context"?:                string;
-    releaseDate?:               string               | undefined;
-    url?:                       string               | undefined;
+    version?:                   string                 | undefined;
+    "@context"?:                string | Array<string> | undefined;
+    releaseDate?:               string                 | undefined;
+    url?:                       string                 | undefined;
     components?:                Array<IFirmwareComponent>;
-    checksum?:                  string               | undefined;
-    description?:               chargyLib.I18NString | undefined;
+    checksum?:                  string                 | undefined;
+    description?:               chargyLib.I18NString   | undefined;
 }
 
 export interface IFirmwareComponent {
-    "@id":                      string               | undefined;
-    "@context"?:                string;
-    description?:               chargyLib.I18NString | undefined;
-    version:                    string               | undefined;
-    releaseDate?:               string               | undefined;
-    checksum:                   string               | undefined;
-    url?:                       string               | undefined;
+    "@id":                      string                 | undefined;
+    "@context"?:                string | Array<string> | undefined;
+    description?:               chargyLib.I18NString   | undefined;
+    version:                    string                 | undefined;
+    releaseDate?:               string                 | undefined;
+    checksum:                   string                 | undefined;
+    url?:                       string                 | undefined;
 }
 
 
@@ -852,3 +1053,53 @@ export interface IContainerInfos {
     chargingSessions?:      Array<IChargingSession>  | undefined;
     warnings?:              Array<IWarning>          | undefined;
 }
+
+
+export interface ITimeSource {
+
+    "@context"?:           string    | Array<string>   | undefined;
+    isLegalTime?:          boolean   | undefined,
+    authority?:            string    | undefined,
+    accuracy?:             string    | undefined, // "+-2 ms"
+    stratum?:              number    | undefined, // 2
+    syncInterval?:         string    | undefined, // "PT1H"
+    lastSynchronization?:  Timestamp | undefined, // "2026-08-28T11:14:27Z"
+    minServers?:           number    | undefined, // 2
+    autoConfURL?:          string    | undefined, // "https://time.ptb.de/files/ptb-ntp-services.json"
+
+    servers:               Array<ITimeServer>; 
+
+}
+
+export interface ITimeServer {
+
+    "@context"?:           string | Array<string> | undefined;
+    server:                string,              // "nts://ptbtime1.ptb.de"
+    //ToDo: What when NTS-KE server != NTP+NTS server?
+    priority?:             number                 | undefined,
+    weight?:               number                 | undefined
+
+}
+
+export interface ILegallyRelevantLogMessage
+{
+    "@context"?:                  string | Array<string>         | undefined;
+    chargingSession?:             IChargingSession               | undefined;
+    timestamp:                    Timestamp;
+    code?:                        string                         | undefined;
+    data?:                        chargyLib.JSONObject           | undefined;
+    text?:                        chargyLib.I18NString           | undefined;
+    signatures?:                  Array<ISignature|ISignatureRS> | undefined;
+}
+
+export interface ISupportMessage
+{
+    "@id":                        string;
+    "@context"?:                  string | Array<string>         | undefined;
+    chargingSession?:             IChargingSession               | undefined;
+    timestamp:                    Timestamp;
+    text?:                        chargyLib.I18NString           | undefined;
+    data?:                        chargyLib.JSONObject           | undefined;
+    signatures?:                  Array<ISignature|ISignatureRS> | undefined;
+}
+

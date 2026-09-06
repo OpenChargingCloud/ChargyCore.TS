@@ -44,10 +44,10 @@ export {
     type CustomHeaders,
     type IChargeTransparencyLiveLink,
     type ICustomHeaderValueProvider,
-    type ITransport,
+    type ILiveTransport,
     type ITransportURL,
     type TOTPConfig,
-    type Transport,
+    type LiveTransports,
     type TransportHTTPS,
     type TransportHTTPSSE,
     type TransportWebsocket
