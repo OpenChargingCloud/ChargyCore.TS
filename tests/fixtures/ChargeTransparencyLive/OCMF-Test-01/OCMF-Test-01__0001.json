@@ -4,7 +4,7 @@
     "@context":           "https://open.charging.cloud/contexts/chargeTransparency/live/link/1.0",
     "created":            "2026-08-28T11:59:59Z",
     "lastUpdated":        "2026-08-28T12:00:00Z",
-    "updates":            "E5CE6DD9F14CA41488921936525444C5FE025420A95B7298B68E622CF77E849B",
+    "updates":            "48B4584101D8F1A64216F5F6EF247E9375747C96B5F03710A9A25A89EE691DA7",
     "description":        {
                               "en": "OCMF-Test-01 Transparency Live-Link",
                               "de": "OCMF-Test-01 Transparenz Live-Link"
@@ -142,7 +142,7 @@
     "liveTransports": [
                          {
                              "type":         "https",
-                             "url":          "https://api1.example.com/chargingSessions/OCMF-Test-01/transparency/live?token=abcdef",
+                             "urls":         [ "https://api1.example.com/chargingSessions/OCMF-Test-01/transparency/live?token=abcdef" ],
                              "refresh":       10,
                              "customHeaders": {
 
@@ -191,7 +191,7 @@
     "signedMeterValues": {
         "encodings": [ "OCMF", "plain" ],
         "values": [
-            "OCMF|{\"FV\":\"1.4\",\"GI\":\"GraphDefined Charging Station\",\"GS\":\"CS-OCMF-TEST-01\",\"GV\":\"1.0.0\",\"PG\":\"T1\",\"MV\":\"GraphDefined\",\"MM\":\"GD-OCMF-AC22\",\"MS\":\"GD-METER-OCMF-TEST-01\",\"MF\":\"1.0.0\",\"IS\":true,\"IL\":\"TRUSTED\",\"IF\":[\"RFID_PLAIN\"],\"IT\":\"ISO14443\",\"ID\":\"04A9B7C21E5D80\",\"CT\":\"EVSEID\",\"CI\":\"DE*GEF*E12345678*1\",\"CF\":\"1.0.0\",\"RD\":[{\"TM\":\"2026-08-28T14:00:00,000+0200 S\",\"TX\":\"B\",\"RV\":1234.0000,\"RI\":\"1-0:1.8.0*255\",\"RU\":\"kWh\",\"RT\":\"AC\",\"EF\":\"\",\"ST\":\"G\"}]}|{\"SA\":\"ECDSA-secp256r1-SHA256\",\"SE\":\"hex\",\"SM\":\"application/x-der\",\"SD\":\"304402207E92B54D8D52522D40218FA2DE58E82180F01D4518D7AA3C1868128EAD92493D02203901206080D1517A0B16EC0E9481D0ECAB80A4B12AD45ACC554B11F900CA05BE\"}"
+            "OCMF|{\"FV\":\"1.4\",\"GI\":\"GraphDefined Charging Station\",\"GS\":\"CS-OCMF-TEST-01\",\"GV\":\"1.0.0\",\"PG\":\"T1\",\"MV\":\"GraphDefined\",\"MM\":\"GD-OCMF-AC22\",\"MS\":\"GD-METER-OCMF-TEST-01\",\"MF\":\"1.0.0\",\"IS\":true,\"IL\":\"TRUSTED\",\"IF\":[\"RFID_PLAIN\"],\"IT\":\"ISO14443\",\"ID\":\"04A9B7C21E5D80\",\"CT\":\"EVSEID\",\"CI\":\"DE*GEF*E12345678*1\",\"CF\":\"1.0.0\",\"RD\":[{\"TM\":\"2026-08-28T14:00:00,000+0200 S\",\"TX\":\"B\",\"RV\":1234.0000,\"RI\":\"1-0:1.8.0*255\",\"RU\":\"kWh\",\"RT\":\"AC\",\"EF\":\"\",\"ST\":\"G\"}]}|{\"SA\":\"ECDSA-secp256r1-SHA256\",\"SE\":\"hex\",\"SM\":\"application/x-der\",\"SD\":\"3046022100CF6BD179F6E529517EF9FB4B196D0603763665E4862A0AD0855D7FBA6BBB31820221009E498E6AF9F74B30C8484743D8338138A0CF3C2A2A0AD8DB2BA779FC7ECBEFA7\"}"
         ]
     },
 
@@ -204,7 +204,7 @@
                 "encodings": [ "JSON", "JCS", "UTF-8" ]
             },
             "encodings": [ "Ecdsa-Sig-Value", "DER", "hex" ],
-            "value": "304402204AF8101EA4D506FBB3E7BEF4A9D0F28A4B64B97C05A598A6C7807087D90152EA022060604B4FBB6AFF618CFFAE5ECE532BD5567317A478C25655F306A8BCEA5B5334"
+            "value": "3046022100DE2B5A4300EF6543B8BBB31B9E9CD2292614B68F5BBD2482C156DB4E246D329F02210093E2247D57150A086A9DA24AC31188C9C3697326AC4C1686085044436A59FA1E"
         },
         {
             "keyId": "A2F94A58FB75E25BC2CECDF582819B6D44F3705D0C3BADD6391E9D536D5671E8",
@@ -214,7 +214,7 @@
                 "encodings": [ "JSON", "JCS", "UTF-8" ]
             },
             "encodings": [ "raw", "hex" ],
-            "value": "8AB198D7409945E75BC3AC88147290FF6213D15DDC313F4C32E70A97212FDA1E9A7D3B80EBB836DBEF9373E98E21877908F44D77533A9BB53172FBF977C3F001"
+            "value": "B273838D912ED280F83A554C27A45906BAD91A34EF4B9574E2AFC137D874A9282C3CB2D1B56870AC7427DEEB49711CCF71EB1E94D3B0D16C17730A16FC8E5B03"
         }
     ]
 

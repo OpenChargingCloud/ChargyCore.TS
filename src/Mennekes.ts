@@ -472,18 +472,15 @@ export class MennekesCrypt01 extends ACrypt {
     }
 
     async ViewMeasurement(measurementValue:      IMennekesMeasurementValue,
-                          errorDiv:              HTMLDivElement,
+                          _errorDiv:             HTMLDivElement,
                           introDiv:              HTMLDivElement,
-                          infoDiv:               HTMLDivElement,
+                          _infoDiv:              HTMLDivElement,
                           PlainTextDiv:          HTMLDivElement,
                           HashedPlainTextDiv:    HTMLDivElement,
                           PublicKeyDiv:          HTMLDivElement,
                           SignatureExpectedDiv:  HTMLDivElement,
                           SignatureCheckDiv:     HTMLDivElement) : Promise<Error | undefined>
     {
-
-        void errorDiv;
-        void infoDiv;
 
         const result = measurementValue.result as IMennekesCrypt01Result;
 

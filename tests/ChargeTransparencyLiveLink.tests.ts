@@ -13,7 +13,7 @@ import {
     IsAChargeTransparencyLiveLink,
     isCustomHeaderValue,
     isCustomHeaders,
-    isTransport,
+    isLiveTransport,
     type IChargeTransparencyLiveLink
 } from "../src/interfaces/IChargeTransparencyLiveLink";
 import {
@@ -75,13 +75,17 @@ describe("Charge Transparency LiveLink", () => {
         expect(IsAChargeTransparencyLiveLink({ ...liveLink, "@context": "https://example.com/other" })).toBe(false);
         expect(IsAChargeTransparencyLiveLink(undefined)).toBe(false);
 
-        // A malformed optional field does not un-recognise a live link: the
-        // context identifies it, and a broken transport is dropped where the
-        // transports are read, not by turning the whole document into an
-        // "unknown format".
-        expect(IsAChargeTransparencyLiveLink({ ...liveLink, liveTransports: [ { type: "ftp", url: "https://example.com" } ] })).toBe(true);
-        expect(IsAChargeTransparencyLiveLink({ ...liveLink, liveTransports: "not an array" })).toBe(true);
+        // A malformed optional field does not un-recognise a live link: a
+        // broken transport is dropped where the transports are read, not by
+        // turning the whole document into an "unknown format".
+        expect(IsAChargeTransparencyLiveLink({ ...liveLink, liveTransports: [ { type: "ftp", urls: [ "https://example.com" ] } ] })).toBe(true);
         expect(IsAChargeTransparencyLiveLink({ ...liveLink, connector: 42 })).toBe(true);
+
+        // What every live link has is checked, though: a document that states
+        // no creation timestamp, or whose transports are not a list at all, is
+        // not one of these documents in the first place.
+        expect(IsAChargeTransparencyLiveLink({ ...liveLink, liveTransports: "not an array" })).toBe(false);
+        expect(IsAChargeTransparencyLiveLink({ ...liveLink, created: 42 })).toBe(false);
 
     });
 
@@ -225,7 +229,12 @@ describe("Charge Transparency LiveLink", () => {
 
     });
 
-    test("adds the current UTC timestamp when a live link has none", async () => {
+    test("keeps the timestamp the document states, and requires one", async () => {
+
+        // Reading a document is not creating one: a timestamp put in while
+        // reading would say when it was read, which in a legally relevant
+        // document is not what "created" means. So the stated one is kept even
+        // when the clock says otherwise...
         vi.useFakeTimers();
         vi.setSystemTime(new Date("2026-06-13T10:11:12.000Z"));
 
@@ -236,21 +245,29 @@ describe("Charge Transparency LiveLink", () => {
             expect(IsAChargeTransparencyLiveLink(report)).toBe(true);
 
             if (IsAChargeTransparencyLiveLink(report))
-                expect(report.created).toBe("2026-06-13T10:11:12.000Z");
+                expect(report.created).toBe("2026-09-06T22:58:14Z");
         }
         finally
         {
             vi.useRealTimers();
         }
+
+        // ...and a document that states none is not a live link at all, rather
+        // than one with an invented creation time.
+        const withoutCreated = parseJSONRecord(readFixture("ChargeTransparencyLive/ChargeTransparencyLiveLink_2.json"));
+        delete withoutCreated["created"];
+
+        expect(IsAChargeTransparencyLiveLink(withoutCreated)).toBe(false);
+
     });
 
     test("reads the custom headers of an https transport", () => {
 
         // A literal value and a value computed per request are the two shapes
         // a header value may have.
-        expect(isTransport({
+        expect(isLiveTransport({
             type:           "https",
-            url:            "https://api.example.com/live",
+            urls:           [ "https://api.example.com/live" ],
             refresh:         10,
             customHeaders:  {
                                 "X-Key1": "headerValue1",
@@ -282,10 +299,10 @@ describe("Charge Transparency LiveLink", () => {
         // three are validated.
         for (const type of [ "https", "httpSSE", "websocket" ])
         {
-            expect(isTransport({ type, url: "https://api.example.com/live", customHeaders: { "X-Key1": "v" } })).toBe(true);
-            expect(isTransport({ type, url: "https://api.example.com/live", customHeaders: "X-Key1: v"        })).toBe(false);
-            expect(isTransport({ type, url: "https://api.example.com/live", customHeaders: { "X-Key1": 42 }   })).toBe(false);
-            expect(isTransport({ type, url: "https://api.example.com/live"                                    })).toBe(true);
+            expect(isLiveTransport({ type, urls: [ "https://api.example.com/live" ], customHeaders: { "X-Key1": "v" } })).toBe(true);
+            expect(isLiveTransport({ type, urls: [ "https://api.example.com/live" ], customHeaders: "X-Key1: v"        })).toBe(false);
+            expect(isLiveTransport({ type, urls: [ "https://api.example.com/live" ], customHeaders: { "X-Key1": 42 }   })).toBe(false);
+            expect(isLiveTransport({ type, urls: [ "https://api.example.com/live" ]                                    })).toBe(true);
         }
 
     });
@@ -295,12 +312,12 @@ describe("Charge Transparency LiveLink", () => {
         // Absent no longer means "never ask again" but defaultRefreshSeconds:
         // a document that names a polling endpoint without saying how often
         // still wants its readers to see what the session does next.
-        expect(isTransport({ type: "https", url: "https://api.example.com/live" })).toBe(true);
+        expect(isLiveTransport({ type: "https", urls: [ "https://api.example.com/live" ] })).toBe(true);
         expect(defaultRefreshSeconds).toBe(10);
 
         // What it does say is still type-checked, and still only on https.
-        expect(isTransport({ type: "https",     url: "https://api.example.com/live", refresh: "10" })).toBe(false);
-        expect(isTransport({ type: "websocket", url: "wss://api.example.com/live",   refresh: "10" })).toBe(true);
+        expect(isLiveTransport({ type: "https",     urls: [ "https://api.example.com/live" ], refresh: "10" })).toBe(false);
+        expect(isLiveTransport({ type: "websocket", urls: [ "wss://api.example.com/live"   ], refresh: "10" })).toBe(true);
 
     });
 

@@ -1,4 +1,4 @@
-﻿/*
+/*
  * Copyright (c) 2018-2026 GraphDefined GmbH <achim.friedland@graphdefined.com>
  * This file is part of ChargyCore <https://github.com/OpenChargingCloud/ChargyCore.TS>
  *
@@ -193,8 +193,6 @@ export function getElementsByLocalName(parent:     Document | Element,
 
 export function ParseJSON_LD(Text:      string,
                              _Context:  string = ""): Record<string, unknown> {
-
-    void _Context;
 
     const JObject = JSON.parse(Text) as Record<string, unknown>;
 

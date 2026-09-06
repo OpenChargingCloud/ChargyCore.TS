@@ -6,7 +6,7 @@ Fixtures for the charge transparency live link format
 | Fixture                            | |
 | ---------------------------------- | - |
 | `ChargeTransparencyLiveLink_1.json`| a full live link: the **final document** of the `OCMF-Test-01` series, byte-identical to `OCMF-Test-01__0019.json`. Generated, not hand-maintained. |
-| `ChargeTransparencyLiveLink_2.json`| the minimal form: context and live transports only |
+| `ChargeTransparencyLiveLink_2.json`| the minimal form: context, creation timestamp and live transports only |
 | `OCMF-Test-01/`                    | the generated 22 kW charging session it comes from, see its own README |
 
 This file collects the conventions that apply to **all** of them. Everything
@@ -369,10 +369,10 @@ the two limits are worth knowing before a producer exercises the freedom.
 
 A live link describes a charging session that is still running, so it says
 where the next version of itself can be had. `liveTransports` lists the ways,
-each with a `type` of `https`, `websocket` or `httpSSE`, and either a single
-`url` or a list of `urls` with a `priority` and a `weight` per entry. A
-`totp` gives the shared secret and the time step for the one-time password
-those endpoints expect.
+each with a `type` of `https`, `websocket` or `httpSSE` and a list of `urls`.
+An entry of that list is either the URL itself or an object carrying it
+alongside a `priority` and a `weight`. A `totp` gives the shared secret and the
+time step for the one-time password those endpoints expect.
 
 An `https` transport has to be asked, where the other two deliver on their own,
 so it may state how often to ask:
@@ -380,7 +380,7 @@ so it may state how often to ask:
 ```json
 {
     "type":    "https",
-    "url":     "https://api1.example.com/chargingSessions/OCMF-Test-01/transparency/live?token=abcdef",
+    "urls":    [ "https://api1.example.com/chargingSessions/OCMF-Test-01/transparency/live?token=abcdef" ],
     "refresh":  10
 }
 ```

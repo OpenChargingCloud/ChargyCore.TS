@@ -945,17 +945,14 @@ export class EDL40Crypt01 extends ACrypt {
     }
 
     async ViewMeasurement(measurementValue:      chargeTransparencyRecord.IMeasurementValue,
-                          errorDiv:              HTMLDivElement,
+                          _errorDiv:             HTMLDivElement,
                           introDiv:              HTMLDivElement,
-                          infoDiv:               HTMLDivElement,
+                          _infoDiv:              HTMLDivElement,
                           PlainTextDiv:          HTMLDivElement,
                           HashedPlainTextDiv:    HTMLDivElement,
                           PublicKeyDiv:          HTMLDivElement,
                           SignatureExpectedDiv:  HTMLDivElement,
                           SignatureCheckDiv:     HTMLDivElement): Promise<Error | undefined> {
-
-        void errorDiv;
-        void infoDiv;
 
         const result = measurementValue.result as IEDL40Crypt01Result | undefined;
 

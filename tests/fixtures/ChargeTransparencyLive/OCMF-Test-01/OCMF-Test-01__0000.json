@@ -141,7 +141,7 @@
     "liveTransports": [
                          {
                              "type":         "https",
-                             "url":          "https://api1.example.com/chargingSessions/OCMF-Test-01/transparency/live?token=abcdef",
+                             "urls":         [ "https://api1.example.com/chargingSessions/OCMF-Test-01/transparency/live?token=abcdef" ],
                              "refresh":       10,
                              "customHeaders": {
 
@@ -197,7 +197,7 @@
                 "encodings": [ "JSON", "JCS", "UTF-8" ]
             },
             "encodings": [ "Ecdsa-Sig-Value", "DER", "hex" ],
-            "value": "30450220291E95BA0386F4FDA5E43C732FAE0CEEC8B51BF9A1984AF9CEB61C7872457213022100F1B99441818CF7D787645712F6195D1C1E643B87963D5BCA5704F660950FF683"
+            "value": "3045022100D3F685946D67A11B311AA95DE71647EC51A03564BBA4AA8F92865700BD3661900220028E2365BE7D3CACF833215D821D044C0EF2FEE7F5E3CCF19B50F1609B728B07"
         },
         {
             "keyId": "A2F94A58FB75E25BC2CECDF582819B6D44F3705D0C3BADD6391E9D536D5671E8",
@@ -207,7 +207,7 @@
                 "encodings": [ "JSON", "JCS", "UTF-8" ]
             },
             "encodings": [ "raw", "hex" ],
-            "value": "7FC66A87EDD987CB12C47A81CA1B4FF0FE76F505206C21D4136C92913E0EA68F45A9D1AF319399406AA9853DE09DDF2EE22FBDB8321010437F1F736565CDE807"
+            "value": "0269C3E8A02194DF70373B797220E6ABBF74A466ECD01BA310BE6476E6FB1BD04777AFA691C163128181F3AF57D442A48838722DFBD8F44848F93B9C91AB2D05"
         }
     ]
 

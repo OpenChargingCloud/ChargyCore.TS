@@ -202,24 +202,24 @@ export function IsAPublicKeySignature(data: unknown): data is IPublicKeySignatur
 export interface IPublicKey extends chargyLib.JSONObject
 {
 
-    "@context"?:                string | Array<string>                        | undefined;
-    subject?:                   string | Array<string> | chargyLib.JSONObject | undefined;
-    algorithm:                  string | chargyLib.IOIDInfo;
-    type?:                      string | chargyLib.IOIDInfo;
-    format?:                    string                                        | undefined;     // e.g. "DER" | "rs"
-    encoding?:                  string                                        | undefined;     // e.g. "hex" | "base64"
-    value:                      string;
-    signatures?:                Array<IPublicKeySignature>;
-    certainty?:                 number                                        | undefined;
+    "@context"?:                  chargyInterfaces.LinkedDataContext | Array<chargyInterfaces.LinkedDataContext> | undefined;
+    subject?:                     string | Array<string> | chargyLib.JSONObject | undefined;
+    algorithm:                    string | chargyLib.IOIDInfo;
+    type?:                        string | chargyLib.IOIDInfo;
+    format?:                      string                                        | undefined;     // e.g. "DER" | "rs"
+    encoding?:                    string                                        | undefined;     // e.g. "hex" | "base64"
+    value:                        string;
+    signatures?:                  Array<IPublicKeySignature>;
+    certainty?:                   number                                        | undefined;
 
 
     // NEW!!!!!!!!!!!!!
 
     /** The allowed key usage for this public key */
-    keyUsage:                     Array<string>;
+    keyUsage?:                    Array<string>                                 | undefined;
 
     /** The ordered encoding procedure */
-    encodings?:                   Array<string>;
+    encodings?:                   Array<string>                                 | undefined;
 
 }
 
@@ -280,11 +280,11 @@ export interface IPublicKeySignature extends chargyLib.JSONObject
         encoding?:              string        | undefined;
         value:                  string;
     } | undefined;
-    timestamp?:                 string        | undefined;
+    timestamp?:                 chargyInterfaces.Timestamp        | undefined;
     issuer?:                    string        | undefined;
     signer?:                    string        | undefined;
-    notBefore?:                 string        | undefined;
-    notAfter?:                  string        | undefined;
+    notBefore?:                 chargyInterfaces.Timestamp        | undefined;
+    notAfter?:                  chargyInterfaces.Timestamp        | undefined;
     keyUsage?:                  Array<string> | undefined;
     operations?:                chargyLib.JSONObject | undefined;
     comment?:                   chargyLib.JSONObject | undefined;

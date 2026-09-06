@@ -6,3 +6,4 @@ artifacts/
 *.tgz
 *.tsbuildinfo
 npm-debug.log*
+docs/*

@@ -1821,8 +1821,6 @@ export class Chargy {
                         // verified and would turn a good signature into a bad one.
                         this.verifyLiveLinkSignatures(JSONContent);
 
-                        JSONContent.created ??= new Date().toISOString();
-
                         processedFile.result = JSONContent;
 
                     }

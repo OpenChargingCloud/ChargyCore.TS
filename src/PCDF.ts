@@ -502,19 +502,15 @@ export class PCDFCrypt01 extends ACrypt {
     }
 
     async ViewMeasurement(measurementValue:      IPCDFMeasurementValue,
-                          errorDiv:              HTMLDivElement,
+                          _errorDiv:             HTMLDivElement,
                           introDiv:              HTMLDivElement,
-                          infoDiv:               HTMLDivElement,
+                          _infoDiv:              HTMLDivElement,
                           PlainTextDiv:          HTMLDivElement,
                           HashedPlainTextDiv:    HTMLDivElement,
                           PublicKeyDiv:          HTMLDivElement,
                           SignatureExpectedDiv:  HTMLDivElement,
-                          SignatureCheckDiv:     HTMLDivElement) : Promise<Error | undefined>
+                          _SignatureCheckDiv:    HTMLDivElement) : Promise<Error | undefined>
     {
-
-        void errorDiv;
-        void infoDiv;
-        void SignatureCheckDiv;
 
         if (measurementValue.measurement === undefined)
             return new Error("Invalid measurement!");

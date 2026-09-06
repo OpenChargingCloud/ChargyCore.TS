@@ -23,10 +23,12 @@ import type * as simpleURL                    from './IURL'
 import type * as publicKeyInfo               from './IPublicKeyInfo';
 import      * as chargyLib                   from './chargyLib'
 import Decimal                               from 'decimal.js';
+
 import {
     isISessionCryptoResult1,
     SessionVerificationResult
 } from './chargyInterfaces';
+
 
 export function IsAChargeTransparencyRecord(data: unknown): data is IChargeTransparencyRecord
 {
@@ -47,10 +49,11 @@ export interface IChargeTransparencyRecord extends chargyLib.JSONObject
 {
 
     "@id":                       string;
-    "@context":                  string | Array<string>                           | undefined;
-    begin?:                      string                                           | undefined;
-    end?:                        string                                           | undefined;
+    "@context":                  chargyInterfaces.LinkedDataContext | Array<chargyInterfaces.LinkedDataContext> | undefined;
+    begin?:                      chargyInterfaces.Timestamp                       | undefined;
+    end?:                        chargyInterfaces.Timestamp                       | undefined;
     description?:                chargyLib.I18NString                             | undefined;
+
     contracts?:                  Array<chargyInterfaces.IContract>                | undefined;
     chargingStationOperators?:   Array<chargyInterfaces.IChargingStationOperator> | undefined;
     chargingPools?:              Array<chargyInterfaces.IChargingPool>            | undefined;
@@ -99,11 +102,11 @@ export function IsASessionCryptoResult(data: unknown): data is chargyInterfaces.
 export interface IChargingSession
 {
     "@id":                        string;
-    "@context"?:                  string | Array<string>                             | undefined;
+    "@context"?:                  chargyInterfaces.LinkedDataContext | Array<chargyInterfaces.LinkedDataContext> | undefined;
     ctr?:                         IChargeTransparencyRecord                          | undefined;
     GUI?:                         HTMLDivElement                                     | undefined;
-    begin?:                       string                                             | undefined;
-    end?:                         string                                             | undefined;
+    begin?:                       chargyInterfaces.Timestamp                         | undefined;
+    end?:                         chargyInterfaces.Timestamp                         | undefined;
     internalSessionId?:           string                                             | undefined;
     chargingProductRelevance?:    chargyInterfaces.IChargingProductRelevance         | undefined,
     description?:                 chargyLib.       I18NString                        | undefined;
@@ -140,16 +143,16 @@ export interface IChargingSession
 
 export interface IMeasurement
 {
-    "@context"?:                  string| Array<string>            | undefined;
+    "@context"?:                  chargyInterfaces.LinkedDataContext| Array<chargyInterfaces.LinkedDataContext> | undefined;
     chargingSession?:             IChargingSession                 | undefined;
     energyMeterId:                string;
     phenomena?:                   unknown[]                        | undefined;
     name:                         string;
     obis:                         string;
-    unit?:                        string                           | undefined;
+    unit?:                        chargyInterfaces.UnitSymbol      | undefined;
     unitEncoded?:                 number                           | undefined;
     valueType?:                   string                           | undefined;
-    scale:                        number;
+    scale:                        chargyInterfaces.DecimalScale;
     verifyChain?:                 boolean                          | undefined;
     signatureInfos?:              chargyInterfaces.ISignatureInfos | undefined;
     values:                       Array<IMeasurementValue>;
@@ -158,7 +161,7 @@ export interface IMeasurement
 
 export interface IMeasurements
 {
-    "@context"?:                  string | Array<string>         | undefined;
+    "@context"?:                  chargyInterfaces.LinkedDataContext | Array<chargyInterfaces.LinkedDataContext> | undefined;
     values:                       Array<IMeasurement>;
     verificationResult?:          chargyInterfaces.ICryptoResult | undefined;
 }
@@ -170,12 +173,12 @@ export interface IMeasurementValue
     method?:                      ACrypt                                          | undefined;
     previousValue?:               IMeasurementValue                               | undefined;
 
-    timestamp:                    string;
-    value:                        Decimal;
+    timestamp:                    chargyInterfaces.Timestamp;
+    value:                        chargyInterfaces.MeasurementMagnitude;
     value_displayPrefix?:         chargyInterfaces.DisplayPrefixes                | undefined;
     value_displayPrecision?:      number                                          | undefined;
     statusMeter?:                 string                                          | undefined;
-    secondsIndex?:                number                                          | undefined;
+    secondsIndex?:                chargyInterfaces.DurationSeconds                                          | undefined;
     paginationId?:                number | string                                 | undefined;
     logBookIndex?:                string                                          | undefined;
     statusAdapter?:               string                                          | undefined;

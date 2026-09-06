@@ -15,123 +15,12 @@
  * limitations under the License.
  */
 
-import type * as chargyInterfaces        from './chargyInterfaces'
-import * as chargyLib                    from './chargyLib'
+import * as chargyInterfaces              from './chargyInterfaces'
+import * as chargyLib                     from './chargyLib'
 import type { IDocumentSignaturesResult } from '../DocumentSignatures'
 
 
 export const ChargeTransparencyLiveLinkContext = "https://open.charging.cloud/contexts/chargeTransparency/live/link/1.0";
-
-/**
- * How often an https transport is asked again when it does not say, in
- * seconds. A charging session that is still running changes every few seconds,
- * so "it did not say" means "the usual period", not "never ask again".
- *
- * A client is expected to clamp what a document states rather than obey it -
- * this default is what it uses when there is nothing to clamp.
- */
-export const defaultRefreshSeconds = 10;
-
-
-export function isConnector(data: unknown): data is chargyInterfaces.IConnector {
-    if (!chargyLib.isObject(data))
-        return false;
-
-    return [ "standard", "format", "powerType", "maxPower" ].
-               every(key => data[key] === undefined || typeof data[key] === "string");
-}
-
-function isTransportURL(data: unknown): data is ITransportURL|string {
-
-    if (typeof data === "string")
-        return data.trim() !== "";
-
-    return chargyLib.isObject(data) &&
-           typeof data["url"] === "string" &&
-           (data["priority"] === undefined || typeof data["priority"] === "number") &&
-           (data["weight"]   === undefined || typeof data["weight"]   === "number");
-
-}
-
-// Whether one value of customHeaders is a provider that computes the header
-// value per request, rather than the literal value to send.
-export function isCustomHeaderValueProvider(data: unknown): data is ICustomHeaderValueProvider {
-
-    return chargyLib.isMandatoryJSONObject(data) &&
-           typeof data["valueProvider"] === "string" &&
-           (data["parameters"] === undefined || chargyLib.isMandatoryJSONObject(data["parameters"]));
-
-}
-
-// Whether one value of customHeaders is one of the two things a header value
-// may be: the literal string, or a provider computing it.
-export function isCustomHeaderValue(data: unknown): data is CustomHeaderValue {
-    return typeof data === "string" || isCustomHeaderValueProvider(data);
-}
-
-// Whether customHeaders is a well-formed set of header values. What a name and
-// a value additionally have to look like before they may go into an actual
-// request - HTTP has rules of its own about that - is the sending client's
-// question, not this one.
-export function isCustomHeaders(data: unknown): data is CustomHeaders {
-
-    return chargyLib.isMandatoryJSONObject(data) &&
-           Object.values(data).every(isCustomHeaderValue);
-
-}
-
-// Whether one entry of liveTransports is a well-formed transport. Exported so a
-// consumer can drop the entries that are not, keeping the good ones, rather than
-// discarding the whole live link over one bad transport.
-export function isTransport(data: unknown): data is LiveTransports {
-
-    if (!chargyLib.isObject(data))
-        return false;
-
-    const type = data["type"];
-
-    if (type !== "https"     &&
-        type !== "httpSSE"   &&
-        type !== "websocket")
-    {
-        return false;
-    }
-
-    // Only https declares a refresh period, so only there is it validated.
-    // On the other two it is an unknown property like any other.
-    if (type === "https"                 &&
-        data["refresh"]    !== undefined &&
-        typeof data["refresh"] !== "number")
-    {
-        return false;
-    }
-
-    return (data["url"]  === undefined || typeof data["url"] === "string") &&
-           (data["urls"] === undefined || (Array.isArray(data["urls"]) && data["urls"].every(isTransportURL))) &&
-           (data["totp"] === undefined || isTOTPConfig(data["totp"])) &&
-           (data["customHeaders"] === undefined || isCustomHeaders(data["customHeaders"]));
-
-}
-
-export function IsAChargeTransparencyLiveLink(data: unknown): data is IChargeTransparencyLiveLink {
-
-    // A live link is identified by its context alone. Everything below it is
-    // optional, so a malformed optional field - a broken transport most of all -
-    // must not turn the document into an unrecognised one that then fails as an
-    // "unknown format". Each such field is read defensively where it is used,
-    // and an entry that does not hold up is dropped there, not here: see
-    // isConnector and isTransport for the per-field shape a reader can filter by.
-    return chargyLib.isMandatoryJSONObject(data) &&
-           data["@context"] === ChargeTransparencyLiveLinkContext;
-
-}
-
-function isTOTPConfig(data: unknown): data is TOTPConfig {
-    return chargyLib.isObject(data) &&
-           typeof data["initialSharedSecret"] === "string" &&
-           typeof data["timeStep"]            === "number";
-}
-
 
 /** A charging transparency live link document,
  *  which is a single still ongoing charging session
@@ -140,7 +29,7 @@ function isTOTPConfig(data: unknown): data is TOTPConfig {
  *  or tariff changes. */
 export interface IChargeTransparencyLiveLink extends chargyLib.JSONObject {
 
-    "@context"?:                   string | Array<string> | undefined;
+    "@context":                    chargyInterfaces.LinkedDataContext | Array<chargyInterfaces.LinkedDataContext> | undefined;
 
     /** Multi-language description */
     description?:                  chargyLib.I18NString;
@@ -150,40 +39,40 @@ export interface IChargeTransparencyLiveLink extends chargyLib.JSONObject {
     timeSource?:                   chargyInterfaces.ITimeSource;
 
     /** The timestamp of the document creation (ISO 8601) */
-    created:                       string;
+    created:                       chargyInterfaces.Timestamp;
 
     /** The timestamp of the last document update (ISO 8601) */
-    lastUpdated?:                  string;
+    lastUpdated?:                  chargyInterfaces.Timestamp | undefined;
 
     /** The way document reference ids are generated within this document, default: [ "SHA-256", "hex" ] */
-    docRefIdGeneration?:           Array<string> | undefined;
+    docRefIdGeneration?:           Array<string>              | undefined;
 
     /** The reference identification (crypto hash) of the document that was updated */
-    updates?:                      string;
+    updates?:                      string                     | undefined;
 
 
     /** The charging station operator */
-    chargingStationOperator:       chargyInterfaces.IChargingStationOperator;
+    chargingStationOperator?:      chargyInterfaces.IChargingStationOperator;
 
     /** The charging station */
-    chargingStation:               chargyInterfaces.IChargingStation;
+    chargingStation?:              chargyInterfaces.IChargingStation;
 
     /** The charging session identification at the station/operator */
-    chargingSessionId?:            string | undefined;
+    chargingSessionId?:            string;
 
 
     /** The e-mobility provider */
     eMobilityProvider?:            chargyInterfaces.IEMobilityProvider;
 
     /** EV driver contract information */
-    contract:                      chargyInterfaces.IContract;
+    contract?:                     chargyInterfaces.IContract;
 
 
     /** Available transport methods for live transparency data */
     liveTransports:                Array<LiveTransports>;
 
     /** Signed metering values */
-    signedMeterValues?:            Array<LiveTransports>                              | undefined;
+    signedMeterValues?:            ISignedMeterValues                                 | undefined;
 
     /** Charging periods define tariffs and costs. Start-/stop timestamps should match a signed metering value timestamp. */
     chargingPeriods?:              Array<chargyInterfaces.IChargingPeriod>            | undefined;
@@ -200,7 +89,7 @@ export interface IChargeTransparencyLiveLink extends chargyLib.JSONObject {
     keyIdGeneration?:              Array<string>                                      | undefined;  // [ "SubjectPublicKeyInfo", "DER", "SHA-256", "hex" ]
 
     /** Digital document signatures, e.g. signed by the charging station operator */
-    signatures?:                   Array<chargyInterfaces.ISignature>                 | undefined;
+    signatures?:                   Array<chargyInterfaces.IDocumentSignature>         | undefined;
 
 
 
@@ -225,18 +114,42 @@ export interface IChargeTransparencyLiveLink extends chargyLib.JSONObject {
 
 }
 
+export function IsAChargeTransparencyLiveLink(data: unknown): data is IChargeTransparencyLiveLink {
+
+    // A live link is recognised by its context and by the properties every one
+    // of them has: when it was created, and where its updates can be fetched.
+    // Nothing optional is validated here, so a malformed optional field - a
+    // broken transport most of all - must not turn the document into an
+    // unrecognised one that then fails as an "unknown format". Each such field
+    // is read defensively where it is used, and an entry that does not hold up
+    // is dropped there, not here: see chargyInterfaces.isConnector and
+    // isLiveTransport for the per-field shape a reader can filter by.
+    if (!chargyLib.isMandatoryJSONObject(data))
+        return false;
+
+    if (data["created"] === undefined || typeof data["created"] !== "string")
+        return false;
+
+    if (!Array.isArray(data["liveTransports"]))
+        return false;
+
+    const context = data["@context"];
+    return context === ChargeTransparencyLiveLinkContext ||
+           (Array.isArray(context) && context.every(value => typeof value === "string") &&
+            context.includes(ChargeTransparencyLiveLinkContext));
+
+}
+
 
 /** Union type for the different transport variants */
 export type LiveTransports = TransportHTTPS   |
                              TransportHTTPSSE |
                              TransportWebsocket;
 
-
 export interface ILiveTransport {
 
-    url?:   string;
-    urls?:  Array<ITransportURL|string>;
-    totp?:  TOTPConfig;
+    urls?:  Array<chargyInterfaces.URL|chargyInterfaces.IURL> | undefined;
+    totp?:  chargyInterfaces.TOTPConfig                       | undefined;
 
     /**
      * Additional HTTP headers to send with every request to this transport,
@@ -250,11 +163,12 @@ export interface ILiveTransport {
      * meant for the operator's polling endpoint has no business being sent to
      * some other transport's URLs.
      */
-    customHeaders?:  CustomHeaders;
+    customHeaders?:  CustomHeaders | undefined;
 
 }
 
 export interface TransportHTTPS     extends ILiveTransport {
+
     type: "https";
 
     /**
@@ -268,7 +182,8 @@ export interface TransportHTTPS     extends ILiveTransport {
      * asked, and a document that names one without saying how often still
      * wants its readers to see what the session does next.
      */
-    refresh?: number;
+    refresh?: chargyInterfaces.DurationSeconds;
+
 }
 
 export interface TransportHTTPSSE   extends ILiveTransport {
@@ -279,17 +194,49 @@ export interface TransportWebsocket extends ILiveTransport {
     type: "websocket";
 }
 
-export interface ITransportURL {
-    url:                   string;
-    priority?:             number;
-    weight?:               number;
+// Whether one entry of liveTransports is a well-formed transport. Exported so a
+// consumer can drop the entries that are not, keeping the good ones, rather than
+// discarding the whole live link over one bad transport.
+export function isLiveTransport(data: unknown): data is LiveTransports {
+
+    if (!chargyLib.isObject(data))
+        return false;
+
+    const type = data["type"];
+
+    if (type !== "https"     &&
+        type !== "httpSSE"   &&
+        type !== "websocket")
+    {
+        return false;
+    }
+
+    // Only https declares a refresh period, so only there is it validated.
+    // On the other two it is an unknown property like any other.
+    if (type === "https"                     &&
+               data["refresh"] !== undefined &&
+        typeof data["refresh"] !== "number")
+    {
+        return false;
+    }
+
+    return (data["urls"] === undefined || (Array.isArray(data["urls"]) && data["urls"].every(chargyInterfaces.isURL))) &&
+           (data["totp"] === undefined || chargyInterfaces.isTOTPConfig(data["totp"])) &&
+           (data["customHeaders"] === undefined || isCustomHeaders(data["customHeaders"]));
+
 }
 
-/** Time-based One-Time Password configuration */
-export interface TOTPConfig {
-    initialSharedSecret:   string;
-    timeStep:              number;
-}
+
+/**
+ * How often an https transport is asked again when it does not say, in
+ * seconds. A charging session that is still running changes every few seconds,
+ * so "it did not say" means "the usual period", not "never ask again".
+ *
+ * A client is expected to clamp what a document states rather than obey it -
+ * this default is what it uses when there is nothing to clamp.
+ */
+export const defaultRefreshSeconds = 10;
+
 
 /**
  * The custom HTTP headers of a transport, by header name.
@@ -320,4 +267,38 @@ export type CustomHeaderValue = string | ICustomHeaderValueProvider;
 export interface ICustomHeaderValueProvider {
     valueProvider:         string;
     parameters?:           chargyLib.JSONObject;
+}
+
+// Whether one value of customHeaders is a provider that computes the header
+// value per request, rather than the literal value to send.
+export function isCustomHeaderValueProvider(data: unknown): data is ICustomHeaderValueProvider {
+
+    return chargyLib.isMandatoryJSONObject(data) &&
+           typeof data["valueProvider"] === "string" &&
+           (data["parameters"] === undefined || chargyLib.isMandatoryJSONObject(data["parameters"]));
+
+}
+
+// Whether one value of customHeaders is one of the two things a header value
+// may be: the literal string, or a provider computing it.
+export function isCustomHeaderValue(data: unknown): data is CustomHeaderValue {
+    return typeof data === "string" || isCustomHeaderValueProvider(data);
+}
+
+// Whether customHeaders is a well-formed set of header values. What a name and
+// a value additionally have to look like before they may go into an actual
+// request - HTTP has rules of its own about that - is the sending client's
+// question, not this one.
+export function isCustomHeaders(data: unknown): data is CustomHeaders {
+
+    return chargyLib.isMandatoryJSONObject(data) &&
+           Object.values(data).every(isCustomHeaderValue);
+
+}
+
+
+/** Textual signed meter records, e.g. encodings [ "OCMF", "plain" ]. */
+export interface ISignedMeterValues {
+    encodings:   Array<string>;
+    values:      Array<string>;
 }
