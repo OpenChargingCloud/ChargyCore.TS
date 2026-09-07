@@ -7,6 +7,143 @@ While the version number is below 1.0.0, breaking changes are released in minor
 versions and are always listed first below.
 
 
+## [0.15.1] - 2026-09-07
+
+### Fixed
+
+- **`isTOTPConfig()` rejected every TOTP configuration that named its hash
+  algorithm.** It asked for a number where `TOTPConfig.hashAlgorithm` is a
+  string, so a transport stating `"SHA-256"` was not a transport any more.
+  Nothing said so: `isLiveTransport()` simply returned false, and a reader
+  filtering its transports through it dropped that one without a word. Only
+  configurations leaving the property out were unaffected, which is why the
+  fixtures did not catch it.
+
+### Changed
+
+- **The OCMF-Test-01 series still spelled the TOTP secret the old way.** The
+  rename to `sharedSecret` reached the interfaces in 0.15.0 but not the
+  fixtures, so `isLiveTransport()` dropped the websocket and the httpSSE
+  transport of every document in it - the test data did not survive its own
+  type guard. The template says `sharedSecret` now, and the series and
+  `ChargeTransparencyLiveLink_1.json` are regenerated and re-signed from it.
+
+
+## [0.15.0] - 2026-09-07
+
+### Breaking
+
+- **A live link is recognised by the three things every one of them has.**
+  `IsAChargeTransparencyLiveLink()` requires the `@context`, a `created`
+  timestamp and a `liveTransports` array; a document missing any of them is not
+  a live link. Everything else stays unvalidated there - a malformed optional
+  field, and a broken transport most of all, must not turn a document into an
+  unrecognised one that then fails as an "unknown format". A transport is
+  judged where the transports are read, not where the document is identified.
+
+- **Reading a document no longer fills in a missing `created`.** It used to get
+  the current UTC time, which recorded when the document was *read*. In a
+  legally relevant document that is not what "created" means, and reading is
+  not creating. A live link states its own timestamp, and one that does not is
+  not a live link.
+
+- **A transport names its endpoints in `urls`, and only there.** The singular
+  `url` was the older spelling of the same thing, was never part of
+  `ILiveTransport`, and `isLiveTransport()` no longer looks at it. A transport
+  that carries only `url` is still recognised - an unknown property is not an
+  error - but it names no endpoint, so there is nothing to show and nothing to
+  poll. The fixtures, the format documentation and the tests all say `urls`.
+
+- **`Transport` is now `LiveTransports`, `ITransport` is `ILiveTransport`, and
+  `ITransportURL` is gone.** An entry of `urls` is either the URL itself or a
+  `chargyInterfaces.IURL` carrying it alongside a `priority` and a `weight`.
+  The type guard is `isLiveTransport()`; the top-level export keeps the name
+  `isTransport`, so a consumer importing it from the package index sees no
+  rename, while one reaching through the `ChargeTransparencyLiveLink` namespace
+  has to follow.
+
+- **`TOTPConfig` moved to `chargyInterfaces`, and `initialSharedSecret` is now
+  `sharedSecret`.** It also gained `validityTime`, `totpLength`, `alphabet`,
+  `timestamp` and `hashAlgorithm`, and `timeStep` became optional - the shape
+  the TOTP library actually takes. `isTOTPConfig()` validates it, and
+  `isLiveTransport()` calls it, so a transport still spelling the secret the
+  old way is dropped along with its TOTP.
+
+- **The top-level `IURL` is a different type now.** `chargyInterfaces.IURL` -
+  a `url` with an optional `priority` and `weight` - is what the name resolves
+  to when it is imported from the package index; the JSON-LD document with the
+  `@context` of `URLContext` is `SimpleURL.IURL` and is no longer re-exported
+  by name. The two guards keep them apart: `IsAURL()` judges the document,
+  `isURL()` the transport endpoint. Code importing `IURL` from the index keeps
+  compiling and means something else.
+
+- **`IChargeTransparencyLiveLink` lost `imageURLs`, `geoLocation` and
+  `connector`.** Images belong to whoever they show, so they hang off
+  `IChargingStationOperator`, `IChargingStation` and the other things that have
+  one; the position belongs to the charging station, and the connector to its
+  EVSE. A document keeps saying all of it, one level further in.
+
+- **`ILegallyRelevantLogMessage` moved from `IChargeTransparencyRecord` to
+  `chargyInterfaces`,** where a live link can reach it as easily as a record
+  can, and `isConnector()` moved to `chargyInterfaces` next to the `IConnector`
+  it validates. Both keep their names at the package index; only the
+  namespace-qualified paths change.
+
+### Added
+
+- **The interfaces name the quantities they carry.** A metrological value is
+  text - `"22 kW"`, `"(230.00 ±0.12) V, k=2"` - because resolution and
+  uncertainty are part of the reading and a number would drop both, so `Volt`,
+  `Ampere`, `Watt`, `WattHour`, `Ohm`, `Meter`, `Second` and `Kelvin` are
+  aliases of `MetrologicalText` rather than of `number`. `Timestamp`,
+  `CalendarDate`, `LocalTime`, `ISO8601Duration`, `DurationSeconds`, `Degrees`,
+  `LinkedDataContext`, `URL`, `UnitSymbol`, `DecimalScale` and
+  `MeasurementMagnitude` do the same for the values that were plain strings and
+  numbers before. They document meaning and do not validate syntax: parse at
+  the serialization boundary before doing arithmetic.
+
+- **A live link says what it is about, not only where to fetch it.** It may now
+  carry its `timeSource`, `lastUpdated`, `updates` and `docRefIdGeneration`,
+  the `chargingStationOperator`, `chargingStation`, `chargingSessionId`,
+  `eMobilityProvider` and `contract` of the session, its `signedMeterValues`,
+  `chargingPeriods`, `legallyRelevantLogMessages` and `supportMessages`, and
+  the `keyIdGeneration` its signatures are read under. Most of it was already
+  in the documents and read untyped; it is described now.
+
+- **`@context` may be a list.** A document can name an extension context
+  alongside this one, and is recognised as long as the list contains the live
+  link context.
+
+- **New shapes for what the documents already contained:**
+  `IDocumentSignature` - the signature `verifyDocumentSignatures()` consumes -,
+  `ISignedMeterValues`, `ITimeSource` with `ITimeServer`, `ISupportMessage`,
+  `ILocalController`, `ITemperatureSensor` and `IMetrologicalCable`, the cable
+  profile that states its length and resistance as quantity text without a
+  second unit field.
+
+- **The topology interfaces carry ids next to their objects.** A charging pool,
+  station, EVSE or energy meter can name what it belongs to and what belongs to
+  it by id - `chargingStationIds`, `EVSEIds`, `energyMeterIds`,
+  `chargingTariffIds`, `temperaturSensorIds` and the singular counterparts -
+  so a document may reference rather than nest. They also gained `imageURLs`,
+  an operator gained a `name`, an EVSE a `powerType` and a `maxPower`, and a
+  public key `keyUsage` and `encodings`.
+
+### Changed
+
+- **The OCMF-Test-01 fixture series is regenerated from its template and
+  re-signed,** which the changed transport of every document required.
+
+### Internal dependencies
+
+- @types/node 26.4.1, eslint 10.10.0, globals 17.12.0, playwright 1.63.0 and
+  typescript-eslint 8.69.0. The last of those extends
+  `no-meaningless-void-operator` to expressions that are not calls, which
+  caught the `void x;` idiom marking a parameter as deliberately unused. Those
+  parameters now carry the underscore prefix `argsIgnorePattern` already
+  covers, the way `_Context` always did.
+
+
 ## [0.14.4] - 2026-09-05
 
 ### Changed

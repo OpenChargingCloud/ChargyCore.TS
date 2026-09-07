@@ -1198,7 +1198,7 @@ export function isTOTPConfig(data: unknown): data is TOTPConfig {
            (data["totpLength"]    === undefined || typeof data["totpLength"]    === "number") &&
            (data["alphabet"]      === undefined || typeof data["alphabet"]      === "string") &&
            (data["timestamp"]     === undefined || typeof data["timestamp"]     === "string") &&
-           (data["hashAlgorithm"] === undefined || typeof data["hashAlgorithm"] === "number");
+           (data["hashAlgorithm"] === undefined || typeof data["hashAlgorithm"] === "string");
 }
 
 
