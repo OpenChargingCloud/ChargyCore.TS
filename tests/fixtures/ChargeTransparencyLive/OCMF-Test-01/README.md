@@ -111,8 +111,8 @@ makes the session follow it:
 
 The announcement is signed the way the document is: over its canonical form
 without its own `signatures`, one ECDSA and one Ed25519 signature, each
-referencing its key by `keyId`. Those are the `signPCs` keys listed under
-`gridOperator.publicKeys`.
+referencing its key by `keyId`. Those are the `signGridPowerConstraints` keys
+listed under `gridOperator.publicKeys`.
 
 This fixture grows by exactly one value per document, which is the simple case.
 The format explicitly allows more than one at a time, and a verifier must not
@@ -220,11 +220,11 @@ state during a key rotation), two different signature algorithms side by side
 (which is what adding a post-quantum algorithm looks like), and a key whose
 stored representation differs from the one its id is computed over.
 
-The grid operator (`gridOperator`, `DE*VEN`) holds two keys for **`signPCs`**,
-the usage under which it signs power constraints, and both sign the one
-announcement of this session. The keys are listed from the first document on,
-well before the announcement: a verifier has to know them before the first
-constraint arrives, not with it.
+The grid operator (`gridOperator`, `DE*VEN`) holds two keys for
+**`signGridPowerConstraints`**, the usage under which it signs power
+constraints, and both sign the one announcement of this session. The keys are
+listed from the first document on, well before the announcement: a verifier
+has to know them before the first constraint arrives, not with it.
 
 How the keys appear in the generated document, and their ids under this
 document's `keyIdGeneration` of
