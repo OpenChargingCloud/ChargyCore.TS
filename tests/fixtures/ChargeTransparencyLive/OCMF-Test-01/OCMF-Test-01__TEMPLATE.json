@@ -2,7 +2,7 @@
 
     "@id":                "5f2c8a10-7b64-4e19-9d3a-1c8e05b4a7f2",
     "@context":           "https://open.charging.cloud/contexts/chargeTransparency/live/link/1.0",
-    "created":            "2026-08-28T11:59:59Z",
+    "created":            "{{created}}",
     "lastUpdated":        "{{lastUpdated}}",
     "updates":            "{{updates}}",
     "description":        {
@@ -20,7 +20,7 @@
         "accuracy":             "+-2 ms",
         "stratum":              2,
         "syncInterval":         "PT1H",
-        "lastSynchronization":  "2026-08-28T11:14:27Z",
+        "lastSynchronization":  "{{lastSynchronization}}",
         "minServers":           2,
         "serversURL":           "https://time.ptb.de/files/ptb-ntp-services.json",
 
@@ -33,9 +33,28 @@
 
     },
 
+    "gridOperator": {
+        "@id":           "DE*VEN",
+        "name":          { "en": "Vanaheimr Electric" },
+        "publicKeys": [
+            {
+                 "keyUsage":  [ "signGridPowerConstraints" ],
+                 "algorithm":   "ECDSA-secp256r1",
+                 "encodings": [ "SubjectPublicKeyInfo", "DER", "hex" ],
+                 "value":       "{{publicKey:ven_signPCs}}"
+            },
+            {
+                 "keyUsage":  [ "signGridPowerConstraints" ],
+                 "algorithm":   "EdDSA-Ed25519",
+                 "encodings": [ "raw", "hex" ],
+                 "value":       "{{publicKey:ven_signPCs_Ed25519}}"
+            }
+        ]
+    },
+
     "chargingStationOperator": {
         "@id":           "DE*GEF",
-        "name":          "GraphDefined",
+        "name":          { "en": "GraphDefined" },
         "publicKeys": [
             {
                  "keyUsage":  [ "signCTRs" ],
@@ -189,6 +208,10 @@
 
 
     "signedMeterValues": "{{signedMeterValues}}",
+
+    "chargingPeriods": "{{chargingPeriods}}",
+
+    "legallyRelevantLogMessages": "{{legallyRelevantLogMessages}}",
 
     "signatures":    [ ]
 

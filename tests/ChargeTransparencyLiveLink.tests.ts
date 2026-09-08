@@ -105,7 +105,15 @@ describe("Charge Transparency LiveLink", () => {
 
         if (IsAChargeTransparencyLiveLink(withoutMeterValues))
         {
-            expect(withoutMeterValues.created).toBe("2026-08-28T11:59:59Z");
+            // The series is regenerated with the timestamps of the moment the
+            // generator ran, so what "created" says cannot be spelled out
+            // here. That it is what the document itself states - and not the
+            // time this test read it - is the whole assertion: reading does
+            // not fill in a missing "created" and does not replace a stated
+            // one.
+            expect(withoutMeterValues.created).
+                toBe(readLiveLink("ChargeTransparencyLive/OCMF-Test-01/OCMF-Test-01__0000.json").created);
+
             expect(withoutMeterValues.liveTransports).toHaveLength(3);
         }
 
@@ -128,9 +136,12 @@ describe("Charge Transparency LiveLink", () => {
 
         const measurement = chargingSession?.measurements?.[0];
 
-        // 19 OCMF documents, but the end document repeats the start value.
+        // One reading per OCMF document of the series, plus one: the end
+        // document repeats the start value alongside its own. How long the
+        // series is follows from the generator's session parameters, so it is
+        // counted here rather than spelled out.
         expect(measurement?.name).toBe("ENERGY_TOTAL");
-        expect(measurement?.values).toHaveLength(20);
+        expect(measurement?.values).toHaveLength((liveLink.signedMeterValues?.values.length ?? 0) + 1);
 
         // The live link carries the public keys, so unlike a bare OCMF file
         // every meter value can actually be verified here.

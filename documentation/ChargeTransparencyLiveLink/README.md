@@ -26,23 +26,32 @@ src/chargy.ts                                  (recognition, meter values)
 src/DocumentSignatures.ts                      (signatures over the whole document)
 ```
 
-## Renamed in 0.13.0 — read this before copying an older document
+## Renamed properties — read this before copying an older document
 
-Two top-level properties were renamed, **deliberately without a fallback**:
+Four properties were renamed, **deliberately without a fallback**:
 
-| Until 0.12.1 | Since 0.13.0     |
-| ------------ | ---------------- |
-| `timestamp`  | `created`        |
-| `transports` | `liveTransports` |
+| Old name              | New name         | Since  |
+| --------------------- | ---------------- | ------ |
+| `timestamp`           | `created`        | 0.13.0 |
+| `transports`          | `liveTransports` | 0.13.0 |
+| `url`                 | `urls`           | 0.15.0 |
+| `initialSharedSecret` | `sharedSecret`   | 0.15.0 |
 
 The old names are not accepted, and they are not rejected either: they are
-simply unknown properties now. A document that still says `transports` is
-therefore recognized as a perfectly valid LiveLink **with no transports at
-all**, and nothing reports this. The same holds for `timestamp`, which is
-silently replaced by a freshly generated `created`.
+simply unknown properties now. Since 0.15.0 a document that still says
+`timestamp` or `transports` is **not recognized as a LiveLink at all** —
+recognition requires `created` and `liveTransports`, and such a document fails
+as an unknown format rather than being read with no transports.
+
+The two transport-level renames fail more quietly. A transport carrying only
+`url` is still a well-formed transport — an unknown property is not an error —
+but it names no endpoint, so there is nothing to poll. A `totp` still saying
+`initialSharedSecret` is worse: `isTOTPConfig()` requires `sharedSecret`, so
+the whole transport fails `isLiveTransport()` and a reader filtering by it
+drops that transport without a word.
 
 Earlier revisions of this document used the old names in their examples.
-Producers copying from anywhere older than 0.13.0 must rename both properties.
+Producers copying from anywhere older than 0.15.0 must rename all four.
 
 ## Representations
 
@@ -59,18 +68,21 @@ can be omitted when the QR code only needs to convey an endpoint.
 ```json
 {
   "@context": "https://open.charging.cloud/contexts/chargeTransparency/live/link/1.0",
+  "created": "2026-09-06T22:58:14Z",
   "liveTransports": [
     {
       "type": "https",
-      "url": "https://api1.example.com/chargingSessions/1234567890/transparency/live?token=abcdef"
+      "urls": [ "https://api1.example.com/chargingSessions/1234567890/transparency/live?token=abcdef" ]
     }
   ]
 }
 ```
 
-Only `@context` is mandatory to the current recognizer. For a useful,
-interoperable LiveLink, producers should also provide at least one transport
-with at least one endpoint.
+`@context`, `created` and `liveTransports` are what the recognizer requires —
+this is the smallest document it accepts. `liveTransports` has to be an array,
+but it is not read any further there, so an empty one would do; for a useful,
+interoperable LiveLink, producers should provide at least one transport with at
+least one endpoint.
 
 This is `tests/fixtures/ChargeTransparencyLive/ChargeTransparencyLiveLink_2.json`.
 
@@ -175,7 +187,7 @@ the repeated blocks abbreviated:
   "liveTransports": [
     {
       "type": "https",
-      "url": "https://api1.example.com/chargingSessions/OCMF-Test-01/transparency/live?token=abcdef",
+      "urls": [ "https://api1.example.com/chargingSessions/OCMF-Test-01/transparency/live?token=abcdef" ],
       "refresh": 10,
       "customHeaders": {
         "X-Key1": "headerValue1",
@@ -192,7 +204,7 @@ the repeated blocks abbreviated:
         { "url": "wss://api2.example.com/chargingSessions/OCMF-Test-01/transparency/live", "priority": 10, "weight": 40 }
       ],
       "totp": {
-        "initialSharedSecret": "abcdefghijklmnopqrstuvwxyz1234567890",
+        "sharedSecret": "abcdefghijklmnopqrstuvwxyz1234567890",
         "timeStep": 10
       }
     },
@@ -231,22 +243,37 @@ the repeated blocks abbreviated:
 
 ### Declared top-level properties
 
-Recognition checks nothing but `@context` — see
-[Recognition and Processing](#recognition-and-processing). A malformed optional
-property never turns the document into an "unknown format": each one is read
-defensively where it is used, and whatever fails its shape there is simply
-dropped. The declared properties are:
+Recognition checks `@context`, `created` and `liveTransports` — see
+[Recognition and Processing](#recognition-and-processing). Nothing else is
+validated there. A malformed optional property never turns the document into an
+"unknown format": each one is read defensively where it is used, and whatever
+fails its shape there is simply dropped.
 
 | Property | Required | Format | Meaning |
 |----------|----------|--------|---------|
 | `@context` | yes | exact context string shown above | Identifies version 1.0 of the Charge Transparency LiveLink format. |
-| `created` | no | ISO 8601 / RFC 3339 string or `null` | Creation timestamp of the document, or of the series it belongs to. |
+| `created` | yes | ISO 8601 / RFC 3339 string | Creation timestamp of the document, or of the series it belongs to. |
+| `liveTransports` | yes | array of transport objects | Available live-data access methods. |
 | `description` | no | language-tag-to-string object | Human-readable station or session description. |
-| `imageURLs` | no | array of strings | URLs of logos or other related images. |
-| `geoLocation` | no | object with `lat` and `lng` numbers | Geographic position — **superseded**, see [Position, address and hardware](#position-address-and-hardware). |
-| `connector` | no | connector object | Connector information — **superseded**, see below. |
-| `liveTransports` | no | array of transport objects | Available live-data access methods. |
+| `timeSource` | no | time-source object | The clock behind every timestamp in the document. |
+| `lastUpdated` | no | ISO 8601 / RFC 3339 string | When this particular document of a series was written. |
+| `updates` | no | string | `docRefId` of the document this one supersedes. |
+| `docRefIdGeneration` | no | array of strings | How `updates` references are computed, as an `encodings` pipeline. Default `[ "SHA-256", "hex" ]`. |
+| `chargingStationOperator` | no | operator object | The operator running the station — see [The parties](#the-parties). |
+| `chargingStation` | no | station object | Station, EVSE, energy meter and connector — see [Position, address and hardware](#position-address-and-hardware). |
+| `chargingSessionId` | no | string | The charging session identification at the station or operator. |
+| `eMobilityProvider` | no | provider object | The EV driver's e-mobility provider — see [The parties](#the-parties). |
+| `contract` | no | contract object | `@id` and `type` of the identification that started the session. |
+| `gridOperator` | no | grid operator object | The grid operator behind e.g. signed power constraints — see [The parties](#the-parties). |
+| `signedMeterValues` | no | signed meter values object | The signed meter values measured so far — see [Signed meter values](#signed-meter-values). |
+| `chargingPeriods` | no | array of charging-period objects | Tariffs and costs over the session. Start/stop timestamps should match a signed meter value timestamp. |
+| `legallyRelevantLogMessages` | no | array of log-message objects | Legally relevant events, e.g. a time synchronization or a grid power constraint. |
+| `supportMessages` | no | array of support-message objects | Messages between e.g. the EV driver and the CPO. |
+| `keyIdGeneration` | no | array of strings | How key ids are computed, as an `encodings` pipeline. |
 | `signatures` | no | array of signature entries | Digital signatures over the whole document — verified when present, see [Signatures](#signatures). |
+
+Every optional property may also be present as an explicit `undefined` in the
+TypeScript model; in JSON it is simply left out.
 
 ### Attached after reading
 
@@ -260,31 +287,81 @@ every property except themselves:
 | `signatureVerification` | How the signatures over the whole document came out, per entry and as a whole. |
 | `warnings` | Non-fatal findings, e.g. that the document is unsigned or that a signature did not match. |
 
-### Carried by the fixtures, not validated by the guard
+### Carried by the fixtures, not declared by the interface
 
 These properties are part of the format as the fixtures write it, but
-`IChargeTransparencyLiveLink` does not declare them and the runtime guard does
-not look at them. They are reachable because the interface extends
-`chargyLib.JSONObject`. ChargyCore reads `signedMeterValues` together with the
-public keys under `chargingStation` and `chargingStationOperator` — and, when
-the document carries `signatures`, also `keyIdGeneration` and those same public
-keys to verify them.
+`IChargeTransparencyLiveLink` does not declare them. They are reachable because
+the interface extends `chargyLib.JSONObject`.
 
 | Property | Meaning |
 |----------|---------|
 | `@id` | Identifier of the charging session this document describes. |
-| `lastUpdated` | When this particular document of a series was written. |
-| `updates` | `docRefId` of the document this one supersedes. |
-| `keyIdGeneration` | How key ids are computed, as an `encodings` pipeline. |
-| `docRefIdGeneration` | How `updates` references are computed. |
-| `timeSource` | The clock behind every timestamp in the document. |
-| `chargingStationOperator` | Operator `@id`, `name` and `publicKeys`. |
-| `chargingStation` | Station, EVSE, energy meter and connector — see below. |
-| `contract` | `@id` and `type` of the identification that started the session. |
-| `signedMeterValues` | The signed meter values measured so far — see below. |
+| `imageURLs` | URLs of logos or other related images. |
+| `geoLocation` | Geographic position — **superseded**, see [Position, address and hardware](#position-address-and-hardware). |
+| `connector` | Connector information — **superseded**, see below. |
 
 Unknown properties are preserved in the parsed JSON object and never affect
-recognition: only `@context` decides it.
+recognition: only `@context`, `created` and `liveTransports` decide it.
+
+### The parties
+
+Four parties can appear on a LiveLink, each carrying its own `@id` and, where
+it signs anything, its own `publicKeys`:
+
+| Property | Party | What it is here for |
+|----------|-------|---------------------|
+| `chargingStationOperator` | CPO | Runs the station; signs the document and, usually, the meter values. |
+| `eMobilityProvider` | EMP | The driver's provider; carries the `chargingTariffs` a session is billed by. |
+| `gridOperator` | DSO | Sends e.g. signed power constraints, which appear as `legallyRelevantLogMessages`. |
+| `contract` | — | Not a party but the identification that started the session, e.g. an RFID token. |
+
+`gridOperator` is a grid operator's identity and keys, shaped like a charging
+station operator's minus everything about charging infrastructure — a grid
+operator runs no stations, pools or tariffs:
+
+```json
+"gridOperator": {
+  "@id": "DE*VEN",
+  "name": { "en": "Vanaheimr Electric" },
+  "publicKeys": [
+    {
+      "keyUsage": [ "signGridPowerConstraints" ],
+      "algorithm": "ECDSA-secp256r1",
+      "encodings": [ "SubjectPublicKeyInfo", "DER", "hex" ],
+      "value": "3059301306072A8648CE3D0201..."
+    },
+    {
+      "keyUsage": [ "signGridPowerConstraints" ],
+      "algorithm": "EdDSA-Ed25519",
+      "encodings": [ "raw", "hex" ],
+      "value": "0B442D1044571F14182EE7AE07A1400C..."
+    }
+  ]
+}
+```
+
+`signGridPowerConstraints` is the `keyUsage` under which a grid operator signs
+a power constraint, next to `signCTRs` for whole records and
+`signMeterValues` / `signEnergyMeterValues` for readings. A constraint is
+signed with every key the operator holds for that usage — the fixture uses one
+ECDSA and one Ed25519 key, so a verifier that supports either can check it.
+
+`@id` is the only property `IGridOperator` requires; `@context`, `name`,
+`description`, `contact`, `support`, `privacy`, `geoLocation`, `imageURLs` and
+`publicKeys` are optional. `name` and `description` are `I18NString` objects
+keyed by language tag, not plain strings. Nothing is validated at recognition,
+so a `gridOperator` that does not hold up is a malformed optional property like
+any other.
+
+Why a grid operator belongs in a *transparency* document at all: when the grid
+asks a station to charge more slowly, the session's power drops for a reason
+that is neither the car's nor the station's. Without the constraint and the key
+it was signed with, that dip is indistinguishable from a fault, and the driver
+has no way to check the explanation they were given.
+
+The record format has the plural `gridOperators` for the same reason it has
+`chargingStationOperators`: one document, several sessions, possibly several
+grids. A live link describes a single ongoing session, so it names one.
 
 ### `created` handling
 
@@ -296,15 +373,16 @@ preferably `Z` for UTC:
 2026-08-28T13:59:59+02:00
 ```
 
-When `created` is absent or `null`, `DetectAndConvertContentFormat` inserts the
-current time using JavaScript's `Date.prototype.toISOString()` — after the
-document's signatures were verified, never before: the signatures cover every
-property except themselves, so a timestamp defaulted first would turn a good
-signature into a bad one. Apart from that and the two attached result
-properties, the object is returned as it was read.
+`created` is required and is **never filled in for the producer**. Until 0.15.0
+a missing one was replaced with the current time, which recorded when the
+document was *read*; in a legally relevant document that is not what "created"
+means, and reading is not creating. A document without `created` is now not a
+live link at all. Apart from the two attached result properties, the object is
+returned as it was read.
 
-Recognition does not look at `created` at all, and its syntax is not
-validated.
+Recognition requires `created` to be a string and looks no further: its syntax
+is not validated, so a producer emitting something that is not RFC 3339 gets a
+recognized document with an unusable timestamp.
 
 In a series of documents describing the same session, `created` is when the
 series began and is identical in every document; `lastUpdated` is what
@@ -421,22 +499,25 @@ values:
 The type names are case-sensitive. Values such as `ftp`, `sse`, `ws` or
 `WebSocket` are not recognized — such a transport is dropped where the
 transports are read, and the rest of the document keeps working. Recognition
-checks only `@context`, so no transport can make the document fail it.
+requires `liveTransports` to be an array and reads no entry of it, so no
+transport can make the document fail recognition.
 
 Every transport can contain:
 
 | Property | Required | Format | Meaning |
 |----------|----------|--------|---------|
 | `type` | yes | one of the three strings above | Selects the transport variant. |
-| `url` | conditionally | string | One endpoint. |
-| `urls` | conditionally | array of strings and/or endpoint objects | Multiple alternative endpoints. |
+| `urls` | no | array of strings and/or endpoint objects | The endpoints, one or several. |
 | `totp` | no | TOTP configuration object | Shared configuration for access to this transport. |
 | `customHeaders` | no | object of header values | Headers to send with every request to this transport. |
 | `refresh` | no | number | `https` only — how often to ask again, in seconds. |
 
-For interoperability, a transport should contain `url` or at least one entry
-in `urls`. The transport reader permits both properties together and also
-permits a transport containing only `type`.
+A transport names its endpoints in `urls`, and only there. The singular `url`
+was the older spelling of the same thing and was removed in 0.15.0:
+`isLiveTransport()` does not look at it, so a transport carrying only `url` is
+still a well-formed transport that names no endpoint. For interoperability, a
+transport should contain at least one entry in `urls` — the guard permits a
+transport containing only `type`.
 
 ### `refresh`
 
@@ -446,7 +527,7 @@ so only `https` says how often to ask:
 ```json
 {
   "type": "https",
-  "url": "https://api1.example.com/chargingSessions/1234567890/transparency/live?token=abcdef",
+  "urls": [ "https://api1.example.com/chargingSessions/1234567890/transparency/live?token=abcdef" ],
   "refresh": 10
 }
 ```
@@ -457,8 +538,8 @@ transport exists to be asked, and a document that names one without saying how
 often still wants its readers to see what the session does next. A value that
 is not a positive number is treated as absent.
 
-It belongs to `TransportHTTPS` alone, and `IsAChargeTransparencyLiveLink()`
-validates it only there — on `httpSSE` and `websocket` a `refresh` property is
+It belongs to `TransportHTTPS` alone, and `isLiveTransport()` validates it only
+there — on `httpSSE` and `websocket` a `refresh` property is
 unknown like any other and is neither type-checked nor rejected. If either of
 those transports ever needs a period of its own it will mean something other
 than asking again, which is why the name is not shared.
@@ -476,7 +557,7 @@ requests, and all three can face an endpoint that expects a header:
 ```json
 {
   "type": "https",
-  "url": "https://api1.example.com/chargingSessions/1234567890/transparency/live",
+  "urls": [ "https://api1.example.com/chargingSessions/1234567890/transparency/live" ],
   "refresh": 10,
   "customHeaders": {
     "X-Key1": "headerValue1",
@@ -600,20 +681,34 @@ validate URL schemes, numeric ranges or finite values.
 
 ```json
 {
-  "initialSharedSecret": "session-scoped-shared-secret",
+  "sharedSecret": "session-scoped-shared-secret",
   "timeStep": 30
 }
 ```
 
 | Property | Required | Format | Meaning |
 |----------|----------|--------|---------|
-| `initialSharedSecret` | yes | string | Shared seed from which one-time passwords can be generated. |
-| `timeStep` | yes | number | Time-step value, conventionally expressed in seconds. |
+| `sharedSecret` | yes | string | Shared seed from which one-time passwords can be generated. |
+| `timeStep` | no | number | Time-step value, conventionally expressed in seconds. |
+| `validityTime` | no | number | How long a generated value stays valid, in seconds. |
+| `totpLength` | no | number | Number of characters of the generated value. |
+| `alphabet` | no | string | The characters a generated value is drawn from. |
+| `timestamp` | no | ISO 8601 / RFC 3339 string | The epoch the time steps are counted from. |
+| `hashAlgorithm` | no | string | The hash the one-time password is derived with, e.g. `"SHA-256"`. |
 
-The current format does not specify the TOTP hash algorithm, number of digits,
-secret encoding or how the generated value is sent to the endpoint. These
-details require an external profile or agreement. ChargyCore validates only the
-two property types and does not generate a TOTP value.
+`sharedSecret` is the only required property, and it is the one that decides
+whether a transport survives: `isTOTPConfig()` requires it to be a string, so a
+`totp` without it — or one still using the pre-0.15.0 name
+`initialSharedSecret` — fails `isLiveTransport()` and takes its whole transport
+with it. `hashAlgorithm` is a **string** naming the algorithm, not a number;
+until 0.15.1 the guard asked for a number here and rejected every configuration
+that named its hash at all.
+
+Everything except `sharedSecret` is optional and unvalidated beyond its type.
+The format still does not specify how a generated value is sent to the
+endpoint, nor what the values of `alphabet` and `hashAlgorithm` may be — those
+need an external profile or agreement. ChargyCore validates property types and
+does not generate a TOTP value.
 
 ## Signed meter values
 
@@ -720,21 +815,29 @@ the verifier reads the entries defensively instead.
 
 ChargyCore recognizes a LiveLink when:
 
-1. the parsed value is a non-null JSON object; and
-2. `@context` exactly equals the version 1.0 context.
+1. the parsed value is a non-null JSON object;
+2. `created` is present and is a string;
+3. `liveTransports` is an array; and
+4. `@context` exactly equals the version 1.0 context, or is an array of strings
+   containing it.
 
-Nothing else decides recognition. A malformed optional property — a broken
-transport, a numeric `connector` — never turns the document into an "unknown
-format": the context identifies it, and whatever fails its shape is dropped
-where it is read. The guards for those shapes (`isConnector`, `isTransport`,
+Those are the three things every live link has: what it is, when it was
+created, and where its updates can be fetched. Nothing else decides
+recognition. A malformed optional property — a broken transport, a numeric
+`connector` — never turns the document into an "unknown format": whatever fails
+its shape is dropped where it is read. That is why `liveTransports` is checked
+only for being an array: a single broken transport must not cost the document
+its identity and send it on to fail as an unknown format.
+
+The guards for the per-field shapes (`isConnector`, `isLiveTransport`,
 `isTOTPConfig`, `isCustomHeaders`, `isCustomHeaderValue`, …) are exported for
 exactly that point-of-use filtering; note that some of them use
 `chargyLib.isObject()`, which accepts arrays as well as objects.
 
 When a single LiveLink is passed to `DetectAndConvertContentFormat`, ChargyCore
-first verifies the signatures the document carries over itself — see
-[Signatures](#signatures) — attaches the outcome as `signatureVerification`
-plus `warnings`, and then adds a missing `created`; in that order, because the
+verifies the signatures the document carries over itself — see
+[Signatures](#signatures) — and attaches the outcome as `signatureVerification`
+plus `warnings`. Those are added only after verification, because the
 signatures cover every property except themselves. It does not download
 `imageURLs` and does not open transport endpoints, and it does not convert the
 LiveLink into a Charge Transparency Record — but the signed meter values it
@@ -754,7 +857,10 @@ The implementation intentionally accepts some incomplete values. Producers
 should use the stricter rules below:
 
 - emit the exact versioned `@context`;
-- use `created` and `liveTransports`, never `timestamp` or `transports`;
+- use `created` and `liveTransports`, never `timestamp` or `transports`, and
+  emit `created` always — it is required, and nothing fills it in;
+- name endpoints in `urls`, never in the removed singular `url`;
+- name a TOTP seed `sharedSecret`, never the removed `initialSharedSecret`;
 - include at least one transport and at least one endpoint per transport;
 - use RFC 3339 timestamps with an explicit offset;
 - use absolute `https://` endpoints for `https` and `httpSSE`;
@@ -770,7 +876,10 @@ should use the stricter rules below:
   `chargingStation`, and omit the top-level `geoLocation` and `connector`;
 - emit both coordinates and keep them within their geographic ranges;
 - use finite, non-negative endpoint priorities and weights;
-- use a positive, integral TOTP time step;
+- use a positive, integral TOTP time step, and name the TOTP hash algorithm as
+  a string when one is agreed;
+- state a `gridOperator` whenever the session carries grid-signed power
+  constraints, together with the keys those constraints were signed with;
 - omit `signedMeterValues` entirely while there are none; and
 - omit `signatures` unless a complete signature profile is available.
 
@@ -781,7 +890,7 @@ input.
 
 - URL query parameters can be bearer credentials. Do not persist or log them
   unless necessary.
-- `initialSharedSecret` is sensitive authentication material. Encoding a
+- `sharedSecret` is sensitive authentication material. Encoding a
   LiveLink in a publicly visible QR code also publishes that secret. A literal
   `customHeaders` value — an API key — and the parameters of a value provider
   are just as sensitive, and just as published.
@@ -831,8 +940,9 @@ if (IsAChargeTransparencyLiveLink(candidate)) {
 }
 ```
 
-Automatic content detection accepts the JSON as file data and supplies a
-missing `created`:
+Automatic content detection accepts the JSON as file data. It verifies the
+document's signatures and attaches the outcome; it does not supply anything the
+producer left out:
 
 ```ts
 import { Chargy, IsAChargeTransparencyLiveLink } from "@open-charging-cloud/chargy-core";
@@ -866,22 +976,34 @@ The fixtures live under `tests/fixtures/ChargeTransparencyLive/`:
 
 ```text
 ChargeTransparencyLiveLink_1.json     a full live link — byte-identical to
-                                      OCMF-Test-01__0019.json
-ChargeTransparencyLiveLink_2.json     the minimal form: context and one
-                                      https transport
+                                      OCMF-Test-01__0034.json
+ChargeTransparencyLiveLink_2.json     the minimal form: context, created and
+                                      one https transport
 ChargeTransparencyLiveLink_2.png      QR-code representations of the
 ChargeTransparencyLiveLink_2.svg      minimal form
 OCMF-Test-01/                         the generated series it comes from
 ```
 
-`OCMF-Test-01/` is a simulated 22 kW AC charging session of three minutes with a
-new signed meter reading every ten seconds, published as a series of **twenty**
-documents — `OCMF-Test-01__0000.json` through `__0019.json` — each signed as a
-whole and chained to its predecessor by `updates`. `__0000.json` carries no
-meter values at all and omits `signedMeterValues`; each later document adds the
-readings that arrived since. The directory also holds the hand-maintained
-template `OCMF-Test-01__TEMPLATE.json`, the generator `generateOCMFTest01.mjs`
-and four key pairs as PEM files.
+`OCMF-Test-01/` is a simulated 22 kW AC charging session of five minutes with a
+new signed meter reading every ten seconds, during which the grid operator
+limits the charging power to 6 kW for one minute. It is published as a series
+of **35** documents — `OCMF-Test-01__0000.json` through `__0034.json` — each
+signed as a whole and chained to its predecessor by `updates`. `__0000.json`
+carries no meter values at all and omits `signedMeterValues`; each later
+document adds the readings that arrived since, and one document per event, so
+the announcement of the constraint gets a document of its own.
+
+That constraint is what makes the series more than a meter log: it is a
+`legallyRelevantLogMessage` signed by the grid operator under
+`signGridPowerConstraints`, the meter takes an extra reading where it begins
+and where it ends, the power in between stays below the limit, and the charging
+periods are cut at both ends of it. The dip in the curve has a signed
+explanation next to it.
+
+The directory also holds the hand-maintained template
+`OCMF-Test-01__TEMPLATE.json`, the log messages `OCMF-Test-01__LRLMs.json` whose
+times are relative to the start reading, the generator `generateOCMFTest01.mjs`
+and six key pairs as PEM files.
 
 The generated files are always overwritten; the template is what to edit. Note
 that a rerun rewrites the **whole** series, because a new signature changes a

@@ -403,6 +403,7 @@ For this draft profile:
 | `publicKeys` | OPTIONAL | Keys needed to verify signatures. |
 | `chargingSessions` | RECOMMENDED | Charging sessions contained in the CTR. |
 | `eMobilityProviders` | OPTIONAL | E-mobility providers. |
+| `gridOperators` | OPTIONAL | Grid operators, e.g. the sender of a signed power constraint. |
 | `mediationServices` | OPTIONAL | Consumer mediation or dispute services. |
 | `legallyRelevantLogMessages` | DRAFT EXTENSION | Canonical event store described by the log specification. |
 | `legallyRelevantLogStreams` | DRAFT EXTENSION | Integrity-protected log-stream manifests. |

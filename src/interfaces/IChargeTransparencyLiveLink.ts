@@ -32,40 +32,44 @@ export interface IChargeTransparencyLiveLink extends chargyLib.JSONObject {
     "@context":                    chargyInterfaces.LinkedDataContext | Array<chargyInterfaces.LinkedDataContext> | undefined;
 
     /** Multi-language description */
-    description?:                  chargyLib.I18NString;
+    description?:                  chargyLib.I18NString                               | undefined;
 
 
     /** The (legal) time source used */
-    timeSource?:                   chargyInterfaces.ITimeSource;
+    timeSource?:                   chargyInterfaces.ITimeSource                       | undefined;
 
     /** The timestamp of the document creation (ISO 8601) */
     created:                       chargyInterfaces.Timestamp;
 
     /** The timestamp of the last document update (ISO 8601) */
-    lastUpdated?:                  chargyInterfaces.Timestamp | undefined;
+    lastUpdated?:                  chargyInterfaces.Timestamp                         | undefined;
 
     /** The way document reference ids are generated within this document, default: [ "SHA-256", "hex" ] */
-    docRefIdGeneration?:           Array<string>              | undefined;
+    docRefIdGeneration?:           Array<string>                                      | undefined;
 
     /** The reference identification (crypto hash) of the document that was updated */
-    updates?:                      string                     | undefined;
+    updates?:                      string                                             | undefined;
 
 
     /** The charging station operator */
-    chargingStationOperator?:      chargyInterfaces.IChargingStationOperator;
+    chargingStationOperator?:      chargyInterfaces.IChargingStationOperator          | undefined;
 
     /** The charging station */
-    chargingStation?:              chargyInterfaces.IChargingStation;
+    chargingStation?:              chargyInterfaces.IChargingStation                  | undefined;
 
     /** The charging session identification at the station/operator */
-    chargingSessionId?:            string;
+    chargingSessionId?:            string                                             | undefined;
 
 
     /** The e-mobility provider */
-    eMobilityProvider?:            chargyInterfaces.IEMobilityProvider;
+    eMobilityProvider?:            chargyInterfaces.IEMobilityProvider                | undefined;
 
     /** EV driver contract information */
-    contract?:                     chargyInterfaces.IContract;
+    contract?:                     chargyInterfaces.IContract                         | undefined;
+
+
+    /** The grid operator sending e.g. signed power constraints */
+    gridOperator?:                 chargyInterfaces.IGridOperator                     | undefined;
 
 
     /** Available transport methods for live transparency data */
@@ -77,7 +81,7 @@ export interface IChargeTransparencyLiveLink extends chargyLib.JSONObject {
     /** Charging periods define tariffs and costs. Start-/stop timestamps should match a signed metering value timestamp. */
     chargingPeriods?:              Array<chargyInterfaces.IChargingPeriod>            | undefined;
 
-    /** Legally relevant log messages, e.g. time sync, grid power reduction, ... */
+    /** Legally relevant log messages, e.g. time sync, grid power constraints, ... */
     legallyRelevantLogMessages?:   Array<chargyInterfaces.ILegallyRelevantLogMessage> | undefined;
 
     /** Support messages between e.g. the EV driver and the CPO */
@@ -99,7 +103,7 @@ export interface IChargeTransparencyLiveLink extends chargyLib.JSONObject {
      * Non-fatal findings about this document, e.g. that it is unsigned or that
      * a signature did not verify. None of these make the document unusable.
      */
-    warnings?:                     Array<chargyInterfaces.IWarning>;
+    warnings?:                     Array<chargyInterfaces.IWarning>                   | undefined;
 
     /**
      * How the signatures over this whole document came out, filled in when the
@@ -110,7 +114,7 @@ export interface IChargeTransparencyLiveLink extends chargyLib.JSONObject {
      * document has been verified. Adding it first would change the very bytes
      * that are verified.
      */
-    signatureVerification?:        IDocumentSignaturesResult;
+    signatureVerification?:        IDocumentSignaturesResult                          | undefined;
 
 }
 

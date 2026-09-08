@@ -2,9 +2,9 @@
 
     "@id":                "5f2c8a10-7b64-4e19-9d3a-1c8e05b4a7f2",
     "@context":           "https://open.charging.cloud/contexts/chargeTransparency/live/link/1.0",
-    "created":            "2026-08-28T11:59:59Z",
-    "lastUpdated":        "2026-08-28T12:01:00Z",
-    "updates":            "7DB5B7FCA315546424F3ADD854E78D9340D2A1CF291F3EBFBC7A52D8DAA1D2D7",
+    "created":            "2026-09-08T21:37:17Z",
+    "lastUpdated":        "2026-09-08T21:38:08Z",
+    "updates":            "F22B5C4FBF2C870DB61DEA42EA11CB18D05C9861A786682C5E4175CAB0F35E51",
     "description":        {
                               "en": "OCMF-Test-01 Transparency Live-Link",
                               "de": "OCMF-Test-01 Transparenz Live-Link"
@@ -20,7 +20,7 @@
         "accuracy":             "+-2 ms",
         "stratum":              2,
         "syncInterval":         "PT1H",
-        "lastSynchronization":  "2026-08-28T11:14:27Z",
+        "lastSynchronization":  "2026-09-08T20:51:45Z",
         "minServers":           2,
         "serversURL":           "https://time.ptb.de/files/ptb-ntp-services.json",
 
@@ -33,9 +33,28 @@
 
     },
 
+    "gridOperator": {
+        "@id":           "DE*VEN",
+        "name":          { "en": "Vanaheimr Electric" },
+        "publicKeys": [
+            {
+                 "keyUsage":  [ "signGridPowerConstraints" ],
+                 "algorithm":   "ECDSA-secp256r1",
+                 "encodings": [ "SubjectPublicKeyInfo", "DER", "hex" ],
+                 "value":       "3059301306072A8648CE3D020106082A8648CE3D030107034200043FCDF7CCE6FF42E8F12C7D126B5A69F82647D2826957CDF702ECA6B9CACB64C4307793F1C521A52C8B505C6FAFBFDBA0B887478CE8AC55E0C5F8E14BB3C694FD"
+            },
+            {
+                 "keyUsage":  [ "signGridPowerConstraints" ],
+                 "algorithm":   "EdDSA-Ed25519",
+                 "encodings": [ "raw", "hex" ],
+                 "value":       "0B442D1044571F14182EE7AE07A1400C3CDE5D6AD2C180F313E9EA66885C0F9F"
+            }
+        ]
+    },
+
     "chargingStationOperator": {
         "@id":           "DE*GEF",
-        "name":          "GraphDefined",
+        "name":          { "en": "GraphDefined" },
         "publicKeys": [
             {
                  "keyUsage":  [ "signCTRs" ],
@@ -191,15 +210,77 @@
     "signedMeterValues": {
         "encodings": [ "OCMF", "plain" ],
         "values": [
-            "OCMF|{\"FV\":\"1.4\",\"GI\":\"GraphDefined Charging Station\",\"GS\":\"CS-OCMF-TEST-01\",\"GV\":\"1.0.0\",\"PG\":\"T1\",\"MV\":\"GraphDefined\",\"MM\":\"GD-OCMF-AC22\",\"MS\":\"GD-METER-OCMF-TEST-01\",\"MF\":\"1.0.0\",\"IS\":true,\"IL\":\"TRUSTED\",\"IF\":[\"RFID_PLAIN\"],\"IT\":\"ISO14443\",\"ID\":\"04A9B7C21E5D80\",\"CT\":\"EVSEID\",\"CI\":\"DE*GEF*E12345678*1\",\"CF\":\"1.0.0\",\"RD\":[{\"TM\":\"2026-08-28T14:00:00,000+0200 S\",\"TX\":\"B\",\"RV\":1234.0000,\"RI\":\"1-0:1.8.0*255\",\"RU\":\"kWh\",\"RT\":\"AC\",\"EF\":\"\",\"ST\":\"G\"}]}|{\"SA\":\"ECDSA-secp256r1-SHA256\",\"SE\":\"hex\",\"SM\":\"application/x-der\",\"SD\":\"3046022100F4FBB4FCB4EC01E9B0320B73D53DC282938ED8B570B44EE316D328010519F95B022100DC14DD764F8D0D2748EFFBCFDA02CF80C86DB877B198907308C03023086A3CBB\"}",
-            "OCMF|{\"FV\":\"1.4\",\"GI\":\"GraphDefined Charging Station\",\"GS\":\"CS-OCMF-TEST-01\",\"GV\":\"1.0.0\",\"PG\":\"T2\",\"MV\":\"GraphDefined\",\"MM\":\"GD-OCMF-AC22\",\"MS\":\"GD-METER-OCMF-TEST-01\",\"MF\":\"1.0.0\",\"IS\":true,\"IL\":\"TRUSTED\",\"IF\":[\"RFID_PLAIN\"],\"IT\":\"ISO14443\",\"ID\":\"04A9B7C21E5D80\",\"CT\":\"EVSEID\",\"CI\":\"DE*GEF*E12345678*1\",\"CF\":\"1.0.0\",\"RD\":[{\"TM\":\"2026-08-28T14:00:10,000+0200 S\",\"TX\":\"C\",\"RV\":1234.0342,\"RI\":\"1-0:1.8.0*255\",\"RU\":\"kWh\",\"RT\":\"AC\",\"EF\":\"\",\"ST\":\"G\"}]}|{\"SA\":\"ECDSA-secp256r1-SHA256\",\"SE\":\"hex\",\"SM\":\"application/x-der\",\"SD\":\"304502205CE5A84046C590718D740DA8C28E0BB63481478EA999CDF04AC309E5F8528399022100EEFBF0248026406903C896AACEEA542F1C5764C3A783D8145CDC24C2C0F39FF7\"}",
-            "OCMF|{\"FV\":\"1.4\",\"GI\":\"GraphDefined Charging Station\",\"GS\":\"CS-OCMF-TEST-01\",\"GV\":\"1.0.0\",\"PG\":\"T3\",\"MV\":\"GraphDefined\",\"MM\":\"GD-OCMF-AC22\",\"MS\":\"GD-METER-OCMF-TEST-01\",\"MF\":\"1.0.0\",\"IS\":true,\"IL\":\"TRUSTED\",\"IF\":[\"RFID_PLAIN\"],\"IT\":\"ISO14443\",\"ID\":\"04A9B7C21E5D80\",\"CT\":\"EVSEID\",\"CI\":\"DE*GEF*E12345678*1\",\"CF\":\"1.0.0\",\"RD\":[{\"TM\":\"2026-08-28T14:00:20,000+0200 S\",\"TX\":\"C\",\"RV\":1234.0963,\"RI\":\"1-0:1.8.0*255\",\"RU\":\"kWh\",\"RT\":\"AC\",\"EF\":\"\",\"ST\":\"G\"}]}|{\"SA\":\"ECDSA-secp256r1-SHA256\",\"SE\":\"hex\",\"SM\":\"application/x-der\",\"SD\":\"30460221009D49963A7C7096DE8D6EA95491587C59982173E26B03EC6EA08E70DE941E366E022100BEE679AFF5A939DD040510A625AF1804B347EB9474845A1F122ABD6280E67384\"}",
-            "OCMF|{\"FV\":\"1.4\",\"GI\":\"GraphDefined Charging Station\",\"GS\":\"CS-OCMF-TEST-01\",\"GV\":\"1.0.0\",\"PG\":\"T4\",\"MV\":\"GraphDefined\",\"MM\":\"GD-OCMF-AC22\",\"MS\":\"GD-METER-OCMF-TEST-01\",\"MF\":\"1.0.0\",\"IS\":true,\"IL\":\"TRUSTED\",\"IF\":[\"RFID_PLAIN\"],\"IT\":\"ISO14443\",\"ID\":\"04A9B7C21E5D80\",\"CT\":\"EVSEID\",\"CI\":\"DE*GEF*E12345678*1\",\"CF\":\"1.0.0\",\"RD\":[{\"TM\":\"2026-08-28T14:00:30,000+0200 S\",\"TX\":\"C\",\"RV\":1234.1558,\"RI\":\"1-0:1.8.0*255\",\"RU\":\"kWh\",\"RT\":\"AC\",\"EF\":\"\",\"ST\":\"G\"}]}|{\"SA\":\"ECDSA-secp256r1-SHA256\",\"SE\":\"hex\",\"SM\":\"application/x-der\",\"SD\":\"304502210083A6672AD8856E3CAD3FBF842F7F50875F8E4D65BD1F64B132845D7A8243F24702206C2701350F52586232841E7E5DB7C3A8552761CCA964B214C4B37BCDB81001D4\"}",
-            "OCMF|{\"FV\":\"1.4\",\"GI\":\"GraphDefined Charging Station\",\"GS\":\"CS-OCMF-TEST-01\",\"GV\":\"1.0.0\",\"PG\":\"T5\",\"MV\":\"GraphDefined\",\"MM\":\"GD-OCMF-AC22\",\"MS\":\"GD-METER-OCMF-TEST-01\",\"MF\":\"1.0.0\",\"IS\":true,\"IL\":\"TRUSTED\",\"IF\":[\"RFID_PLAIN\"],\"IT\":\"ISO14443\",\"ID\":\"04A9B7C21E5D80\",\"CT\":\"EVSEID\",\"CI\":\"DE*GEF*E12345678*1\",\"CF\":\"1.0.0\",\"RD\":[{\"TM\":\"2026-08-28T14:00:40,000+0200 S\",\"TX\":\"C\",\"RV\":1234.2195,\"RI\":\"1-0:1.8.0*255\",\"RU\":\"kWh\",\"RT\":\"AC\",\"EF\":\"\",\"ST\":\"G\"}]}|{\"SA\":\"ECDSA-secp256r1-SHA256\",\"SE\":\"hex\",\"SM\":\"application/x-der\",\"SD\":\"3046022100F165A2D846DACC48E1CF58ABB4785621EA3F08E868A6482CC349BEC6E7861A530221009998B933C51D16AA7F5B33EA4162BCD2E14005AB2FE20E166C4B02E012195623\"}",
-            "OCMF|{\"FV\":\"1.4\",\"GI\":\"GraphDefined Charging Station\",\"GS\":\"CS-OCMF-TEST-01\",\"GV\":\"1.0.0\",\"PG\":\"T6\",\"MV\":\"GraphDefined\",\"MM\":\"GD-OCMF-AC22\",\"MS\":\"GD-METER-OCMF-TEST-01\",\"MF\":\"1.0.0\",\"IS\":true,\"IL\":\"TRUSTED\",\"IF\":[\"RFID_PLAIN\"],\"IT\":\"ISO14443\",\"ID\":\"04A9B7C21E5D80\",\"CT\":\"EVSEID\",\"CI\":\"DE*GEF*E12345678*1\",\"CF\":\"1.0.0\",\"RD\":[{\"TM\":\"2026-08-28T14:00:50,000+0200 S\",\"TX\":\"C\",\"RV\":1234.2832,\"RI\":\"1-0:1.8.0*255\",\"RU\":\"kWh\",\"RT\":\"AC\",\"EF\":\"\",\"ST\":\"G\"}]}|{\"SA\":\"ECDSA-secp256r1-SHA256\",\"SE\":\"hex\",\"SM\":\"application/x-der\",\"SD\":\"304502203F30F07F8E29EB694D8518F83B81E7079EA7D34489316EEF6E4BED8C79E25E850221008F67C7A6398F688F9945C00EC82A3FFC1E7ECCD22FF6DCCDF64EE5453E3E83BB\"}",
-            "OCMF|{\"FV\":\"1.4\",\"GI\":\"GraphDefined Charging Station\",\"GS\":\"CS-OCMF-TEST-01\",\"GV\":\"1.0.0\",\"PG\":\"T7\",\"MV\":\"GraphDefined\",\"MM\":\"GD-OCMF-AC22\",\"MS\":\"GD-METER-OCMF-TEST-01\",\"MF\":\"1.0.0\",\"IS\":true,\"IL\":\"TRUSTED\",\"IF\":[\"RFID_PLAIN\"],\"IT\":\"ISO14443\",\"ID\":\"04A9B7C21E5D80\",\"CT\":\"EVSEID\",\"CI\":\"DE*GEF*E12345678*1\",\"CF\":\"1.0.0\",\"RD\":[{\"TM\":\"2026-08-28T14:01:00,000+0200 S\",\"TX\":\"C\",\"RV\":1234.3460,\"RI\":\"1-0:1.8.0*255\",\"RU\":\"kWh\",\"RT\":\"AC\",\"EF\":\"\",\"ST\":\"G\"}]}|{\"SA\":\"ECDSA-secp256r1-SHA256\",\"SE\":\"hex\",\"SM\":\"application/x-der\",\"SD\":\"3046022100D438C83BDC6197343F4936E388C0058B8B6C7751C15524859A436BFF7CD0CFB2022100BAACAD8143FA0A9869F6BE656C5AD0B434E1178F7AEF44A0EF87EE42491B6A43\"}"
+            "OCMF|{\"FV\":\"1.4\",\"GI\":\"GraphDefined Charging Station\",\"GS\":\"CS-OCMF-TEST-01\",\"GV\":\"1.0.0\",\"PG\":\"T1\",\"MV\":\"GraphDefined\",\"MM\":\"GD-OCMF-AC22\",\"MS\":\"GD-METER-OCMF-TEST-01\",\"MF\":\"1.0.0\",\"IS\":true,\"IL\":\"TRUSTED\",\"IF\":[\"RFID_PLAIN\"],\"IT\":\"ISO14443\",\"ID\":\"04A9B7C21E5D80\",\"CT\":\"EVSEID\",\"CI\":\"DE*GEF*E12345678*1\",\"CF\":\"1.0.0\",\"RD\":[{\"TM\":\"2026-09-08T23:37:18,000+0200 S\",\"TX\":\"B\",\"RV\":1234.0000,\"RI\":\"1-0:1.8.0*255\",\"RU\":\"kWh\",\"RT\":\"AC\",\"EF\":\"\",\"ST\":\"G\"}]}|{\"SA\":\"ECDSA-secp256r1-SHA256\",\"SE\":\"hex\",\"SM\":\"application/x-der\",\"SD\":\"304502203F98C1A7CBDE87E229B3316147B385B4E94ECFC7B469079278FCED9685F0811902210094D3B8CF4236F1AAE4004A0147F45989F57C2AA0C3C27A0A16F4A2518EC5E5AE\"}",
+            "OCMF|{\"FV\":\"1.4\",\"GI\":\"GraphDefined Charging Station\",\"GS\":\"CS-OCMF-TEST-01\",\"GV\":\"1.0.0\",\"PG\":\"T2\",\"MV\":\"GraphDefined\",\"MM\":\"GD-OCMF-AC22\",\"MS\":\"GD-METER-OCMF-TEST-01\",\"MF\":\"1.0.0\",\"IS\":true,\"IL\":\"TRUSTED\",\"IF\":[\"RFID_PLAIN\"],\"IT\":\"ISO14443\",\"ID\":\"04A9B7C21E5D80\",\"CT\":\"EVSEID\",\"CI\":\"DE*GEF*E12345678*1\",\"CF\":\"1.0.0\",\"RD\":[{\"TM\":\"2026-09-08T23:37:28,000+0200 S\",\"TX\":\"C\",\"RV\":1234.0342,\"RI\":\"1-0:1.8.0*255\",\"RU\":\"kWh\",\"RT\":\"AC\",\"EF\":\"\",\"ST\":\"G\"}]}|{\"SA\":\"ECDSA-secp256r1-SHA256\",\"SE\":\"hex\",\"SM\":\"application/x-der\",\"SD\":\"3045022100F72E1211E2A74A58F65280492127914966A3A8AAA53638F749C4577D2A6CDB4602207A772D15F803ED7D1BE38EC34C563F2F0B2966CEE66CB82648585763CA9DDFDD\"}",
+            "OCMF|{\"FV\":\"1.4\",\"GI\":\"GraphDefined Charging Station\",\"GS\":\"CS-OCMF-TEST-01\",\"GV\":\"1.0.0\",\"PG\":\"T3\",\"MV\":\"GraphDefined\",\"MM\":\"GD-OCMF-AC22\",\"MS\":\"GD-METER-OCMF-TEST-01\",\"MF\":\"1.0.0\",\"IS\":true,\"IL\":\"TRUSTED\",\"IF\":[\"RFID_PLAIN\"],\"IT\":\"ISO14443\",\"ID\":\"04A9B7C21E5D80\",\"CT\":\"EVSEID\",\"CI\":\"DE*GEF*E12345678*1\",\"CF\":\"1.0.0\",\"RD\":[{\"TM\":\"2026-09-08T23:37:38,000+0200 S\",\"TX\":\"C\",\"RV\":1234.0963,\"RI\":\"1-0:1.8.0*255\",\"RU\":\"kWh\",\"RT\":\"AC\",\"EF\":\"\",\"ST\":\"G\"}]}|{\"SA\":\"ECDSA-secp256r1-SHA256\",\"SE\":\"hex\",\"SM\":\"application/x-der\",\"SD\":\"304502206744F1AF62E9801A86A9EC51EB5C477005780C57757E864A8330721A230506F7022100FF1D6F2F7C3459B95A9591D6A4D6A2556A5FB4253CD9E7B304FC83A248F75DAE\"}",
+            "OCMF|{\"FV\":\"1.4\",\"GI\":\"GraphDefined Charging Station\",\"GS\":\"CS-OCMF-TEST-01\",\"GV\":\"1.0.0\",\"PG\":\"T4\",\"MV\":\"GraphDefined\",\"MM\":\"GD-OCMF-AC22\",\"MS\":\"GD-METER-OCMF-TEST-01\",\"MF\":\"1.0.0\",\"IS\":true,\"IL\":\"TRUSTED\",\"IF\":[\"RFID_PLAIN\"],\"IT\":\"ISO14443\",\"ID\":\"04A9B7C21E5D80\",\"CT\":\"EVSEID\",\"CI\":\"DE*GEF*E12345678*1\",\"CF\":\"1.0.0\",\"RD\":[{\"TM\":\"2026-09-08T23:37:48,000+0200 S\",\"TX\":\"C\",\"RV\":1234.1558,\"RI\":\"1-0:1.8.0*255\",\"RU\":\"kWh\",\"RT\":\"AC\",\"EF\":\"\",\"ST\":\"G\"}]}|{\"SA\":\"ECDSA-secp256r1-SHA256\",\"SE\":\"hex\",\"SM\":\"application/x-der\",\"SD\":\"304502201DC9BAD04045CD4854B9BC0E5BAD5266AEA6CF201686F43BD9C21A87760746D8022100DA793C481E6C071CD2D22748073B1E2F648D9C1F7F492BC309635182EE79546E\"}",
+            "OCMF|{\"FV\":\"1.4\",\"GI\":\"GraphDefined Charging Station\",\"GS\":\"CS-OCMF-TEST-01\",\"GV\":\"1.0.0\",\"PG\":\"T5\",\"MV\":\"GraphDefined\",\"MM\":\"GD-OCMF-AC22\",\"MS\":\"GD-METER-OCMF-TEST-01\",\"MF\":\"1.0.0\",\"IS\":true,\"IL\":\"TRUSTED\",\"IF\":[\"RFID_PLAIN\"],\"IT\":\"ISO14443\",\"ID\":\"04A9B7C21E5D80\",\"CT\":\"EVSEID\",\"CI\":\"DE*GEF*E12345678*1\",\"CF\":\"1.0.0\",\"RD\":[{\"TM\":\"2026-09-08T23:37:58,000+0200 S\",\"TX\":\"C\",\"RV\":1234.2195,\"RI\":\"1-0:1.8.0*255\",\"RU\":\"kWh\",\"RT\":\"AC\",\"EF\":\"\",\"ST\":\"G\"}]}|{\"SA\":\"ECDSA-secp256r1-SHA256\",\"SE\":\"hex\",\"SM\":\"application/x-der\",\"SD\":\"304502205D8E803CFA2C699C0DB944C752A1D36342C3CCCBCBC2FEB91E740F4AA9EB7897022100BAEC5B9279AE2BB632C92EB21419F0A7F8B65830434BBD044020B523A08F3AB0\"}",
+            "OCMF|{\"FV\":\"1.4\",\"GI\":\"GraphDefined Charging Station\",\"GS\":\"CS-OCMF-TEST-01\",\"GV\":\"1.0.0\",\"PG\":\"T6\",\"MV\":\"GraphDefined\",\"MM\":\"GD-OCMF-AC22\",\"MS\":\"GD-METER-OCMF-TEST-01\",\"MF\":\"1.0.0\",\"IS\":true,\"IL\":\"TRUSTED\",\"IF\":[\"RFID_PLAIN\"],\"IT\":\"ISO14443\",\"ID\":\"04A9B7C21E5D80\",\"CT\":\"EVSEID\",\"CI\":\"DE*GEF*E12345678*1\",\"CF\":\"1.0.0\",\"RD\":[{\"TM\":\"2026-09-08T23:38:08,000+0200 S\",\"TX\":\"C\",\"RV\":1234.2832,\"RI\":\"1-0:1.8.0*255\",\"RU\":\"kWh\",\"RT\":\"AC\",\"EF\":\"\",\"ST\":\"G\"}]}|{\"SA\":\"ECDSA-secp256r1-SHA256\",\"SE\":\"hex\",\"SM\":\"application/x-der\",\"SD\":\"3044022044AE33B7455CC3AF5054BA19999853F5CD3B0BEC42A9433E39A7F3FF1A36A4DA02207BD5207DA6161FF12D3F77E08E7C406F78F7D4EF537D7845767F23B4F14E253C\"}"
         ]
     },
+
+    "chargingPeriods": [
+        {
+            "startTimestamp": "2026-09-08T21:37:18Z",
+            "chargingTariffId": "DE*GEF*T-AC22",
+            "activeChargingTariffElement": {
+                "price_components": [
+                    {
+                        "type": "ENERGY",
+                        "price": 0.35,
+                        "step_size": 1
+                    }
+                ]
+            },
+            "costs": {
+                "total": 0.0991,
+                "currency": "EUR",
+                "energy": {
+                    "amount": 0.2832,
+                    "unit": "kWh",
+                    "cost": 0.0991
+                }
+            }
+        }
+    ],
+
+    "legallyRelevantLogMessages": [
+        {
+            "@context": "https://open.charging.cloud/contexts/legallyRelevantLogMessages/gridPowerConstraints/1.0",
+            "timestamp": "2026-09-08T21:37:42Z",
+            "code": "LimitationOfPowerConsumption",
+            "text": {
+                "en": "The grid operator has requested a limitation of charging power consumption!"
+            },
+            "data": {
+                "maxPower": "6 kW",
+                "start": "2026-09-08T21:38:20Z",
+                "duration": "1 min"
+            },
+            "signatures": [
+                {
+                    "keyId": "A6346E58D78BE0C49CCD9CEE3BE21743E4FC51170679F1C16337AF4FF2155693",
+                    "algorithm": "ECDSA-secp256r1-SHA256",
+                    "signedData": {
+                        "excludedProperties": [ "signatures" ],
+                        "encodings": [ "JSON", "JCS", "UTF-8" ]
+                    },
+                    "encodings": [ "Ecdsa-Sig-Value", "DER", "hex" ],
+                    "value": "3044022025258DB1C6D6CBC8B468A1A390A493DE837054BA92F93863B4238289C29E74D70220014BC29EEBEB40E8128FB15DE0CA8DE99AC46F9DC2C7B659C86B5B5FC635C156"
+                },
+                {
+                    "keyId": "A48E0EE1B9BDBE41637EF4059B68B698A0F28948280CD12FEA29800BB53646D6",
+                    "algorithm": "EdDSA-Ed25519",
+                    "signedData": {
+                        "excludedProperties": [ "signatures" ],
+                        "encodings": [ "JSON", "JCS", "UTF-8" ]
+                    },
+                    "encodings": [ "raw", "hex" ],
+                    "value": "C9BCA4BDBAE2E26C549EFE3C9A748ED5E8627C4ACAD8F98E43D4FA05188FDA8AEF6177ACEDC97D4F524F3F11885D664E556CC907BE6B3779976353E64E450506"
+                }
+            ]
+        }
+    ],
 
     "signatures":    [
         {
@@ -210,7 +291,7 @@
                 "encodings": [ "JSON", "JCS", "UTF-8" ]
             },
             "encodings": [ "Ecdsa-Sig-Value", "DER", "hex" ],
-            "value": "304502202298FF63ADD6D508AAEB5718BCD22EC51A80186CF8820C681197E2C8F27FAC4C022100D4A6A5148EFA8A5411E6B919EDD8C646ED5A39FD967C1429A781C15B6048740E"
+            "value": "3046022100BCD25ED54F98112444822343AB6524C25F2934883DC7959D50A8958FA82021A4022100DDFEF81B501CD22650914767980A522186A827CF119F76537E51936881DDE62D"
         },
         {
             "keyId": "A2F94A58FB75E25BC2CECDF582819B6D44F3705D0C3BADD6391E9D536D5671E8",
@@ -220,7 +301,7 @@
                 "encodings": [ "JSON", "JCS", "UTF-8" ]
             },
             "encodings": [ "raw", "hex" ],
-            "value": "AB4C5484F624CE3F9C88D177D67554CDEA0E6C1534488D42E0CB4C5FAA86C44BDD3C77719505132F82158A7A1A84B128A54021537366E19810AA138AF92BAD07"
+            "value": "CE057EB246AD5076CF5A332816187487F0F9F07180A6DB9CC6AA6B3CF845EDC8C5D20C640B38E4F7F47E6138CBEFD7AFF8BB2EBF039569AD2968A098182AEA0D"
         }
     ]
 

@@ -62,6 +62,10 @@ export interface IChargeTransparencyRecord extends chargyLib.JSONObject
     publicKeys?:                 Array<publicKeyInfo.   IPublicKey>               | undefined;
     chargingSessions?:           Array<IChargingSession>                          | undefined;
     eMobilityProviders?:         Array<chargyInterfaces.IEMobilityProvider>       | undefined;
+
+    /** Grid operators e.g. send signed power constraints */
+    gridOperators?:              Array<chargyInterfaces.IGridOperator>            | undefined;
+
     mediationServices?:          Array<chargyInterfaces.IMediationService>        | undefined;
     verificationResult?:         chargyInterfaces.ISessionCryptoResult            | undefined;
     invalidDataSets?:            Array<IExtendedFileInfo>                         | undefined;

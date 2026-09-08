@@ -114,6 +114,28 @@ export interface IKeyInfo
 }
 
 
+/** A grid operator */
+export interface IGridOperator
+{
+
+    "@id":                      string;
+    "@context"?:                LinkedDataContext | Array<LinkedDataContext> | undefined;
+    name?:                      chargyLib.I18NString                         | undefined;
+    description?:               chargyLib.I18NString                         | undefined;
+
+    contact?:                   IContact                                     | undefined;
+    support?:                   ISupport                                     | undefined;
+    privacy?:                   IPrivacyContact                              | undefined;
+    geoLocation?:               IGeoLocation                                 | undefined;
+
+    /** URLs to images / logos */
+    imageURLs?:                 string[]                                     | undefined;
+
+    publicKeys?:                Array<IPublicKey>                            | undefined;
+
+}
+
+
 /** A charging station operator */
 export interface IChargingStationOperator
 {
@@ -124,9 +146,9 @@ export interface IChargingStationOperator
     description?:               chargyLib.I18NString                         | undefined;
 
     subCSOIds?:                 Array<string>                                | undefined;
-    contact:                    IContact;
-    support:                    ISupport;
-    privacy:                    IPrivacyContact;
+    contact?:                   IContact                                     | undefined;
+    support?:                   ISupport                                     | undefined;
+    privacy?:                   IPrivacyContact                              | undefined;
     geoLocation?:               IGeoLocation                                 | undefined;
 
     /** URLs to images / logos */
@@ -1159,8 +1181,8 @@ export interface ILegallyRelevantLogMessage
     chargingSession?:             IChargingSession                             | undefined;
     timestamp:                    Timestamp;
     code?:                        string                                       | undefined;
-    data?:                        chargyLib.JSONObject                         | undefined;
     text?:                        chargyLib.I18NString                         | undefined;
+    data?:                        chargyLib.JSONObject                         | undefined;
     signatures?:                  Array<ISignature|ISignatureRS>               | undefined;
 }
 

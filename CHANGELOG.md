@@ -7,6 +7,115 @@ While the version number is below 1.0.0, breaking changes are released in minor
 versions and are always listed first below.
 
 
+## [0.16.0] - 2026-09-08
+
+### Added
+
+- **A grid operator is a party to a charging session.** When the grid asks a
+  station to charge more slowly, the session's power drops for a reason that is
+  neither the car's nor the station's, and without the constraint and the key
+  it was signed with that dip is indistinguishable from a fault. `IGridOperator`
+  carries the identity and the keys to tell the two apart: a charging station
+  operator minus everything about charging infrastructure, because a grid
+  operator runs no pools, stations or tariffs. `@id` is all it requires. A live
+  link names one in `gridOperator`, a charge transparency record several in
+  `gridOperators` - a live link describes one ongoing session, a record may
+  span several grids.
+
+- **`signGridPowerConstraints` is the key usage a grid operator signs under.**
+  It joins `signCTRs` for whole records and `signMeterValues` /
+  `signEnergyMeterValues` for readings. A constraint is signed with every key
+  the operator holds for that usage, so a verifier supporting either algorithm
+  can check it.
+
+- **The OCMF-Test-01 series carries a power constraint.** It is now a five
+  minute session in 35 documents instead of a three minute one in twenty, and
+  the grid operator limits the charging power to 6 kW for one minute in the
+  middle of it. The constraint is a `legallyRelevantLogMessage` signed by
+  `DE*VEN` under `signGridPowerConstraints` with one ECDSA and one Ed25519 key,
+  the meter takes an extra reading where it begins and where it ends, the power
+  in between stays below the limit, and the charging periods are cut at both
+  ends of it - which is the whole point of the fixture: a dip in the curve with
+  a signed explanation next to it. The generator gained
+  `OCMF-Test-01__LRLMs.json`, the log messages whose times are relative to the
+  start reading, and `--log-messages` / `--no-log-messages` to steer them.
+
+- **Every optional property of the live link document may now be explicitly
+  `undefined`.**
+  Under `exactOptionalPropertyTypes` a bare `?:` means the property may be
+  omitted but not set to `undefined`, which made building a live link from
+  optional sources need a conditional per property. `description`, `timeSource`,
+  `chargingStationOperator`, `chargingStation`, `chargingSessionId`,
+  `eMobilityProvider`, `contract`, `warnings` and `signatureVerification` now
+  say `| undefined` like their neighbours already did.
+
+### Fixed
+
+- **The live link documentation described a format two releases old.** Every
+  one of these would have produced a document the current code turns away, and
+  the format documentation is where a producer looks first:
+
+  - The TOTP configuration was documented as `initialSharedSecret`, renamed to
+    `sharedSecret` in 0.15.0. `isTOTPConfig()` requires the new name, so a
+    transport copied from the documentation failed `isLiveTransport()` and was
+    dropped by a filtering reader without a word - the same failure 0.15.1
+    fixed in the fixtures, still sitting in the prose.
+  - Transports named their endpoint in `url`, removed in 0.15.0. A transport
+    copied from the documentation was well-formed and named no endpoint at all.
+  - The minimal document had no `created` and was described as the smallest
+    recognised live link. Since 0.15.0 it is not a live link at all:
+    recognition requires `@context`, `created` and `liveTransports`, and the
+    documentation still said `@context` alone decided it.
+  - Reading a document was described as filling in a missing `created`. It
+    stopped doing that in 0.15.0, because that timestamp recorded when the
+    document was *read*.
+  - The TOTP table listed two properties of seven and declared `timeStep`
+    required, which it is not; the paragraph below it said the format does not
+    specify a hash algorithm, digits or encoding, which it has since done in
+    `hashAlgorithm`, `totpLength` and `alphabet`.
+  - `refresh` was said to be validated by `IsAChargeTransparencyLiveLink()` and
+    the point-of-use guards to include an `isTransport`. Both are
+    `isLiveTransport()` now.
+
+### Changed
+
+- **The format documentation lists the properties a live link declares.** The
+  interfaces grew in 0.14.0 and 0.15.0 without the documentation following, so
+  `chargingSessionId`, `eMobilityProvider`, `chargingPeriods`,
+  `legallyRelevantLogMessages` and `supportMessages` appeared nowhere, while
+  nine properties that *are* declared were still listed as carried by the
+  fixtures and unvalidated. That section now holds what it says: `@id`,
+  `imageURLs` and the superseded `geoLocation` and `connector`.
+
+- **An operator's `contact`, `support` and `privacy` are optional.**
+  `IChargingStationOperator` had required all three since it was written, and
+  `IGridOperator` inherited that when it took its shape. No document in the
+  repository carries any of them, nothing validates them, and requiring them
+  forced anyone building an operator in TypeScript to invent three properties
+  the format's own fixtures do without.
+
+- **The fixtures write an operator's `name` as the `I18NString` it is typed
+  as.** The template said `"GraphDefined"` and `"Vanaheimr Electric"` where the
+  interfaces say a language-tag-to-string object, so the one document meant to
+  show the format did not follow it. It is `{ "en": ... }` now, and the series
+  is regenerated.
+
+- **`ILegallyRelevantLogMessage` names its `text` before its `data`.** The
+  message comes before the payload that qualifies it, the way `ISupportMessage`
+  already had it.
+
+- **`CTR_Format.md` lists `gridOperators`** among the top-level properties of a
+  charge transparency record.
+
+- **Two live link tests no longer spell out what the generator regenerates.**
+  One asserted `created` to be a fixed timestamp and one the meter values to
+  number twenty; both are properties of the moment the fixture was generated
+  and of the session parameters, so both broke the first time the series was
+  regenerated. They now compare `created` against what the document itself
+  states - which is the actual assertion, that reading neither fills in nor
+  replaces it - and count the OCMF documents rather than naming a number.
+
+
 ## [0.15.1] - 2026-09-07
 
 ### Fixed
