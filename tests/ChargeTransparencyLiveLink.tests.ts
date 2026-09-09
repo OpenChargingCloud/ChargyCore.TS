@@ -16,6 +16,7 @@ import {
     isLiveTransport,
     type IChargeTransparencyLiveLink
 } from "../src/interfaces/IChargeTransparencyLiveLink";
+import { parseOCMFBonnTariffTexts } from "../src/OCMF_BET_TariffTextExtension";
 import {
     createTestChargy,
     parseI18NDictionary,
@@ -137,9 +138,10 @@ describe("Charge Transparency LiveLink", () => {
         const measurement = chargingSession?.measurements?.[0];
 
         // One reading per OCMF document of the series, plus one: the end
-        // document repeats the start value alongside its own. How long the
-        // series is follows from the generator's session parameters, so it is
-        // counted here rather than spelled out.
+        // document repeats the start value alongside its own. The session
+        // changes tariff twice on the way, which no longer costs it any
+        // documents - "TT" is not part of the key OCMF documents are grouped
+        // by, so a tariff change does not split a session in two.
         expect(measurement?.name).toBe("ENERGY_TOTAL");
         expect(measurement?.values).toHaveLength((liveLink.signedMeterValues?.values.length ?? 0) + 1);
 
@@ -173,6 +175,113 @@ describe("Charge Transparency LiveLink", () => {
             // Everything verified, so there is nothing to warn about.
             expect(report.warnings ?? []).toHaveLength(0);
         }
+
+    });
+
+    // The JSON payload of one OCMF document. The envelope is
+    // "OCMF|<payload>|<signature>", and the payload may itself contain vertical
+    // bars - a "TT" recording a tariff change does - so it is taken between the
+    // FIRST and the LAST bar rather than by splitting on them.
+    function ocmfPayloadOf(document: string): Record<string, unknown> {
+        return JSON.parse(document.slice(document.indexOf("|") + 1, document.lastIndexOf("|"))) as Record<string, unknown>;
+    }
+
+    // The "TT" tariff text of one OCMF document.
+    function tariffTextOf(document: string): string {
+        return ocmfPayloadOf(document)["TT"] as string;
+    }
+
+    // The fixture carries exactly one log message; a helper that throws keeps
+    // the tests below from quietly passing if it ever carries none.
+    function firstLogMessageOf(liveLink: Record<string, unknown>): Record<string, unknown> {
+
+        const logMessages = liveLink["legallyRelevantLogMessages"] as Array<Record<string, unknown>>;
+        const logMessage  = logMessages[0];
+
+        if (logMessage === undefined)
+            throw new Error("The fixture carries no legally relevant log message!");
+
+        return logMessage;
+
+    }
+
+    async function readTamperedLiveLink(change: (liveLink: Record<string, unknown>) => void): DetectionResult {
+
+        const tampered = JSON.parse(readFixture("ChargeTransparencyLive/ChargeTransparencyLiveLink_1.json")) as Record<string, unknown>;
+
+        change(tampered);
+
+        return createTestChargy(Chargy, { i18n: coreI18n }).DetectAndConvertContentFormat([ {
+            name: "tampered.json",
+            type: "application/json",
+            data: new TextEncoder().encode(JSON.stringify(tampered))
+        } ]);
+
+    }
+
+    test("verifies the signatures a log message carries over itself", async () => {
+
+        const report = await verifyChargeTransparencyLiveLink("ChargeTransparencyLive/ChargeTransparencyLiveLink_1.json");
+
+        expect(IsAChargeTransparencyLiveLink(report)).toBe(true);
+
+        if (IsAChargeTransparencyLiveLink(report))
+        {
+            // The power constraint is signed by the grid operator with one
+            // ECDSA and one Ed25519 key, and the keys to check it live on the
+            // gridOperator of the same document. Nothing to warn about.
+            expect(report.legallyRelevantLogMessages).toHaveLength(1);
+            expect(report.warnings ?? []).toHaveLength(0);
+        }
+
+    });
+
+    test("warns when a log message was changed after it was signed", async () => {
+
+        // Changing the message inside the document breaks both signatures -
+        // the document covers the message, so the operator's signature fails
+        // too. What the message's own signature adds is the answer to a
+        // different question: an operator who re-signs the document around a
+        // forged constraint produces a document that verifies, and only the
+        // grid operator's signature still says the grid never asked for it.
+        // Verified in isolation in DocumentSignatures.tests.ts.
+        const report = await readTamperedLiveLink(liveLink => {
+            firstLogMessageOf(liveLink)["data"] = { maxPower: "60 kW" };
+        });
+
+        expect(IsAChargeTransparencyLiveLink(report)).toBe(true);
+
+        if (IsAChargeTransparencyLiveLink(report))
+        {
+            const warnings = report.warnings ?? [];
+
+            expect(warnings.some(warning =>
+                warning.message["en"]?.includes("log message does not match its content") === true)).toBe(true);
+
+            // Both fail, and both are reported.
+            expect(report.signatureVerification?.status).toBe("noneValid");
+            expect(warnings.some(warning =>
+                warning.message["en"]?.includes("signature of this document does not match") === true)).toBe(true);
+
+            // Reported, not refused: the message and everything around it stay
+            // readable.
+            expect(report.legallyRelevantLogMessages).toHaveLength(1);
+            expect(report.liveTransports).toHaveLength(3);
+        }
+
+    });
+
+    test("warns about a log message that carries no signature of its own", async () => {
+
+        const report = await readTamperedLiveLink(liveLink => {
+            delete firstLogMessageOf(liveLink)["signatures"];
+        });
+
+        expect(IsAChargeTransparencyLiveLink(report)).toBe(true);
+
+        if (IsAChargeTransparencyLiveLink(report))
+            expect((report.warnings ?? []).some(warning =>
+                warning.message["en"]?.includes("not signed in its own right") === true)).toBe(true);
 
     });
 
@@ -329,6 +438,91 @@ describe("Charge Transparency LiveLink", () => {
         // What it does say is still type-checked, and still only on https.
         expect(isLiveTransport({ type: "https",     urls: [ "https://api.example.com/live" ], refresh: "10" })).toBe(false);
         expect(isLiveTransport({ type: "websocket", urls: [ "wss://api.example.com/live"   ], refresh: "10" })).toBe(true);
+
+    });
+
+    test("records the session's tariff changes in the OCMF tariff text", () => {
+
+        const liveLink    = readLiveLink("ChargeTransparencyLive/ChargeTransparencyLiveLink_1.json");
+        const documents   = liveLink.signedMeterValues?.values ?? [];
+        const tariffTexts = documents.map(tariffTextOf);
+
+        expect(documents.length).toBeGreaterThan(0);
+
+        const base        = "001;EUR;0;35;0;0";
+        const constrained = "001;EUR;0;25;0;0";
+
+        // A tariff text names one tariff. This session has three tariff
+        // periods, so "TT" carries the tariffs that have metered something so
+        // far, in order and separated by a vertical bar - the extension
+        // documented in the fixture README. The base price appears twice
+        // because the session returns to it: these are periods, not distinct
+        // tariffs.
+        expect([ ...new Set(tariffTexts) ]).toEqual([
+            base,
+            base + "|" + constrained,
+            base + "|" + constrained + "|" + base
+        ]);
+
+        // Every one of them is a tariff text this library reads back, and each
+        // entry of a history is a well-formed Bonn tariff of its own.
+        for (const tariffText of tariffTexts)
+            for (const tariff of parseOCMFBonnTariffTexts(tariffText))
+            {
+                expect(tariff.code).toBe("001");
+                expect(tariff.currency).toBe("EUR");
+                expect(tariff.startFeeCents).toBe(0);
+
+                // Neither tariff has a blocking fee, which profile 001
+                // expresses as a fee of zero rather than by leaving the fields
+                // out.
+                if (tariff.code === "001")
+                {
+                    expect(tariff.blockingFeeCentsPerMinute).toBe(0);
+                    expect(tariff.blockingFeeStartMinute).toBe(0);
+                }
+            }
+
+        // The two prices of the session, and no others.
+        expect([ ...new Set(tariffTexts.flatMap(tariffText =>
+            parseOCMFBonnTariffTexts(tariffText).map(tariff =>
+                tariff.code === "001" ? tariff.energyFeeCentsPerKWh : undefined))) ].
+                    sort((left, right) => (left ?? 0) - (right ?? 0))).toEqual([ 25, 35 ]);
+
+    });
+
+    test("marks the readings at which the tariff changes with TX \"T\"", () => {
+
+        const liveLink  = readLiveLink("ChargeTransparencyLive/ChargeTransparencyLiveLink_1.json");
+        const documents = liveLink.signedMeterValues?.values ?? [];
+
+        const readingsOf = (document: string): Array<string> =>
+            (ocmfPayloadOf(document)["RD"] as Array<Record<string, unknown>>).
+                map(reading => reading["TX"] as string);
+
+        // OCMF has a reading reason for a tariff change, and the meter reads at
+        // both ends of the power limit anyway - so both boundaries carry it.
+        const tariffChanges = documents.filter(document => readingsOf(document).includes("T"));
+
+        expect(tariffChanges).toHaveLength(2);
+
+        // A "T" reading closes the interval under the previous tariff, so it is
+        // still the last document of that tariff: its history is one entry
+        // shorter than that of the document after it.
+        for (const tariffChange of tariffChanges)
+        {
+            const index = documents.indexOf(tariffChange);
+            const after = documents[index + 1];
+
+            expect(after).toBeDefined();
+            expect(parseOCMFBonnTariffTexts(tariffTextOf(after ?? "")).length).
+                toBe(parseOCMFBonnTariffTexts(tariffTextOf(tariffChange)).length + 1);
+        }
+
+        // One "T" per tariff change, and the first and last readings of the
+        // session keep their own reasons.
+        expect(readingsOf(documents[0] ?? "")).toEqual([ "B" ]);
+        expect(readingsOf(documents[documents.length - 1] ?? "")).toEqual([ "B", "E" ]);
 
     });
 

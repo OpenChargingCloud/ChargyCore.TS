@@ -5,7 +5,8 @@ import { describe, expect, test } from "vitest";
 
 import {
     collectDocumentPublicKeys,
-    verifyDocumentSignatures
+    verifyDocumentSignatures,
+    verifyEmbeddedSignatures
 } from "../src/DocumentSignatures";
 import type { JSONObject } from "../src/interfaces/chargyLib";
 
@@ -41,13 +42,19 @@ describe("Signatures over a whole document", () => {
 
     });
 
-    test("finds the public keys of the operator and of the energy meter", () => {
+    test("finds the public keys of the operator, the energy meter and the grid operator", () => {
 
         const publicKeys = collectDocumentPublicKeys(readDocument(signedLiveLink));
 
-        expect(publicKeys).toHaveLength(4);
+        expect(publicKeys).toHaveLength(6);
         expect(publicKeys.map(publicKey => publicKey.algorithm)).toContain("EdDSA-Ed25519");
         expect(publicKeys.some(publicKey => publicKey.keyUsage.includes("signMeterValues"))).toBe(true);
+
+        // The grid operator signs its power constraints rather than the
+        // document, so its keys are needed to verify a log message, not the
+        // document itself - they belong in the same set all the same.
+        expect(publicKeys.filter(publicKey =>
+            publicKey.keyUsage.includes("signGridPowerConstraints"))).toHaveLength(2);
 
     });
 
@@ -140,6 +147,81 @@ describe("Signatures over a whole document", () => {
 
         expect(result.status).toBe("someValid");
         expect(result.validCount).toBe(1);
+
+    });
+
+});
+
+
+describe("Signatures an embedded object carries over itself", () => {
+
+    function logMessageOf(document: JSONObject): JSONObject {
+
+        const logMessage = (document["legallyRelevantLogMessages"] as Array<JSONObject>)[0];
+
+        if (logMessage === undefined)
+            throw new Error("The fixture carries no legally relevant log message!");
+
+        return logMessage;
+
+    }
+
+    test("verifies a log message against the keys of the enclosing document", () => {
+
+        const liveLink = readDocument(signedLiveLink);
+        const result   = verifyEmbeddedSignatures(logMessageOf(liveLink), liveLink);
+
+        // The grid operator signs its power constraint with both of its keys.
+        expect(result.status).toBe("allValid");
+        expect(result.validCount).toBe(2);
+
+    });
+
+    test("notices a log message that was changed after it was signed", () => {
+
+        const liveLink   = readDocument(signedLiveLink);
+        const logMessage = { ...logMessageOf(liveLink), data: { maxPower: "60 kW" } };
+        const result     = verifyEmbeddedSignatures(logMessage, liveLink);
+
+        // This is the case the message's own signature exists for: an operator
+        // who re-signs the document around a forged constraint produces a
+        // document that verifies as a whole, and only this signature still says
+        // the grid never asked for it.
+        expect(result.status).toBe("noneValid");
+
+        for (const signature of result.signatures)
+            expect(signature.status).toBe("invalidSignature");
+
+    });
+
+    test("reports a log message without signatures as unsigned", () => {
+
+        const liveLink = readDocument(signedLiveLink);
+        const { signatures, ...unsigned } = logMessageOf(liveLink);
+
+        expect(signatures).toBeDefined();
+        expect(verifyEmbeddedSignatures(unsigned, liveLink).status).toBe("unsigned");
+
+    });
+
+    test("cannot judge a log message when the enclosing document lists no matching key", () => {
+
+        const liveLink = readDocument(signedLiveLink);
+        const message  = logMessageOf(liveLink);
+
+        // Same message, but a document that does not carry the grid operator:
+        // the signature is intact and unjudgeable, which is a weaker statement
+        // than "is wrong".
+        const { gridOperator, ...withoutGridOperator } = liveLink;
+
+        expect(gridOperator).toBeDefined();
+
+        const result = verifyEmbeddedSignatures(message, withoutGridOperator);
+
+        expect(result.status).toBe("noneValid");
+
+        for (const signature of result.signatures)
+            expect(signature.status).toBe("unknownPublicKey");
 
     });
 

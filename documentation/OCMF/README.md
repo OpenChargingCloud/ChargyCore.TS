@@ -51,6 +51,49 @@ Chargy parses these forms into `IOCMFBonnTariff001`,
 as `CTR.ocmf.tariffTextInterpretation`, while the unmodified `TT` remains in
 `CTR.ocmf.tariffText`.
 
+#### Recording a tariff change
+
+A Bonn tariff text names **one** tariff, which is all a document needs until
+the tariff changes during a session — and OCMF expects that it can, because it
+reserves a reading reason for exactly that case (`TX` = `T`). Chargy therefore
+reads an extended form: the tariffs that have metered something so far,
+separated by a vertical bar and in the order they took effect.
+
+```text
+001;EUR;0;35;0;0
+001;EUR;0;35;0;0|001;EUR;0;25;0;0
+001;EUR;0;35;0;0|001;EUR;0;25;0;0|001;EUR;0;35;0;0
+```
+
+| Property | Meaning |
+|----------|---------|
+| Last entry | The tariff in effect at the document's last reading. |
+| Earlier entries | The history that led there, oldest first. |
+| Growth | The list only grows, so the newest document carries the whole history and no earlier one is needed. |
+| Repetition | Entries are tariff **periods**, not distinct tariffs. A tariff that comes back is written again rather than referenced, so the position in the list is what pairs an entry with a `TX` = `T` reading. |
+
+A document whose tariff never changes writes a list of one, which is
+byte-identical to the plain single-tariff form — so this extension costs
+nothing where it is not needed, and every existing document keeps its meaning.
+
+`parseOCMFBonnTariffTexts()` reads such a field into an array;
+`parseOCMFBonnTariffText()` reads a single entry and rejects a list.
+
+A boundary reading — the one carrying `TX` = `T` — still closes the interval
+metered under the *previous* tariff, so it is the last document of that tariff
+and its list is one entry shorter than that of the document after it.
+
+**The vertical bar is also the OCMF envelope separator.** `TT` lives inside the
+JSON payload, and Chargy reads the payload by tracking the brace depth of the
+JSON rather than by splitting the envelope on bars, so a bar in this field
+reaches the parser intact. A reader that does split must take the payload
+between the **first** and the **last** bar, never by counting them.
+
+**`TT` is not part of the key documents are grouped by.** Documents from before
+and after a tariff change belong to one charging session. Grouping by `TT`
+split them into two, and since only the first group is returned, every reading
+metered under a later tariff was dropped without a word.
+
 The corresponding CTR `IChargingTariff` uses the original `TT` as its `@id`:
 
 | Bonn value | CTR price component |

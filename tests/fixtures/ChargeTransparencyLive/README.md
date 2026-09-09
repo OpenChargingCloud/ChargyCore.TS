@@ -769,6 +769,11 @@ means checking that no document quietly rewrites history:
 - Once a document contains an **end value** (`TX: "E"`), no later document may
   add anything. The session is over; a value appearing afterwards means the
   series is not what it claims to be.
+- The tariff list in an OCMF document's `TT` may only **grow**, and the entries
+  already there must stay unchanged and in place. It records the tariffs that
+  have been in effect so far, so a later document appends to that history and
+  never rewrites it — the same append-only rule as for the values themselves.
+  See [The tariff texts](OCMF-Test-01/README.md#the-tariff-texts).
 - `lastUpdated` must not go backwards.
 
 None of this follows from the signatures. Each document is perfectly signed on

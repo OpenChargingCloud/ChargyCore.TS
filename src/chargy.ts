@@ -2035,6 +2035,12 @@ export class Chargy {
                         for (const eMobilityProvider of processedFileResult.eMobilityProviders)
                             mergedCTR.eMobilityProviders.push(eMobilityProvider);
 
+                    if (!mergedCTR.gridOperators)
+                        mergedCTR.gridOperators = processedFileResult.gridOperators;
+                    else if (processedFileResult.gridOperators)
+                        for (const gridOperator of processedFileResult.gridOperators)
+                            mergedCTR.gridOperators.push(gridOperator);
+
                     if (!mergedCTR.mediationServices)
                         mergedCTR.mediationServices = processedFileResult.mediationServices;
                     else if (processedFileResult.mediationServices)
@@ -2159,7 +2165,9 @@ export class Chargy {
 
     // A live link may be signed as a whole by the operator, which is what ties
     // the transport URLs and the listed public keys to whoever signed them.
-    // Those signatures are verified whenever the document carries any.
+    // Those signatures are verified whenever the document carries any, and so
+    // are the signatures its legally relevant log messages carry over
+    // themselves - see verifyLiveLinkLogMessages().
     //
     // Nothing here rejects a document. An unsigned live link, an unknown key or
     // even a signature that does not match is reported as a warning and the
@@ -2227,10 +2235,91 @@ export class Chargy {
             }
         }
 
+        // Still before any mutation, for the same reason: a log message is
+        // verified as it was written, and so is the document around it.
+        this.verifyLiveLinkLogMessages(LiveLink, warn);
+
         LiveLink.signatureVerification = result;
 
         if (warnings.length > 0)
             LiveLink.warnings = [ ...(LiveLink.warnings ?? []), ...warnings ];
+
+    }
+
+    //#endregion
+
+    //#region (private) verifyLiveLinkLogMessages(LiveLink, Warn)
+
+    // A legally relevant log message - a grid operator's power constraint, say -
+    // carries signatures of its own, made by whoever sent it rather than by
+    // whoever assembled the document around it. The two prove different things:
+    // the document signature says the message has not been changed since the
+    // operator collected it, the message signature says the grid operator is
+    // who asked for the constraint. Only the second one answers the question the
+    // message exists for, which is why a dip in the charging curve has a signed
+    // explanation next to it.
+    //
+    // The keys and the keyIdGeneration come from the live link, the signatures
+    // from the message - see verifyEmbeddedSignatures().
+    //
+    // Nothing here rejects a document either. A message that does not verify is
+    // reported and stays where it is; what a reader makes of that is the
+    // reader's decision.
+    private verifyLiveLinkLogMessages(LiveLink: chargeTransparencyLiveLink.IChargeTransparencyLiveLink,
+                                      Warn:     (messageKey: string, level: chargyInterfaces.WarningLevel) => void): void
+    {
+
+        const logMessages = LiveLink.legallyRelevantLogMessages;
+
+        if (!Array.isArray(logMessages))
+            return;
+
+        for (const logMessage of logMessages)
+        {
+
+            const message = chargyLib.asJSONObject(logMessage);
+
+            if (message === undefined)
+                continue;
+
+            const result  = documentSignatures.verifyEmbeddedSignatures(message, LiveLink);
+
+            // A message the sender did not sign is not broken - the document
+            // signature still covers it - but it carries no proof of its own.
+            if (result.status === "unsigned")
+            {
+                Warn("LogMessageSignature_Missing", chargyInterfaces.WarningLevel.low);
+                continue;
+            }
+
+            for (const signature of result.signatures)
+            {
+                switch (signature.status)
+                {
+
+                    case "validSignature":
+                        break;
+
+                    case "invalidSignature":
+                        Warn("LogMessageSignature_Mismatch",             chargyInterfaces.WarningLevel.high);
+                        break;
+
+                    case "unknownPublicKey":
+                        Warn("LogMessageSignature_UnknownPublicKey",     chargyInterfaces.WarningLevel.medium);
+                        break;
+
+                    case "unsupportedAlgorithm":
+                        Warn("LogMessageSignature_UnsupportedAlgorithm", chargyInterfaces.WarningLevel.medium);
+                        break;
+
+                    case "malformed":
+                        Warn("LogMessageSignature_Malformed",            chargyInterfaces.WarningLevel.medium);
+                        break;
+
+                }
+            }
+
+        }
 
     }
 
@@ -2916,6 +3005,12 @@ export class Chargy {
             else if (ctr.eMobilityProviders)
                 for (const eMobilityProvider of ctr.eMobilityProviders)
                     mergedCTR.eMobilityProviders.push(eMobilityProvider);
+
+            if (!mergedCTR.gridOperators)
+                mergedCTR.gridOperators = ctr.gridOperators;
+            else if (ctr.gridOperators)
+                for (const gridOperator of ctr.gridOperators)
+                    mergedCTR.gridOperators.push(gridOperator);
 
             if (!mergedCTR.mediationServices)
                 mergedCTR.mediationServices = ctr.mediationServices;

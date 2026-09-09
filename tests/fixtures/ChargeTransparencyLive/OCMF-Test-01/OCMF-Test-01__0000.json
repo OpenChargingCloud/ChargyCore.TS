@@ -2,8 +2,8 @@
 
     "@id":                "5f2c8a10-7b64-4e19-9d3a-1c8e05b4a7f2",
     "@context":           "https://open.charging.cloud/contexts/chargeTransparency/live/link/1.0",
-    "created":            "2026-09-08T21:37:17Z",
-    "lastUpdated":        "2026-09-08T21:37:17Z",
+    "created":            "2026-09-09T00:50:40Z",
+    "lastUpdated":        "2026-09-09T00:50:40Z",
     "description":        {
                               "en": "OCMF-Test-01 Transparency Live-Link",
                               "de": "OCMF-Test-01 Transparenz Live-Link"
@@ -19,7 +19,7 @@
         "accuracy":             "+-2 ms",
         "stratum":              2,
         "syncInterval":         "PT1H",
-        "lastSynchronization":  "2026-09-08T20:51:45Z",
+        "lastSynchronization":  "2026-09-09T00:05:08Z",
         "minServers":           2,
         "serversURL":           "https://time.ptb.de/files/ptb-ntp-services.json",
 
@@ -218,7 +218,7 @@
                 "encodings": [ "JSON", "JCS", "UTF-8" ]
             },
             "encodings": [ "Ecdsa-Sig-Value", "DER", "hex" ],
-            "value": "3046022100E7E9A8FB6317037DCC3C97F25BD8D58F7EAEADECF4E2C22205AD2FAC895056A5022100A8C31A10E36D3560065A073D70D3B9ACAA779FB968BE4C83F7B5A4C261E11C80"
+            "value": "304402202B71C83952EE725B4B0752D7D0EFBE4C75B1D483A6EE1F3A6BB31D94DDA3CE47022046079A062804B1D1B13EF8C6F961A30A2269395B93EE91AF4B48345A18B88A4D"
         },
         {
             "keyId": "A2F94A58FB75E25BC2CECDF582819B6D44F3705D0C3BADD6391E9D536D5671E8",
@@ -228,7 +228,7 @@
                 "encodings": [ "JSON", "JCS", "UTF-8" ]
             },
             "encodings": [ "raw", "hex" ],
-            "value": "2E54EC48BC46F5D3836FBFD0E46FC14DBE5334B10FCF7F2A8DF2064420D3395B1A02F15D653FE9BE4F0E922F6AA0E28D909D97E3FA6352B0D7B076639700BF00"
+            "value": "EC7B7DA2D4055201329A892374950C90D19BD407B3513A06BC5310E6E018EC99D8333295E1C260BFCD87F6A3A1EF4B0F8AFF4CB5F99499AF8A75198E61646C04"
         }
     ]
 

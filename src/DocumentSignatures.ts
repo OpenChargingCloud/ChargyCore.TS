@@ -390,10 +390,12 @@ function asStringArray(value: unknown): Array<string> | undefined
 /**
  * Every public key a document lists, in the order they appear.
  *
- * The keys of a charge transparency live link live in two places: those of the
- * operator, and the one of the energy meter of the EVSE. A key that does not
- * carry the three things needed to use it - an algorithm, an encodings pipeline
- * and a value - is skipped rather than guessed at.
+ * The keys of a charge transparency live link live in three places: those of
+ * the charging station operator, the one of the energy meter of the EVSE, and
+ * those of the grid operator, which signs the power constraints it sends rather
+ * than the document carrying them. A key that does not carry the three things
+ * needed to use it - an algorithm, an encodings pipeline and a value - is
+ * skipped rather than guessed at.
  */
 export function collectDocumentPublicKeys(Document: chargyLib.JSONObject): Array<IDocumentPublicKey>
 {
@@ -436,6 +438,7 @@ export function collectDocumentPublicKeys(Document: chargyLib.JSONObject): Array
 
     collectFrom(chargyLib.asJSONObject(Document["chargingStationOperator"])?.["publicKeys"]);
     collectFrom(chargyLib.asJSONObject(evse?.["energyMeter"])?.["publicKeys"]);
+    collectFrom(chargyLib.asJSONObject(Document["gridOperator"])?.["publicKeys"]);
 
     return publicKeys;
 
@@ -588,14 +591,57 @@ export function verifyDocumentSignatures(Document: chargyLib.JSONObject): IDocum
     if (!Array.isArray(signatures) || signatures.length === 0)
         return { status: "unsigned", signatures: [], validCount: 0 };
 
-    const keyIdGeneration = asStringArray(Document["keyIdGeneration"]) ?? defaultKeyIdGeneration;
-    const publicKeys      = collectDocumentPublicKeys(Document);
+    return verifySignaturesOf(Document,
+                              signatures,
+                              collectDocumentPublicKeys(Document),
+                              asStringArray(Document["keyIdGeneration"]) ?? defaultKeyIdGeneration);
 
-    const results         = signatures.map((signature, index) =>
-                                verifyDocumentSignature(Document, signature, index, publicKeys, keyIdGeneration)
-                            );
+}
 
-    const validCount      = results.filter(result => result.status === "validSignature").length;
+
+/**
+ * The signatures an object *inside* a document carries over itself.
+ *
+ * A legally relevant log message is the case this exists for: the grid operator
+ * signs the power constraint it sends, not the document it later travels in, so
+ * the signatures sit on the message while the keys to check them and the rule
+ * for computing key ids belong to the enclosing live link. Passing the two
+ * objects separately is the whole difference to verifyDocumentSignatures().
+ *
+ * The embedded object is canonicalized on its own, exactly as a document is:
+ * what a signature covers is stated by the signature, not by where the object
+ * sits.
+ */
+export function verifyEmbeddedSignatures(Embedded:           chargyLib.JSONObject,
+                                         EnclosingDocument:  chargyLib.JSONObject): IDocumentSignaturesResult
+{
+
+    const signatures = Embedded["signatures"];
+
+    if (!Array.isArray(signatures) || signatures.length === 0)
+        return { status: "unsigned", signatures: [], validCount: 0 };
+
+    return verifySignaturesOf(Embedded,
+                              signatures,
+                              collectDocumentPublicKeys(EnclosingDocument),
+                              asStringArray(EnclosingDocument["keyIdGeneration"]) ?? defaultKeyIdGeneration);
+
+}
+
+
+// What both of the above do once they know which object is signed, which keys
+// may have signed it and how key ids are computed.
+function verifySignaturesOf(SignedObject:     chargyLib.JSONObject,
+                            Signatures:       Array<unknown>,
+                            PublicKeys:       Array<IDocumentPublicKey>,
+                            KeyIdGeneration:  Array<string>): IDocumentSignaturesResult
+{
+
+    const results    = Signatures.map((signature, index) =>
+                           verifyDocumentSignature(SignedObject, signature, index, PublicKeys, KeyIdGeneration)
+                       );
+
+    const validCount = results.filter(result => result.status === "validSignature").length;
 
     return {
         status:      validCount === 0              ? "noneValid"

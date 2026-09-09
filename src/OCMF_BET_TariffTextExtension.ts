@@ -89,6 +89,46 @@ function parseCents(value:      string,
 }
 
 
+/**
+ * The separator between the tariffs of an OCMF "TT" field that records a tariff
+ * change.
+ *
+ * A vertical bar is also what separates the three parts of the OCMF envelope,
+ * but "TT" lives inside the JSON payload, and the payload is read by tracking
+ * the brace depth of the JSON rather than by splitting the envelope on bars -
+ * so a bar inside this field reaches a reader intact. A reader that does split
+ * the envelope naively must use the FIRST and the LAST bar, never the count.
+ */
+export const OCMFBonnTariffSeparator = "|";
+
+
+/**
+ * The tariffs of one OCMF "TT" field, in the order they took effect.
+ *
+ * The Bonner Eichrechtstage define a tariff text for ONE tariff, which is all a
+ * document needs as long as the tariff does not change. It can: OCMF has a
+ * reading reason for exactly that, TX "T". This is the extension of that format
+ * for the case - the tariffs that have been in effect so far, separated by a
+ * vertical bar and in chronological order:
+ *
+ *     001;EUR;0;35;0;0
+ *     001;EUR;0;35;0;0|001;EUR;0;25;0;0
+ *     001;EUR;0;35;0;0|001;EUR;0;25;0;0|001;EUR;0;35;0;0
+ *
+ * The list grows with the session, so the last entry is the tariff in effect at
+ * the document's last reading and the entries before it are the history that
+ * led there. A tariff that comes back is written again rather than referenced:
+ * the position in the list is what pairs an entry with a TX "T" reading, so the
+ * third document above states three tariff periods, not two distinct tariffs.
+ *
+ * A field naming a single tariff parses as a list of one, which is what every
+ * document of a session with an unchanging tariff carries.
+ */
+export function parseOCMFBonnTariffTexts(tariffText: string): Array<IOCMFBonnTariff> {
+    return tariffText.split(OCMFBonnTariffSeparator).map(parseOCMFBonnTariffText);
+}
+
+
 export function parseOCMFBonnTariffText(tariffText: string): IOCMFBonnTariff {
 
     const fields = tariffText.split(";");

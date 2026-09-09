@@ -55,6 +55,7 @@ export {
 export {
     collectDocumentPublicKeys,
     verifyDocumentSignatures,
+    verifyEmbeddedSignatures,
     type DocumentSignatureStatus,
     type DocumentSignaturesStatus,
     type IDocumentPublicKey,

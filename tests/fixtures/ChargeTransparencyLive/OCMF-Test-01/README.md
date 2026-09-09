@@ -129,12 +129,14 @@ suppressed with `--no-live-link`.
 | `values[]` | Role         | `PG`        | `RD` readings | `TX`     | Signing key                 |
 | ---------- | ------------ | ----------- | ------------- | -------- | --------------------------- |
 | 0          | start        | `T1`        | 1             | `B`      | `energyMeter`               |
-| 1 … 31     | intermediate | `T2` … `T32`| 1 (see below) | `C`      | `cpo_signEnergyMeterValues` |
+| 1 … 31     | intermediate | `T2` … `T32`| 1 (see below) | `C`, `T` | `cpo_signEnergyMeterValues` |
 | 32         | end          | `T33`       | 2             | `B`, `E` | `energyMeter`               |
 
 The readings are ten seconds apart, +00:00 to +05:00, plus the two extra ones
-at +01:02 and +02:02 where the power limit begins and ends. The extra ones are
-intermediate values like any other.
+at +01:02 and +02:02 where the power limit begins and ends. Those two are the
+tariff changes of the session and carry `TX` = `T` rather than `C` — see
+[`TX` = `T` at the tariff changes](#tx--t-at-the-tariff-changes). In every
+other respect they are intermediate values like any other.
 
 The **end document carries the start and the end reading**, which is the
 classic OCMF transaction document that existing solutions expect. It is signed
@@ -147,7 +149,9 @@ once therefore yields 34 measurement values, of which the first two are the
 same reading.
 
 All OCMF documents share the same `FV`/`GI`/`GS`/`GV`/`MV`/`MM`/`MS`/`MF`/`IS`/
-`IL`/`IT`/`ID`/`CT`/`CI`/`CF` values and differ only in `PG` and `RD`.
+`IL`/`IT`/`ID`/`CT`/`CI`/`CF` values. They differ in `PG`, in `RD` — and in
+`TT`, which grows as the tariff changes; see
+[The tariff texts](#the-tariff-texts).
 
 ## Write modes
 
@@ -200,7 +204,91 @@ the current one still open with its costs still growing. Their boundaries
 coincide with signed meter values, as the format asks, which is one reason for
 the two extra readings.
 
-## Keys
+### The tariff texts
+
+Every OCMF document states its tariff in `TT`, in the tariff text format of the
+Bonner Eichrechtstage — `<profile>;<currency>;<W>;<X>[;<Y>[;<Z>]]`, amounts in
+cents. Both tariffs of this session use profile `001` (start fee, energy price,
+blocking fee from a given minute); neither has a start fee or a blocking fee,
+so only the energy price differs:
+
+| Tariff                | Bonn tariff text     |
+| --------------------- | -------------------- |
+| 0.35 EUR/kWh          | `001;EUR;0;35;0;0`   |
+| 0.25 EUR/kWh (limited)| `001;EUR;0;25;0;0`   |
+
+A blocking fee of zero cents per minute is no blocking fee, whatever minute it
+would start in; profile `001` has no shorter form that leaves the fields out.
+
+#### Extending `TT` for a tariff change
+
+**A Bonn tariff text names one tariff. This session has three tariff periods,
+so this fixture extends the format: `TT` carries the tariffs that have metered
+something so far, separated by a vertical bar and in the order they took
+effect.** The list grows with the session:
+
+| From the reading at | `TT`                                                     |
+| ------------------- | -------------------------------------------------------- |
+| +00:00              | `001;EUR;0;35;0;0`                                        |
+| +01:02              | `001;EUR;0;35;0;0｜001;EUR;0;25;0;0`                      |
+| +02:02              | `001;EUR;0;35;0;0｜001;EUR;0;25;0;0｜001;EUR;0;35;0;0`    |
+
+(The bars above are drawn wide only so the table stays readable; the field uses
+the ordinary `|`.)
+
+Why an extension is needed at all: OCMF carries one `TT` per document, and a
+document is not free to describe two prices. A charging session whose tariff
+changes therefore has no way to say so — while OCMF itself clearly expects the
+case, because it reserves a reading reason for it (`TX` = `T`, see below). The
+single-tariff form is the special case of this one: a session that never
+changes tariff writes a list of one, which is byte-identical to what the
+Bonner Eichrechtstage define.
+
+Three properties are worth stating, because they are what a reader can rely on:
+
+- **The last entry is the tariff in effect** at the document's last reading.
+  Everything before it is the history that led there.
+- **The entries are tariff periods, not distinct tariffs.** A tariff that comes
+  back is written again — which is why the base price appears twice above, and
+  why the list is never deduplicated.
+- **The list only grows.** Document *n+1* repeats the list of document *n* and
+  may append to it, so a reader holding the newest document holds the whole
+  history and needs no earlier one.
+
+A boundary reading — the one carrying `TX` = `T` — still closes the interval
+metered under the *previous* tariff, so it is the last document of that tariff
+and its list is one entry shorter than that of the document after it.
+
+`parseOCMFBonnTariffTexts()` in `src/OCMF_BET_TariffTextExtension.ts` reads the
+list; `parseOCMFBonnTariffText()` reads a single entry.
+
+The vertical bar is also what separates the three parts of the OCMF envelope,
+but `TT` lives inside the JSON payload, which ChargyCore reads by tracking the
+brace depth of the JSON rather than by splitting the envelope on bars. A reader
+that does split must take the payload between the **first** and the **last**
+bar, never by counting them.
+
+#### `TX` = `T` at the tariff changes
+
+OCMF defines a reading reason for a tariff change, and this fixture uses it:
+the readings at +01:02 and +02:02 — both ends of the power limit, where the
+meter reads anyway — carry `TX` = `T` instead of `C`. The first reading keeps
+`B`, the last keeps `E`.
+
+So the two ways a document tells a reader about the tariff agree with each
+other: `TX` = `T` marks *where* the tariff changed, `TT` says *what* it changed
+to and what it was before.
+
+#### Not part of the grouping key
+
+`TT` is deliberately **not** part of the key ChargyCore groups OCMF documents
+by. It used to be, which split this session in two — the documents metered
+under the lower tariff formed a second group, and since only the first group is
+returned, seven signed meter values were dropped without a word. Documents
+before and after a tariff change belong to one charging session; OCMF says so
+itself by having a reading reason for the change.
+
+## Keys## Keys
 
 Six key pairs, each as a private and a public PEM file:
 

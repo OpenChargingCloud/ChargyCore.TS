@@ -267,7 +267,7 @@ fails its shape there is simply dropped.
 | `gridOperator` | no | grid operator object | The grid operator behind e.g. signed power constraints — see [The parties](#the-parties). |
 | `signedMeterValues` | no | signed meter values object | The signed meter values measured so far — see [Signed meter values](#signed-meter-values). |
 | `chargingPeriods` | no | array of charging-period objects | Tariffs and costs over the session. Start/stop timestamps should match a signed meter value timestamp. |
-| `legallyRelevantLogMessages` | no | array of log-message objects | Legally relevant events, e.g. a time synchronization or a grid power constraint. |
+| `legallyRelevantLogMessages` | no | array of log-message objects | Legally relevant events, e.g. a time synchronization or a grid power constraint. Signatures on an entry are verified — see [Signatures inside the document](#signatures-inside-the-document). |
 | `supportMessages` | no | array of support-message objects | Messages between e.g. the EV driver and the CPO. |
 | `keyIdGeneration` | no | array of strings | How key ids are computed, as an `encodings` pipeline. |
 | `signatures` | no | array of signature entries | Digital signatures over the whole document — verified when present, see [Signatures](#signatures). |
@@ -757,6 +757,29 @@ What it does:
    transparency record goes through, so each measurement value arrives with its
    crypto result.
 
+### The tariff of a meter value
+
+An OCMF document states its tariff in `TT`, as a tariff text of the Bonner
+Eichrechtstage. A session whose tariff changes — a grid power constraint priced
+differently, say — carries the tariffs that have metered something so far,
+separated by a vertical bar and in the order they took effect:
+
+```text
+001;EUR;0;35;0;0|001;EUR;0;25;0;0|001;EUR;0;35;0;0
+```
+
+The last entry is the tariff in effect at the document's last reading, the ones
+before it are the history, and the list only grows — the newest document
+carries all of it. Entries are tariff periods rather than distinct tariffs, so
+a tariff that comes back is written again. The readings where the tariff
+changed carry the OCMF reading reason for it, `TX` = `T`.
+
+`parseOCMFBonnTariffTexts()` reads such a field, `parseOCMFBonnTariffText()` a
+single entry. `TT` is not part of the key OCMF documents are grouped by, so a
+tariff change does not split a session in two. The full description, and why
+the single-tariff format needed extending at all, is in
+[`tests/fixtures/ChargeTransparencyLive/OCMF-Test-01/README.md`](../../tests/fixtures/ChargeTransparencyLive/OCMF-Test-01/README.md).
+
 **The LiveLink stays a LiveLink.** It describes a charging session that is still
 running; a charge transparency record is a collection of finished ones, and an
 application shows the two differently. `DetectAndConvertContentFormat()` returns
@@ -811,6 +834,41 @@ one signature per key and algorithm — is documented in
 The declared `ISignature[]` still does not describe this richer entry shape;
 the verifier reads the entries defensively instead.
 
+### Signatures inside the document
+
+An entry of `legallyRelevantLogMessages` may carry `signatures` of its own, in
+exactly the shape shown above. They are made by whoever *sent* the message
+rather than by whoever assembled the document around it, and since 0.16.0 they
+are verified too, whenever a live link is read.
+
+The two answer different questions, and the difference is the reason the second
+one exists:
+
+| | proves |
+|---|---|
+| the document's `signatures` | the message has not been changed since the operator collected it |
+| the message's own `signatures` | the grid operator is who asked for the constraint |
+
+Changing a message inside a document breaks both — the document covers the
+message. What only the message's own signature survives is the other case: an
+operator who re-signs the document around a forged constraint produces a
+document that verifies as a whole, and only the grid operator's signature still
+says the grid never asked for it.
+
+The signatures sit on the message; the keys to check them and the
+`keyIdGeneration` to resolve their `keyId` belong to the enclosing live link —
+for a power constraint, `gridOperator.publicKeys`, whose `keyUsage` is
+`signGridPowerConstraints`. `verifyEmbeddedSignatures(message, liveLink)` takes
+the two objects separately for that reason; the message is canonicalized on its
+own, exactly as a document is.
+
+This is not fatal either. A message that was changed, one signed with a key the
+document does not list, and one carrying no signature at all are each reported
+as a graded warning on the returned document and change nothing else — the
+message stays where it is. Unlike the document's outcome there is no
+`signatureVerification` to inspect: writing one onto the message would change
+the very bytes its signature covers.
+
 ## Recognition and Processing
 
 ChargyCore recognizes a LiveLink when:
@@ -835,7 +893,8 @@ exactly that point-of-use filtering; note that some of them use
 `chargyLib.isObject()`, which accepts arrays as well as objects.
 
 When a single LiveLink is passed to `DetectAndConvertContentFormat`, ChargyCore
-verifies the signatures the document carries over itself — see
+verifies the signatures the document carries over itself, and the signatures its
+legally relevant log messages carry over themselves — see
 [Signatures](#signatures) — and attaches the outcome as `signatureVerification`
 plus `warnings`. Those are added only after verification, because the
 signatures cover every property except themselves. It does not download

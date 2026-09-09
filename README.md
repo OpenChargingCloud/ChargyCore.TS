@@ -28,7 +28,7 @@ Currently supported formats include:
 - **EMH** energy meter data
 - **Mennekes** XML
 - **OCMF**, versions v1.1 to v1.4
-  - Bonner Eichrechtstage **Tariff Text** Extensions
+  - Bonner Eichrechtstage (BET) **Tariff Text** Extensions including tariff changes
   - EdDSA support: Ed25519 and Ed448
   - Post-Quantum Cryptography support: ML-DSA-44, ML-DSA-65, ML-DSA-87
 - **Porsche Charging Data Format (PCDF)**
@@ -185,7 +185,7 @@ npx playwright install chromium
 ## Publishing
 
 ```bash
-npm version 0.16.0 --no-git-tag-version
+npm version 0.16.1 --no-git-tag-version
 npm run verify
 npm pack --dry-run
 npm pack

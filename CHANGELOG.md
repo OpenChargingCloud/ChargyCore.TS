@@ -7,6 +7,87 @@ While the version number is below 1.0.0, breaking changes are released in minor
 versions and are always listed first below.
 
 
+## [0.16.1] - 2026-09-09
+
+### Added
+
+- **A signed log message is verified, not merely carried.** A legally relevant
+  log message may sign itself, and reading a live link now checks those
+  signatures alongside the document's own. The two prove different things: the
+  document signature says the message has not been changed since the operator
+  collected it, the message signature says the grid operator is who asked for
+  the constraint. Changing a message breaks both, since the document covers the
+  message - what only the message's signature survives is an operator who
+  re-signs the document around a forged constraint, which produces a document
+  that verifies as a whole while the grid never asked for anything.
+
+  `verifyEmbeddedSignatures(message, liveLink)` is exported for it: the
+  signatures sit on the message, the keys to check them and the
+  `keyIdGeneration` belong to the enclosing document, so the two objects are
+  passed separately. The message is canonicalized on its own, exactly as a
+  document is.
+
+  Nothing here refuses a document. A changed message, one signed with a key the
+  document does not list, and one carrying no signature at all are each reported
+  as a graded warning and change nothing else. There is deliberately no
+  `signatureVerification` written onto the message: that would change the very
+  bytes its signature covers.
+
+- **`collectDocumentPublicKeys()` also collects `gridOperator.publicKeys`.**
+  A grid operator signs the constraints it sends rather than the document
+  carrying them, so its keys were listed in the fixtures and reachable by
+  nothing. The five new `LogMessageSignature_*` warning texts are in `i18n.json`.
+
+- **`TT` may record a tariff change.** A Bonn tariff text names one tariff,
+  which is all a document needs until the tariff changes - and OCMF clearly
+  expects that it can, because it reserves a reading reason for exactly that
+  case. So this extends the format: `TT` carries the tariffs that have metered
+  something so far, separated by a vertical bar and in the order they took
+  effect.
+
+      001;EUR;0;35;0;0
+      001;EUR;0;35;0;0|001;EUR;0;25;0;0
+      001;EUR;0;35;0;0|001;EUR;0;25;0;0|001;EUR;0;35;0;0
+
+  The last entry is the tariff in effect, the ones before it are the history
+  that led there, and the list only grows - so the newest document carries the
+  whole history and no earlier one is needed. The entries are tariff periods
+  rather than distinct tariffs: a tariff that comes back is written again,
+  which is why the base price appears twice above. A session whose tariff never
+  changes writes a list of one, byte-identical to the single-tariff form.
+
+  `parseOCMFBonnTariffTexts()` reads the list, `parseOCMFBonnTariffText()` one
+  entry. The vertical bar is also the OCMF envelope separator, but `TT` sits
+  inside the JSON payload, which is read by tracking the brace depth rather
+  than by splitting on bars; a reader that does split must take the payload
+  between the first and the last bar.
+
+- **The OCMF-Test-01 series states its tariffs and marks the changes.** The
+  session has three tariff periods - the base energy price, the lower one for
+  the minute the grid limits the power, and the base price again - and every
+  document now carries the history up to its last reading. The two readings at
+  the ends of the limit carry `TX` = `T`, the OCMF reading reason for a tariff
+  change, so where the tariff changed and what it changed to are stated in
+  agreement with each other.
+
+### Fixed
+
+- **A tariff change split a charging session in two, and silently lost half of
+  it.** `TT` was part of the key OCMF documents are grouped by, so the
+  documents before and after a tariff change formed two groups - and
+  `TryToParseOCMFDocuments()` returns only the first of them. Every reading
+  metered under a later tariff was parsed and then dropped without a word: for
+  the OCMF-Test-01 series, seven of thirty-three signed meter values. `TT` is
+  no longer part of that key. That only the first group is returned at all
+  remains as it was, and is worth revisiting separately.
+
+- **Merging charge transparency records dropped the grid operators.** The merge
+  enumerates every top-level array by hand, and `gridOperators` was added to
+  `IChargeTransparencyRecord` in 0.16.0 without being added there - two records
+  merged into one lost a party, silently. A test now merges two records and
+  checks that both survive.
+
+
 ## [0.16.0] - 2026-09-08
 
 ### Added

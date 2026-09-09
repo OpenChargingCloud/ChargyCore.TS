@@ -1033,6 +1033,13 @@ export interface IOCMFPayload {
 
     TT?:        string,                 // Tariff Text:                   An optional textual description used to identify a unique tariff.
                                         //                                This field is intended for the tariff designation in "Direct Payment" use case.
+                                        //
+                                        //                                A tariff can change during a session - OCMF has a reading reason for it,
+                                        //                                TX "T" - which one tariff designation cannot express. Chargy therefore also
+                                        //                                reads the extended form: the tariffs that have been in effect so far,
+                                        //                                separated by a vertical bar and in the order they took effect. See
+                                        //                                parseOCMFBonnTariffTexts() and documentation/OCMF/README.md.
+                                        //                                A field naming a single tariff is the special case of a list of one.
 
     //#endregion
 
@@ -2956,8 +2963,13 @@ export class OCMF {
                                            //(ocmfJSONDocument.payload.IF ?? "") + "|" +
                                            (ocmfJSONDocument.payload.IT ?? "") + "|" +
                                            (ocmfJSONDocument.payload.ID ?? "") + "|" +
-                                           (ocmfJSONDocument.payload.TT ?? "") + "|" +
 
+                                           // "TT" is deliberately NOT part of this key. A tariff may change
+                                           // during a charging session - OCMF has a reading reason of its own
+                                           // for it, TX "T" - and the documents before and after such a change
+                                           // belong to one session, not to two. Grouping by "TT" split them,
+                                           // and since only the first group is returned below, the readings
+                                           // metered under every later tariff were dropped without a word.
                                            (ocmfJSONDocument.payload.CF ?? "") + "|" +
 
                                            (ocmfJSONDocument.payload.CT ?? "") + "|" +

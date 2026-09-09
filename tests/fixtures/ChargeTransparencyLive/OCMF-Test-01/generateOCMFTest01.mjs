@@ -6,12 +6,26 @@
 //   power for one minute. The OCMF documents of the session are:
 //
 //       - the start value        (RD: B)     signed with the energyMeter key
-//       - 31 intermediate values (RD: C)     signed with the
-//                                            cpo_signEnergyMeterValues key
+//       - 31 intermediate values (RD: C,     signed with the
+//                                 T at the   cpo_signEnergyMeterValues key
+//                                 two tariff
+//                                 changes)
 //       - the end value          (RD: B, E)  signed with the energyMeter key
 //
 //   The end document carries the start AND the end reading, which is the
 //   classic OCMF transaction document understood by existing solutions.
+//
+//   The tariff changes with the power limit, so the documents state it in "TT"
+//   as a tariff text of the Bonner Eichrechtstage - and, because that format
+//   names a single tariff, as the list of the tariffs in effect so far,
+//   separated by a vertical bar:
+//
+//       001;EUR;0;35;0;0
+//       001;EUR;0;35;0;0|001;EUR;0;25;0;0
+//       001;EUR;0;35;0;0|001;EUR;0;25;0;0|001;EUR;0;35;0;0
+//
+//   The readings where it changes carry the OCMF reading reason for a tariff
+//   change, TX "T". See "The tariff texts" in the README next to this file.
 //
 //   The power constraint comes from OCMF-Test-01__LRLMs.json, the legally
 //   relevant log messages of the session, whose times are relative to the
@@ -552,6 +566,15 @@ function constraintOf(from, to)
     return powerConstraints.find(constraint => constraint.start <= from && to <= constraint.end);
 }
 
+// Where the tariff changes. OCMF has a reading reason of its own for this,
+// TX "T", and the meter reads at both ends of a power constraint anyway - so
+// those readings are the tariff changes of this session: the lower price
+// begins when the limit does, and ends with it.
+const tariffChangeOffsets = new Set(
+    powerConstraints.flatMap(constraint => [ constraint.start, constraint.end ]).
+                     filter(offset => offset > 0 && offset < sessionDuration)
+);
+
 // The meter is counted in units of 0.1 Wh (1e-4 kWh) to keep the differences
 // between two readings exact and free of floating point artefacts.
 let   meterValueE4   = Math.round(startMeterValue * 10000);
@@ -580,9 +603,10 @@ for (let i = 0; i < readingCount; i++)
 
     readings.push({
         "TM":  formatOCMFTimestamp(readingOffsets[i]),
-        "TX":  i === 0                 ? "B"
-             : i === readingCount - 1  ? "E"
-             :                           "C",
+        "TX":  i === 0                                     ? "B"
+             : i === readingCount - 1                      ? "E"
+             : tariffChangeOffsets.has(readingOffsets[i])  ? "T"
+             :                                               "C",
         "RV":  "@@" + (meterValueE4 / 10000).toFixed(4) + "@@",
         "RI":  "1-0:1.8.0*255",
         "RU":  "kWh",
@@ -629,6 +653,59 @@ function tariffElementFor(constraint)
                ? { "price_components": [ { "type": "ENERGY", "price": energyPrice,      "step_size": 1 } ] }
                : { "price_components": [ { "type": "ENERGY", "price": constrainedPrice, "step_size": 1 } ],
                    "restrictions":     { "max_power": constraint.maxPower } };
+
+}
+
+// The same two tariffs as an OCMF "TT" field, in the tariff text format of the
+// Bonner Eichrechtstage: "<profile>;<currency>;<W>;<X>[;<Y>[;<Z>]]", with every
+// amount in cents.
+//
+// Profile 001 is "start fee, energy price, blocking fee from a given minute".
+// Neither of these tariffs has a start fee or a blocking fee, so W, Y and Z are
+// zero and only X differs: a blocking fee of zero cents per minute is no
+// blocking fee, whatever minute it would start in.
+//
+// A Bonn tariff text names one tariff, which is all a document needs as long as
+// the tariff does not change. This session's does, so "TT" carries the tariffs
+// that have metered something so far, separated by a vertical bar and in the
+// order they took effect - see parseOCMFBonnTariffTexts() in
+// src/OCMF_BET_TariffTextExtension.ts, and "The tariff texts" in the README
+// next to this file.
+function bonnTariffText(centsPerKWh)
+{
+    return [ "001", currency, 0, centsPerKWh, 0, 0 ].join(";");
+}
+
+const baseTariffText        = bonnTariffText(Math.round(energyPrice      * 100));
+const constrainedTariffText = bonnTariffText(Math.round(constrainedPrice * 100));
+
+// Which reading is which, so a document can be placed in the session without
+// the readings carrying an offset of their own - they are written into "RD"
+// verbatim, and a helper property would travel into the signed payload.
+const indexOfReading = new Map(readings.map((reading, index) => [ reading, index ]));
+
+// The "TT" field of one document: every tariff that has metered something by
+// its last reading, in the order they took effect.
+//
+// A reading closes the interval since the reading before it, so a tariff period
+// only enters the list once the session has passed its start - the boundary
+// reading itself, the one carrying TX "T", still closes the interval under the
+// previous tariff and is the last document of it. One reading later the new
+// tariff appears at the end of the list.
+//
+// A tariff that comes back is written again rather than referenced: the entries
+// are tariff periods, not distinct tariffs, so a session that returns to its
+// base price ends with that price twice in the list.
+function tariffTextFor(includedReadings)
+{
+
+    const indices = includedReadings.map(reading => indexOfReading.get(reading));
+    const last    = readingOffsets[Math.max(...indices)];
+
+    return chargingPeriodDefinitions.
+               filter((period, index) => index === 0 || period.start < last).
+               map(period => period.constraint === undefined ? baseTariffText : constrainedTariffText).
+               join("|");
 
 }
 
@@ -703,6 +780,7 @@ function createOCMFDocument(paginationId, includedReadings, keyPair)
         "ID":  "04A9B7C21E5D80",
         "CT":  "EVSEID",
         "CI":  "DE*GEF*E12345678*1",
+        "TT":  tariffTextFor(includedReadings),
         "CF":  "1.0.0",
         "RD":  includedReadings
     };

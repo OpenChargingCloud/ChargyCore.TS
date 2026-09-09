@@ -126,6 +126,31 @@
         "en": "A document signature is malformed and could not be evaluated!"
     },
 
+    "LogMessageSignature_Missing": {
+        "de": "Eine rechtlich relevante Logmeldung ist nicht eigenständig signiert!",
+        "en": "A legally relevant log message is not signed in its own right!"
+    },
+
+    "LogMessageSignature_Mismatch": {
+        "de": "Die Signatur einer rechtlich relevanten Logmeldung passt nicht zu ihrem Inhalt!",
+        "en": "The signature of a legally relevant log message does not match its content!"
+    },
+
+    "LogMessageSignature_UnknownPublicKey": {
+        "de": "Der öffentliche Schlüssel der Signatur einer rechtlich relevanten Logmeldung ist in diesem Dokument nicht enthalten!",
+        "en": "The public key signing a legally relevant log message is not part of this document!"
+    },
+
+    "LogMessageSignature_UnsupportedAlgorithm": {
+        "de": "Die Signatur einer rechtlich relevanten Logmeldung verwendet ein nicht unterstütztes Signaturverfahren!",
+        "en": "The signature of a legally relevant log message uses an unsupported signature algorithm!"
+    },
+
+    "LogMessageSignature_Malformed": {
+        "de": "Die Signatur einer rechtlich relevanten Logmeldung ist fehlerhaft kodiert und konnte nicht ausgewertet werden!",
+        "en": "The signature of a legally relevant log message is malformed and could not be evaluated!"
+    },
+
     "UnknownOrInvalidChargingSessionFormat": {
         "de": "Unbekanntes oder ungültiges Ladevorgangsformat!",
         "en": "Unknown or invalid charging session format!"
