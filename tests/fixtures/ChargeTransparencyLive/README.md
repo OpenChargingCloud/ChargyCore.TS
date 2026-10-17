@@ -171,6 +171,26 @@ Three properties fall out of writing it this way:
   inside its own bytes; a `raw` key carries nothing, so there the algorithm has
   to be stated next to it.
 
+#### COSE keys name only registered curves
+
+A `COSE_Key` names its curve with `crv`, an integer from the IANA "COSE Elliptic
+Curves" registry, and in no other way. The registry has P-256, P-384, P-521,
+X25519, X448, Ed25519, Ed448, secp256k1 (RFC 8812) and brainpoolP256r1 to
+brainpoolP512r1 — but **no secp192r1, secp192k1 or secp224k1**, which are the
+curves of the EMH, GDF, Alfen and legacy ChargePoint meters and of the OCMF
+secp192 algorithms.
+
+**Therefore: `["COSE_Key", "CBOR", …]` is only for keys on a registered curve.**
+A key on secp192r1, secp192k1 or secp224k1 is written as
+`["SubjectPublicKeyInfo", "DER", …]`, where the curve is an object identifier
+and every curve has one, or as `["ECPoint", …]` next to an `algorithm` that
+names the curve. A private-use `crv` (below −65536) is no way around this: only
+its author knows what it means, so a consumer rejects it — saying that the curve
+cannot be expressed as a COSE key, not that the key is broken.
+
+Key ids are not affected: `keyIdGeneration` hashes the `SubjectPublicKeyInfo`
+whatever form a key is stored in, so an id is defined for every curve.
+
 For comparison, ChargyCore currently describes public keys with two independent
 fields, `format` (`PublicKeyFormats.DER` | `PublicKeyFormats.XY`) and
 `encoding` (`hex` | `base32` | `base64`). `DER` there means the SPKI case, and
@@ -354,20 +374,22 @@ The candidate keys are collected from `chargingStationOperator.publicKeys` and
 start, the intermediate and the end values, and a session signed by two keys
 cannot be verified from one of them.
 
-Two of the conventions above are load-bearing for that path, and a document
-that ignores either still verifies by hand but yields nothing through
-ChargyCore:
+Only `encodings[0] == "OCMF"` is read. A value carried as `base64`, or in
+another meter value format, is left alone rather than guessed at, and that is
+not reported: such a live link is a valid live link with working transports and
+no meter values to show.
 
-- only `encodings[0] == "OCMF"` is read. A value carried as `base64`, or in
-  another meter value format, is left alone rather than guessed at.
-- a public key whose `encodings` do not end in `hex` is skipped, because `hex`
-  is what is passed on to the OCMF parser. This is a real limit on the freedom
-  [hex is a convention here, not a rule](#hex-is-a-convention-here-not-a-rule)
-  describes: the choice is per value in the format, but not yet in this reader.
-
-Neither is reported. A live link whose keys are written in `base64` is a valid
-live link with working transports whose meter values simply do not verify, so
-the two limits are worth knowing before a producer exercises the freedom.
+The keys have the freedom
+[hex is a convention here, not a rule](#hex-is-a-convention-here-not-a-rule)
+describes. A key is read in `hex`, `base64`, `base64url` or `PEM`, and as a
+`SubjectPublicKeyInfo`, a `raw` key, a `COSE_Key` on a registered curve, or an
+`ECPoint` next to an `algorithm` that names its curve. A key that still cannot
+be read is not skipped: a reading that no readable key verified is reported
+with that key's status — `UnknownPublicKeyFormat`, or `InvalidPublicKey` for a
+value that does not decode — and the reason, rather than as a signature that
+does not match, and the record carries one error per such key. Leaving the key
+out would turn "could not be checked" into "does not match" for every reading
+it signed.
 
 ## Live transports
 

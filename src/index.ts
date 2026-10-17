@@ -62,6 +62,12 @@ export {
     type IDocumentSignatureResult,
     type IDocumentSignaturesResult
 } from "./DocumentSignatures";
+export {
+    COSECurveNotExpressible,
+    readLiveLinkPublicKey,
+    readPublicKey,
+    type ILiveLinkPublicKey
+} from "./LiveLinkPublicKeys";
 
 export * as ChargyInterfaces from "./interfaces/chargyInterfaces";
 export * as ChargeTransparencyLiveLink from "./interfaces/IChargeTransparencyLiveLink";

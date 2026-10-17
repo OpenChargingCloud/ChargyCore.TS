@@ -7,6 +7,40 @@ While the version number is below 1.0.0, breaking changes are released in minor
 versions and are always listed first below.
 
 
+## [Unreleased]
+
+### Fixed
+
+- **A live link key that is not hexadecimal was left out without a word.**
+  `TryToParseLiveLinkMeterValues()` only collected keys whose `encodings` end in
+  `hex`, so the readings a `base64` or COSE key signed then failed against the
+  remaining keys as if their signatures did not match. Such a key is now read,
+  and one that still cannot be read is reported: a reading no readable key
+  verified gets that key's status - `UnknownPublicKeyFormat`, or
+  `InvalidPublicKey` for a value that does not decode - with the reason, unless
+  it failed for a reason no key would have changed, and the record carries one
+  error per unreadable key.
+
+### Added
+
+- **`readPublicKey()` and `readLiveLinkPublicKey()`** read a key by its
+  `encodings` pipeline: `hex`, `base64`, `base64url` and `PEM` text; a
+  `SubjectPublicKeyInfo` or raw key as it is, an EdDSA or ML-DSA one unwrapped
+  to the raw octets its verifier takes; a `COSE_Key` through `@vanaheimr/cose`,
+  an EC2 key becoming the `SubjectPublicKeyInfo` of its curve and an OKP or AKP
+  key its raw octets; an `ECPoint` wrapped with the curve its `algorithm` names.
+  A hexadecimal key is passed on byte for byte as before. The document
+  signatures read keys the same way, so a COSE key has a key id and can sign a
+  live link.
+
+- **`Verification_COSEKeyCurveNotExpressible`**, exported as
+  `COSECurveNotExpressible`, for a COSE key whose `crv` is missing, unregistered
+  or private use. The IANA "COSE Elliptic Curves" registry has no secp192r1,
+  secp192k1 or secp224k1, so a key on those curves has no COSE form and travels
+  as a `SubjectPublicKeyInfo`; the format README says so next to the encodings
+  it lists.
+
+
 ## [0.16.1] - 2026-09-09
 
 ### Added

@@ -27,6 +27,7 @@
 import { sha256, sha384, sha512 }        from '@noble/hashes/sha2.js'
 import * as chargyLib                    from './interfaces/chargyLib'
 import { canonicalJSONBytes }            from './interfaces/CryptoUtils'
+import { decodePublicKeyStructure }      from './LiveLinkPublicKeys'
 import { getSignatureSuite }             from './SignatureCrypto'
 import type { NobleSignatureAlgorithm }  from './SignatureCrypto'
 
@@ -267,13 +268,17 @@ function encodeText(bytes:    Uint8Array,
 }
 
 // The key material of a public key in the requested structure, converting
-// between the stored form and the requested one where that is possible.
+// between the stored form and the requested one where that is possible. A
+// COSE_Key or a bare ECPoint arrives here already as the SubjectPublicKeyInfo
+// or raw key it stands for, so it has a key id like any other key - which is
+// what lets a COSE key on a registered curve sign the document.
 function publicKeyBytes(publicKey: IDocumentPublicKey,
                         structure: string): Uint8Array
 {
 
-    const storedStructure = publicKey.encodings[0];
-    const storedBytes     = decodeText(publicKey.value, publicKey.encodings[publicKey.encodings.length - 1]);
+    const stored          = decodePublicKeyStructure(publicKey.value, publicKey.encodings, publicKey.algorithm);
+    const storedStructure = stored.structure;
+    const storedBytes     = stored.bytes;
 
     if (storedStructure === structure)
         return storedBytes;

@@ -81,6 +81,11 @@
         "en": "The public key is not a valid point on the elliptic curve!"
     },
 
+    "Verification_COSEKeyCurveNotExpressible": {
+        "de": "Die Kurve dieses öffentlichen Schlüssels lässt sich als COSE-Schlüssel nicht ausdrücken, er muss als SubjectPublicKeyInfo angegeben werden!",
+        "en": "The curve of this public key cannot be expressed as a COSE key, it has to be given as a SubjectPublicKeyInfo!"
+    },
+
     "Verification_SignatureMalformed": {
         "de": "Die Signatur ist fehlerhaft kodiert und konnte nicht ausgewertet werden!",
         "en": "The signature is malformed and could not be parsed!"

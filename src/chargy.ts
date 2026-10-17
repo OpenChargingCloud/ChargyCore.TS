@@ -44,6 +44,7 @@ import seekBzip                             from 'seek-bzip';
 import type moment                          from 'moment';
 import { createCompatibleCurve }            from './SignatureCrypto'
 import * as documentSignatures              from './DocumentSignatures'
+import * as liveLinkPublicKeys              from './LiveLinkPublicKeys'
 import type { CompatibleCurve,
               CompatiblePublicKey,
               LegacyEllipticModule }        from './SignatureCrypto'
@@ -2137,10 +2138,11 @@ export class Chargy {
         }
 
         const publicKeys = this.collectLiveLinkMeterValueKeys(LiveLink);
+        const usableKeys = publicKeys.flatMap(publicKey => publicKey.keyHex !== undefined ? [ publicKey.keyHex ] : []);
 
         const ctr        = await new OCMF(this).TryToParseOCMFDocuments(
                                      values as string[],
-                                     publicKeys.length > 0 ? publicKeys : undefined,
+                                     usableKeys.length > 0 ? usableKeys : undefined,
                                      "hex"
                                  );
 
@@ -2148,6 +2150,8 @@ export class Chargy {
         // link itself: the transports still work, there is just nothing to show.
         if (!chargeTransparencyRecord.IsAChargeTransparencyRecord(ctr))
             return undefined;
+
+        this.reportUnusableKeys(ctr, publicKeys.filter(publicKey => publicKey.keyHex === undefined));
 
         // The very same verification every other charge transparency record
         // goes through, so the meter values arrive with their crypto results.
@@ -2327,13 +2331,19 @@ export class Chargy {
 
     //#region (private) collectLiveLinkMeterValueKeys(LiveLink)
 
-    // Every public key of the document that is allowed to sign meter values.
-    // A charging session is regularly signed by more than one of them: the
-    // meter signs its start and end values, the operator the intermediate ones.
-    private collectLiveLinkMeterValueKeys(LiveLink: chargeTransparencyLiveLink.IChargeTransparencyLiveLink): Array<string>
+    // Every public key of the document that is allowed to sign meter values,
+    // including the ones that cannot be read. A charging session is regularly
+    // signed by more than one of them: the meter signs its start and end
+    // values, the operator the intermediate ones.
+    //
+    // A key whose encoding cannot be read is kept, with the reason, rather than
+    // left out: it is still a key that may have signed some of the readings,
+    // and leaving it out would make those readings look as if they did not
+    // match rather than as if they could not be checked.
+    private collectLiveLinkMeterValueKeys(LiveLink: chargeTransparencyLiveLink.IChargeTransparencyLiveLink): Array<liveLinkPublicKeys.ILiveLinkPublicKey>
     {
 
-        const publicKeys  = new Array<string>();
+        const publicKeys  = new Array<liveLinkPublicKeys.ILiveLinkPublicKey>();
 
         const collectFrom = (candidates: unknown): void => {
 
@@ -2344,24 +2354,23 @@ export class Chargy {
             {
 
                 const entry     = chargyLib.asJSONObject(candidate);
-                const value     = chargyLib.asString(entry?.["value"]);
-                const keyUsage  = entry?.["keyUsage"];
-                const encodings = entry?.["encodings"];
 
-                if (value === undefined || value === "")
+                if (entry === undefined)
                     continue;
 
-                // The key has to be hexadecimal, because that is what is passed
-                // on as the encoding below.
-                if (Array.isArray(encodings) && encodings[encodings.length - 1] !== "hex")
-                    continue;
+                // A key for something else is not a candidate, however it is
+                // encoded - and so it is not a key that could not be read.
+                const keyUsage  = entry["keyUsage"];
 
                 if (Array.isArray(keyUsage) &&
                     !keyUsage.some(usage => usage === "signMeterValues" ||
                                             usage === "signEnergyMeterValues"))
                     continue;
 
-                publicKeys.push(value);
+                const publicKey = liveLinkPublicKeys.readLiveLinkPublicKey(entry);
+
+                if (publicKey !== undefined)
+                    publicKeys.push(publicKey);
 
             }
 
@@ -2374,6 +2383,78 @@ export class Chargy {
         collectFrom(chargyLib.asJSONObject(evse?.["energyMeter"])?.["publicKeys"]);
 
         return publicKeys;
+
+    }
+
+    //#endregion
+
+    //#region (private) reportUnusableKeys(CTR, UnusableKeys)
+
+    // Say which of the document's keys could not be read, and what that means
+    // for the readings none of the other keys verified.
+    //
+    // Such a reading cannot be called invalid: the key that could have verified
+    // it is right there, just not in a form this library reads. So it takes the
+    // verdict of that key - the format is unknown, or the key is invalid - and
+    // the reason, next to whatever the other keys found. A reading that failed
+    // for reasons of its own, an unknown algorithm or a malformed signature,
+    // keeps its verdict: no key would have changed it.
+    //
+    // The record carries the keys as well, so that an unreadable key is not only
+    // visible where it happened to matter.
+    private reportUnusableKeys(CTR:           chargeTransparencyRecord.IChargeTransparencyRecord,
+                               UnusableKeys:  Array<liveLinkPublicKeys.ILiveLinkPublicKey>): void
+    {
+
+        const errorsOf = (level: chargyInterfaces.ErrorLevel): Array<chargyInterfaces.IError> =>
+                             UnusableKeys.flatMap(unusableKey =>
+                                 unusableKey.reasonKey !== undefined
+                                     ? [ chargyInterfaces.CreateError(
+                                             this.GetMultilanguageText(unusableKey.reasonKey),
+                                             level,
+                                             unusableKey.reasonKey,
+                                             unusableKey.details
+                                         ) ]
+                                     : []
+                             );
+
+        const status   = UnusableKeys[0]?.status;
+
+        if (status === undefined)
+            return;
+
+        CTR.errors = [ ...(CTR.errors ?? []), ...errorsOf(chargyInterfaces.ErrorLevel.medium) ];
+
+        for (const chargingSession of CTR.chargingSessions ?? [])
+        {
+            for (const measurement of chargingSession.measurements ?? [])
+            {
+                for (const measurementValue of measurement.values)
+                {
+
+                    const result = measurementValue.result;
+
+                    if (result === undefined ||
+                        (result.status !== chargyInterfaces.VerificationResult.PublicKeyNotFound      &&
+                         result.status !== chargyInterfaces.VerificationResult.UnknownPublicKeyFormat &&
+                         result.status !== chargyInterfaces.VerificationResult.InvalidPublicKey       &&
+                         result.status !== chargyInterfaces.VerificationResult.InvalidSignature)      ||
+                        (result.errors ?? []).some(error => error.code === "Verification_SignatureMalformed"))
+                    {
+                        continue;
+                    }
+
+                    // A new result rather than a changed one: the readings of one
+                    // document share their list of errors.
+                    measurementValue.result = {
+                        ...result,
+                        status,
+                        errors: [ ...(result.errors ?? []), ...errorsOf(chargyInterfaces.ErrorLevel.high) ]
+                    };
+
+                }
+            }
+        }
 
     }
 
