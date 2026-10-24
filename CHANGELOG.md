@@ -7,7 +7,7 @@ While the version number is below 1.0.0, breaking changes are released in minor
 versions and are always listed first below.
 
 
-## [Unreleased]
+## [0.17.0] - 2026-10-24
 
 ### Changed
 
