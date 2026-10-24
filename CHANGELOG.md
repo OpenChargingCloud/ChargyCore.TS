@@ -9,7 +9,19 @@ versions and are always listed first below.
 
 ## [Unreleased]
 
+### Changed
+
+- **Node.js 22.18 is now the minimum supported version.** CI and nightly runs
+  test this minimum alongside Node.js 24 and 26.
+- Update dependencies, including Moment 2.31.0, PDF.js 6.4.299, Canvas 1.0.13,
+  Playwright 1.64.1, Vitest 5.0.5, Vite 8.3.5, and tsup 9.0.0. PDF.js remains
+  pinned to an exact version; TypeScript stays on 6.0.3 for compatibility with
+  typescript-eslint.
+
 ### Fixed
+
+- Rasterize SVG QR codes at sufficient resolution in Node.js so SVGs without
+  explicit dimensions remain readable with the updated Canvas renderer.
 
 - **A live link key that is not hexadecimal was left out without a word.**
   `TryToParseLiveLinkMeterValues()` only collected keys whose `encodings` end in

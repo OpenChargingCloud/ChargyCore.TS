@@ -30,7 +30,7 @@ jobs:
     # Unlike the .NET repositories, the interesting axis here is the Node
     # version rather than the operating system, so the matrix spans both:
     #
-    #  * Ubuntu on Node 22.13, because that is the exact minimum package.json
+    #  * Ubuntu on Node 22.18, because that is the exact minimum package.json
     #    promises. A declared engine range nobody ever runs is a guess; this
     #    leg turns it into a tested claim.
     #  * Ubuntu on Node 26, which is what development actually happens on and
@@ -52,8 +52,8 @@ jobs:
       matrix:
         include:
           - os: ubuntu-latest
-            node: '22.13'
-            leg: ubuntu-node-22.13
+            node: '22.18'
+            leg: ubuntu-node-22.18
           - os: ubuntu-latest
             node: '26'
             leg: ubuntu-node-26

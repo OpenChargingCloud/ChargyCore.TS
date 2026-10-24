@@ -50,10 +50,15 @@ describe('ALFEN Tests', () => {
 
 
     // Low-level tests for QR code reading...
-    test("ALFEN Testdata 03 - QR Code PNG can be decoded", async () => {
+    test.each([
+        { extension: "png", mimeType: "image/png" },
+        { extension: "png", mimeType: undefined },
+        { extension: "svg", mimeType: "image/svg+xml" },
+        { extension: "svg", mimeType: undefined }
+    ])("ALFEN Testdata 03 - QR Code $extension ($mimeType) can be decoded", async ({ extension, mimeType }) => {
 
         const qrCodeImage  = new Uint8Array(
-            readFileSync(new URL("fixtures/ALFEN/ALFEN-Testdata-03_SAFEXMLContainer_asQRCode.png", import.meta.url))
+            readFileSync(new URL(`fixtures/ALFEN/ALFEN-Testdata-03_SAFEXMLContainer_asQRCode.${extension}`, import.meta.url))
         );
 
         const expectedXML  = readFileSync(
@@ -61,7 +66,7 @@ describe('ALFEN Tests', () => {
             "utf8"
         );
 
-        const qrText       = await readQRCodeTextFromImage(qrCodeImage, "image/png");
+        const qrText       = await readQRCodeTextFromImage(qrCodeImage, mimeType);
 
         expect(normalizeXMLText(qrText)).toBe(normalizeXMLText(expectedXML));
 

@@ -39,7 +39,7 @@ type CanvasImage = {
 };
 
 type CanvasRenderingContext = {
-    drawImage(image: CanvasImage, dx: number, dy: number): void;
+    drawImage(image: CanvasImage, dx: number, dy: number, dw: number, dh: number): void;
     getImageData(sx: number, sy: number, sw: number, sh: number): RasterImageData;
 };
 
@@ -222,7 +222,8 @@ async function imageDataFromBrowserImageElement(data:       ArrayBuffer | Uint8A
 
 }
 
-async function imageDataFromNodeCanvas(data: ArrayBuffer | Uint8Array): Promise<QRImageData | undefined>
+async function imageDataFromNodeCanvas(data:       ArrayBuffer | Uint8Array,
+                                      mimeType?:  string): Promise<QRImageData | undefined>
 {
 
     try
@@ -235,11 +236,21 @@ async function imageDataFromNodeCanvas(data: ArrayBuffer | Uint8Array): Promise<
         const image         = await canvasLib.loadImage(Buffer.from(chargyLib.toUint8Array(data)));
         const naturalWidth  = image.naturalWidth  ?? 0;
         const naturalHeight = image.naturalHeight ?? 0;
-        const width         = naturalWidth  > 0 ? naturalWidth  : image.width;
-        const height        = naturalHeight > 0 ? naturalHeight : image.height;
+        let width           = naturalWidth  > 0 ? naturalWidth  : image.width;
+        let height          = naturalHeight > 0 ? naturalHeight : image.height;
 
         if (width <= 0 || height <= 0)
             return undefined;
+
+        // SVGs without explicit dimensions can default to a small viewport.
+        // Rasterize at sufficient resolution for dense QR codes, including
+        // callers that leave format detection to loadImage without a MIME type.
+        if (mimeType == null || mimeType === "image/svg+xml" || mimeType === "image/svg")
+        {
+            const scale = Math.max(1, 1024 / Math.max(width, height));
+            width       = Math.ceil(width  * scale);
+            height      = Math.ceil(height * scale);
+        }
 
         const canvas  = canvasLib.createCanvas(width, height);
         const context = canvas.getContext("2d");
@@ -247,7 +258,7 @@ async function imageDataFromNodeCanvas(data: ArrayBuffer | Uint8Array): Promise<
         if (context == null)
             return undefined;
 
-        context.drawImage(image, 0, 0);
+        context.drawImage(image, 0, 0, width, height);
 
         const imageData = context.getImageData(0, 0, width, height);
 
@@ -359,7 +370,7 @@ export async function readQRCodeTextFromImage(data:       ArrayBuffer | Uint8Arr
 
     const imageDataSources = typeof document === "undefined"
                                  ? [
-                                        async (): Promise<QRImageData | undefined> => imageDataFromNodeCanvas        (data),
+                                        async (): Promise<QRImageData | undefined> => imageDataFromNodeCanvas        (data, mimeType),
                                         async (): Promise<QRImageData | undefined> => imageDataFromPNGOrJPEG         (data, mimeType),
                                         async (): Promise<QRImageData | undefined> => imageDataFromBrowserCanvas     (data, mimeType),
                                         async (): Promise<QRImageData | undefined> => imageDataFromBrowserImageElement(data, mimeType)
@@ -367,7 +378,7 @@ export async function readQRCodeTextFromImage(data:       ArrayBuffer | Uint8Arr
                                  : [
                                         async (): Promise<QRImageData | undefined> => imageDataFromBrowserCanvas     (data, mimeType),
                                         async (): Promise<QRImageData | undefined> => imageDataFromBrowserImageElement(data, mimeType),
-                                        async (): Promise<QRImageData | undefined> => imageDataFromNodeCanvas        (data),
+                                        async (): Promise<QRImageData | undefined> => imageDataFromNodeCanvas        (data, mimeType),
                                         async (): Promise<QRImageData | undefined> => imageDataFromPNGOrJPEG         (data, mimeType)
                                    ];
 
