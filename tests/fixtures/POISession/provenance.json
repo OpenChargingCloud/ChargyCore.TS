@@ -1,0 +1,35 @@
+{
+  "generator": "build-tools/generatePOISessionExample.mjs",
+  "generatedAt": "2026-11-01T00:16:21.000Z",
+  "begin": "2026-10-31T23:41:21.000Z",
+  "end": "2026-11-01T00:11:21.000Z",
+  "attestationsValidUntil": "2026-11-01T23:16:21.000Z",
+  "networkId": "CHARGY-POI-DEMO",
+  "evseId": "DE*POI*E1*1",
+  "meterSerial": "CHARGY-POI-METER-001",
+  "meterKeyId": "0cfefc81f7537db1d2b85ae423bfa45835e664d6f4e77021f6adbc5b83c7e89c",
+  "meterKeySource": "tests/fixtures/ChargeTransparencyLive/OCMF-Test-01/privateKey_energyMeter.pem",
+  "identityKeySeeds": [
+    41,
+    43
+  ],
+  "operationalKeySeeds": [
+    42,
+    44
+  ],
+  "keys": "PUBLIC TEST KEYS ONLY; never production trust roots",
+  "consumedKWh": 11,
+  "pricePerKWh": "0.35",
+  "tariffClaim": "Static definition inclusion; no PriceStatement or publication claim",
+  "files": {
+    "completed-session-with-evse-proof.chargy": {
+      "sha256": "3f6f30792af9caa235eba568ab6e005f98b48a265ca368cf4181335cc35f13ce"
+    },
+    "trust-anchor.txt": {
+      "sha256": "48e9f768e1a9bd3ba5633317bb9f5cb7a5ec036749a69d50e72b13a22bfca939"
+    },
+    "key-statement.json": {
+      "sha256": "ebc67af966be55ef86e75fc39a6bf6d84cba021e2acc2707ca8c556c9077b61a"
+    }
+  }
+}

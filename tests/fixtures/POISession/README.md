@@ -1,0 +1,1 @@
+Public test vector copied from OpenChargingCloud/ChargyWebApp commit 97da24d, tests/fixtures/POISession. The original provenance manifest is retained; it references the complete upstream example set. No production keys. AGPL-3.0-only.

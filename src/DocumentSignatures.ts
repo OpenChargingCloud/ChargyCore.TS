@@ -604,6 +604,13 @@ export function verifyDocumentSignatures(Document: chargyLib.JSONObject): IDocum
 }
 
 
+/** Verify original document signatures with caller-selected keys; embedded keys cannot grant themselves authority. */
+export function verifyDocumentSignaturesWithKeys(Document: chargyLib.JSONObject, PublicKeys: readonly IDocumentPublicKey[]): IDocumentSignaturesResult {
+    const signatures=Document["signatures"];
+    if(!Array.isArray(signatures)||signatures.length===0)return {status:"unsigned",signatures:[],validCount:0};
+    return verifySignaturesOf(Document,signatures,[...PublicKeys],asStringArray(Document["keyIdGeneration"])??defaultKeyIdGeneration);
+}
+
 /**
  * The signatures an object *inside* a document carries over itself.
  *

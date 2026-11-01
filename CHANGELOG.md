@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.17.1-dev.0 (unpublished development candidate)
+
+Original start price context and separate publication/rate checks.
+
+Historical per-document OCMF verification with exact authorized timestamp/key coverage.
+
+Additive OCMF verification with a caller-authorized meter key and provenance;
+container-key conflicts, signed identity and displayed-value comparison; first-reading support.
+OCMF crypto details now show the individual reading result rather than a session-wide verdict.
+
+
 All notable changes to this project are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
@@ -669,3 +680,11 @@ Nothing here changes the published package; it is listed for contributors.
 
 See the commit history at
 <https://github.com/OpenChargingCloud/ChargyCore.TS/commits/master>.
+
+Unpublished live pilot: `readLiveSessionDocument`, `verifyLiveSessionTransition`
+and `verifyDocumentSignaturesWithKeys` validate original JSON/JCS envelopes,
+exact predecessor references, fixed identities/document keys and cumulative
+OCMF strings. Envelope-key continuity is distinct from externally authorized
+CPO identity. `readOCMFSessionPriceContext.allTariffTexts` discovers all original
+tariff texts without claiming their signatures were checked; callers compare
+them only after all original meter signatures and associations pass.

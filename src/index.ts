@@ -55,6 +55,7 @@ export {
 export {
     collectDocumentPublicKeys,
     verifyDocumentSignatures,
+    verifyDocumentSignaturesWithKeys,
     verifyEmbeddedSignatures,
     type DocumentSignatureStatus,
     type DocumentSignaturesStatus,
@@ -74,3 +75,11 @@ export * as ChargeTransparencyLiveLink from "./interfaces/IChargeTransparencyLiv
 export * as ChargeTransparencyRecord from "./interfaces/IChargeTransparencyRecord";
 export * as PublicKeyInfo from "./interfaces/IPublicKeyInfo";
 export * as SimpleURL from "./interfaces/IURL";
+
+export * from "./MeterKeyVerification";
+
+export * from "./SessionPriceContext";
+
+export * from "./LiveSessionContinuity";
+
+export {verifyLiveSessionAuthority,type ILiveCPOAuthority} from './LiveSessionContinuity';

@@ -669,24 +669,24 @@ export class OCMFv1_x extends ACrypt {
 
         //#region Signature check
 
-        if (measurementValue.measurement.chargingSession.verificationResult)
+        if (measurementValue.result)
         {
-            switch (measurementValue.measurement.chargingSession.verificationResult.status)
+            switch (measurementValue.result.status)
             {
 
-                case chargyInterfaces.SessionVerificationResult.PublicKeyNotFound:
+                case chargyInterfaces.VerificationResult.PublicKeyNotFound:
                     SignatureCheckDiv.innerHTML = '<i class="fas fa-times-circle"></i><div id="description">' + this.chargy.GetLocalizedMessage("Public key not found") + '</div>';
                     break;
 
-                case chargyInterfaces.SessionVerificationResult.InvalidPublicKey:
+                case chargyInterfaces.VerificationResult.InvalidPublicKey:
                     SignatureCheckDiv.innerHTML = '<i class="fas fa-times-circle"></i><div id="description">' + this.chargy.GetLocalizedMessage("Invalid public key") + '</div>';
                     break;
 
-                case chargyInterfaces.SessionVerificationResult.InvalidSignature:
+                case chargyInterfaces.VerificationResult.InvalidSignature:
                     SignatureCheckDiv.innerHTML = '<i class="fas fa-times-circle"></i><div id="description">' + this.chargy.GetLocalizedMessage("Invalid signature") + '</div>';
                     break;
 
-                case chargyInterfaces.SessionVerificationResult.ValidSignature:
+                case chargyInterfaces.VerificationResult.ValidSignature:
                     SignatureCheckDiv.innerHTML = '<i class="fas fa-check-circle"></i><div id="description">' + this.chargy.GetLocalizedMessage("Valid signature") + '</div>';
                     break;
 

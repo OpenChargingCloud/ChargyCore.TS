@@ -204,3 +204,71 @@ We also appreciate any additional funding and long-term support for the Chargy f
 <center>
   <img src="images/NGI0_tag.svg" height="30">
 </center>
+
+## Explicit meter-key handoff (unpublished 0.17.1-dev.0 candidate)
+
+`verifyOCMFSessionWithMeterKey(chargy, session, binding, options?)` is an additive
+API for a caller-authorized measurement key. Core has no dependency on WWCP/POI:
+the caller supplies an `IMeterKeyBinding` after verifying its own trust evidence.
+Importing JSON containing such fields never grants trust. `ocmfSessionMaterial`
+extracts original OCMF documents and their original container-key description.
+
+The P-256 pilot re-parses original signed documents with exactly that key,
+checks every signed MS/EVSEID/CI association and compares the displayed readings
+with newly parsed timestamp/value/unit/scale/OBIS data. It ignores cached green
+validation fields and never modifies signed input. Container-key conflicts stay
+explicit, including when the original signatures verify with the proven key.
+A single start reading can be checked without inventing an end value. Result
+readings have their own crypto-detail methods, including the first reading.
+
+`verified`, `key-conflict`, `identity-conflict`, `record-conflict`,
+`invalid-signature`, `unsupported` and `evidence-expired` remain separate results.
+`historicalAssociation` is always `not-proven` for this current-snapshot API.
+Expiry is checked before and after verification; cancellation discards pending
+results. Applications must reread local authorization after asynchronous work
+and preserve original input/public keys on export for conflict diagnostics.
+
+The public fixture in `tests/fixtures/POISession` is copied from ChargyWebApp
+commit 97da24d and retains its original provenance hashes. All keys are test keys.
+
+
+### Historical original readings (unpublished candidate)
+
+`verifyHistoricalOCMFSession(chargy, session, bindings, options?)` checks each original
+OCMF document with the unique caller-authorized historical key covering its original
+reading timestamps. One signed document cannot silently use different keys between
+readings. Different documents can have different authorized keys. Signed identity,
+displayed values, source-key conflicts, cancellation and current observation expiry
+remain enforced. Invalid signatures never produce a successful historical association.
+Bindings use `association: "historical-attestation"` and explicit `measurementTimes`;
+these are authorized API inputs, never authority granted by an imported JSON object.
+
+
+### Original start price context (unpublished candidate)
+
+`readOCMFSessionPriceContext` reparses original OCMF and returns a unique start time,
+EVSE/meter, exact start-document SHA-256 and original tariff texts. Discovery is not
+signature verification. `verifyOCMFPriceStart` checks that document with an explicitly
+authorized key. `compareOCMFPriceRates` compares declared gross currency and simple
+unconditional rates against exact raw Bonner tariff-text decimals. It never uses
+floating-point amounts for equality and does not validate taxes, steps, rounding,
+conditional parking fees or a final invoice. No dependency on POI is introduced.
+
+Unpublished live pilot: `readLiveSessionDocument`, `verifyLiveSessionTransition`
+and `verifyDocumentSignaturesWithKeys` validate original JSON/JCS envelopes,
+exact predecessor references, fixed identities/document keys and cumulative
+OCMF strings. Envelope-key continuity is distinct from externally authorized
+CPO identity. `readOCMFSessionPriceContext.allTariffTexts` discovers all original
+tariff texts without claiming their signatures were checked; callers compare
+them only after all original meter signatures and associations pass.
+
+
+### Independent CPO live-document authority (unpublished extension)
+
+`verifyLiveSessionAuthority` checks original envelope identities/signatures
+against independently supplied POI-authorized CPO document keys. Embedded keys do
+not establish that authority. An updated document must also be authorized by the
+previous completely signed key list; an old/new co-signed bridge supports rotation.
+The `structureOnly` transition option is preparation only and never grants a
+success verdict. Callers must finish independent authority and meter/price checks
+before adoption. This API has no dependency on app storage or a POI package.
