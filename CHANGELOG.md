@@ -22,13 +22,18 @@ versions and are always listed first below.
 
 ### Changed
 
-- Update COSE to 0.10.0, Metrological CBOR to 0.11.1, file-type to 22.3.0,
-  Canvas to 1.1.0, Node.js types to 26.6.6, ESLint to 10.14.0, and
-  typescript-eslint to 8.72.1. Refresh compatible transitive dependencies;
-  TypeScript remains on 6.0.3.
+- Update COSE to 0.12.0, Metrological CBOR to 0.12.0, file-type to 22.3.0,
+  PDF.js to 6.5.438, Canvas to 1.1.0, Node.js types to 26.6.6, ESLint to
+  10.14.0, globals to 17.14.0, and typescript-eslint to 8.72.1. Refresh
+  compatible transitive dependencies; TypeScript remains on 6.0.3 and PDF.js
+  remains pinned to an exact version.
 
 ### Security
 
+- Apply npm overrides for minimatch and rimraf's glob dependency in the
+  development tooling, using minimatch 11.0.3 and glob 14.0.3 to address their
+  denial-of-service advisories. Remove these temporary overrides once the parent
+  packages accept patched versions.
 - Update brace-expansion to 5.0.12 to address denial-of-service advisories.
   After `npm audit fix`, only the elliptic advisory remains, with no available
   fix.

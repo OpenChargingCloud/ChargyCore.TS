@@ -56,8 +56,8 @@
     "@noble/curves": "^2.4.0",
     "@noble/hashes": "^2.4.0",
     "@noble/post-quantum": "^0.7.1",
-    "@vanaheimr/cose": "^0.10.0",
-    "@vanaheimr/metrological-cbor": "^0.11.1",
+    "@vanaheimr/cose": "^0.12.0",
+    "@vanaheimr/metrological-cbor": "^0.12.0",
     "asn1.js": "^5.4.1",
     "base32-decode": "^1.0.0",
     "buffer": "^6.0.3",
@@ -67,7 +67,7 @@
     "is-url-superb": "^6.1.0",
     "jsqr": "^1.4.0",
     "moment": "^2.31.0",
-    "pdfjs-dist": "6.4.299",
+    "pdfjs-dist": "6.5.438",
     "seek-bzip": "^2.0.0"
   },
   "optionalDependencies": {
@@ -85,7 +85,7 @@
     "@vitest/coverage-v8": "^5.0.5",
     "@vitest/ui": "^5.0.5",
     "eslint": "^10.14.0",
-    "globals": "^17.13.0",
+    "globals": "^17.14.0",
     "playwright": "^1.64.1",
     "rimraf": "^6.1.3",
     "tsup": "^9.0.0",
@@ -95,7 +95,11 @@
     "vitest": "^5.0.5"
   },
   "overrides": {
-    "esbuild": "^0.28.2"
+    "esbuild": "^0.28.2",
+    "minimatch": "^11.0.3",
+    "rimraf": {
+      "glob": "^14.0.3"
+    }
   },
   "peerDependencies": {
     "typescript": ">=5.4"
