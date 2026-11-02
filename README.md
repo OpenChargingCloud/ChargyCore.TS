@@ -8,6 +8,15 @@ Chargy Core is a transparency software library for the validation of secure and 
 This software is written as a modern ESM TypeScript package with generated declaration files, providing shared core functionality for the Chargy Desktop, Web & Mobile applications.
 
 
+## Release status
+
+**0.18.0 is prepared, not yet published to npm.** It includes the shared meter-key,
+historical-reading, start-price and CPO-authorized live-session APIs previously
+supplied as the unpublished 0.17.1-dev.0 candidate. See the
+[changelog](CHANGELOG.md#0180-prepared-not-yet-published) for the complete changes
+and [migration guidance](CHANGELOG.md#migration).
+
+
 ## Benefits of Chargy
 
 1. Chargy comes with __*meta data*__. True charging transparency is more than just signed smart meter values. Chargy allows you to group multiple signed smart meter values to entire charging sessions and to add additional meta data like EVSE information, geo coordinates, tariffs, ... within your backend in order to improve the user experience for the ev drivers.
@@ -184,15 +193,42 @@ npx playwright install chromium
 
 ## Publishing
 
+Version 0.18.0 is prepared locally. Preparation does not publish to npm, create a
+release tag or change an application's pinned development package. Validate the
+source and inspect the package before approving a release:
+
 ```bash
-npm version 0.17.0 --no-git-tag-version
+npm ci
+npx playwright install chromium
 npm run verify
 npm pack --dry-run
 npm pack
+```
+
+After release approval, replace the prepared-release markers in this README and
+the changelog with the actual release status and date, rebuild and check the
+final archive. Commit the reviewed release files, then tag and push that exact
+commit to each configured remote:
+
+```bash
+git tag -s v0.18.0 -m "v0.18.0"
+git push origin master v0.18.0
+git push git1 master v0.18.0
+git push git2 master v0.18.0
+```
+
+Publish the inspected archive only after that separate approval:
+
+```bash
 npm login
 npm whoami
-npm publish
+npm publish ./open-charging-cloud-chargy-core-0.18.0.tgz --access public
 ```
+
+After publication, applications can replace their local Core development archive
+with `@open-charging-cloud/chargy-core@^0.18.0`, refresh their lockfile and verify
+a clean install. Applications using POI must update that separate package as well;
+Core intentionally does not depend on it.
 
 
 ## Funding
@@ -205,7 +241,7 @@ We also appreciate any additional funding and long-term support for the Chargy f
   <img src="images/NGI0_tag.svg" height="30">
 </center>
 
-## Explicit meter-key handoff (unpublished 0.17.1-dev.0 candidate)
+## Explicit meter-key handoff in 0.18.0
 
 `verifyOCMFSessionWithMeterKey(chargy, session, binding, options?)` is an additive
 API for a caller-authorized measurement key. Core has no dependency on WWCP/POI:
@@ -232,7 +268,7 @@ The public fixture in `tests/fixtures/POISession` is copied from ChargyWebApp
 commit 97da24d and retains its original provenance hashes. All keys are test keys.
 
 
-### Historical original readings (unpublished candidate)
+### Historical original readings
 
 `verifyHistoricalOCMFSession(chargy, session, bindings, options?)` checks each original
 OCMF document with the unique caller-authorized historical key covering its original
@@ -244,7 +280,7 @@ Bindings use `association: "historical-attestation"` and explicit `measurementTi
 these are authorized API inputs, never authority granted by an imported JSON object.
 
 
-### Original start price context (unpublished candidate)
+### Original start price context
 
 `readOCMFSessionPriceContext` reparses original OCMF and returns a unique start time,
 EVSE/meter, exact start-document SHA-256 and original tariff texts. Discovery is not
@@ -254,7 +290,9 @@ unconditional rates against exact raw Bonner tariff-text decimals. It never uses
 floating-point amounts for equality and does not validate taxes, steps, rounding,
 conditional parking fees or a final invoice. No dependency on POI is introduced.
 
-Unpublished live pilot: `readLiveSessionDocument`, `verifyLiveSessionTransition`
+### Cumulative live-session pilot
+
+`readLiveSessionDocument`, `verifyLiveSessionTransition`
 and `verifyDocumentSignaturesWithKeys` validate original JSON/JCS envelopes,
 exact predecessor references, fixed identities/document keys and cumulative
 OCMF strings. Envelope-key continuity is distinct from externally authorized
@@ -263,7 +301,7 @@ tariff texts without claiming their signatures were checked; callers compare
 them only after all original meter signatures and associations pass.
 
 
-### Independent CPO live-document authority (unpublished extension)
+### Independent CPO live-document authority
 
 `verifyLiveSessionAuthority` checks original envelope identities/signatures
 against independently supplied POI-authorized CPO document keys. Embedded keys do

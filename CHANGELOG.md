@@ -1,16 +1,5 @@
 # Changelog
 
-## 0.17.1-dev.0 (unpublished development candidate)
-
-Original start price context and separate publication/rate checks.
-
-Historical per-document OCMF verification with exact authorized timestamp/key coverage.
-
-Additive OCMF verification with a caller-authorized meter key and provenance;
-container-key conflicts, signed identity and displayed-value comparison; first-reading support.
-OCMF crypto details now show the individual reading result rather than a session-wide verdict.
-
-
 All notable changes to this project are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
@@ -19,6 +8,37 @@ versions and are always listed first below.
 
 
 ## [Unreleased]
+
+
+## [0.18.0] (prepared; not yet published)
+
+Includes the shared trust-integration APIs previously supplied as the unpublished
+0.17.1-dev.0 development candidate, together with the dependency updates below.
+
+### Added
+
+- Caller-authorized OCMF meter-key verification through
+  `verifyOCMFSessionWithMeterKey`, including signed meter/EVSE identities,
+  original container-key conflicts, displayed-reading consistency and support
+  for a single start reading. Cryptographic details report each reading's result.
+- Historical original-document verification through
+  `verifyHistoricalOCMFSession`, selecting the unique caller-authorized key
+  covering each document's signed measurement timestamps.
+- Original start-price context extraction, explicit start-document verification
+  and exact decimal comparisons for unconditional gross Bonner tariff-text rates:
+  `readOCMFSessionPriceContext`, `verifyOCMFPriceStart` and
+  `compareOCMFPriceRates`. Price assertions, rate consistency, publication and
+  customer agreement remain separate claims.
+  `readOCMFSessionPriceContext.allTariffTexts` discovers the original tariff
+  texts; compare them only after their meter signatures and associations pass.
+- Original cumulative live-envelope parsing and continuity checks through
+  `readLiveSessionDocument` and `verifyLiveSessionTransition`, plus document
+  signature verification with explicitly supplied keys.
+- Independent CPO live-document authority through
+  `verifyLiveSessionAuthority`. Embedded keys and document-key continuity do
+  not authorize the initial CPO signer; subsequent envelopes require both
+  independent authority and the previous document's signed key list, including
+  an old/new co-signed bridge for key rotation.
 
 ### Changed
 
@@ -37,6 +57,22 @@ versions and are always listed first below.
 - Update brace-expansion to 5.0.12 to address denial-of-service advisories.
   After `npm audit fix`, only the elliptic advisory remains, with no available
   fix.
+
+
+### Migration
+
+- The new verification APIs are additive. The minimum runtime remains Node.js
+  22.18; the package remains ESM with separate browser and Node.js bundles.
+- Core has no dependency on WWCP POI. Applications verify POI evidence with
+  their currently authorized trust policy and pass explicit bindings or CPO
+  keys to Core. Imported JSON, archived success flags and embedded keys never
+  grant that authority. Reread local authorization after asynchronous work.
+- The meter-key handoff and historical pilot support P-256/OCMF; this does not
+  limit the algorithms supported by the existing standalone OCMF verifier.
+  Signed timestamps do not independently prove actual measurement time.
+- Consumers importing COSE or Metrological CBOR directly should align both
+  dependency ranges with ^0.12.0. Update PDF.js worker assets to match the
+  pinned PDF.js version when updating the application.
 
 
 ## [0.17.0] - 2026-10-24
@@ -685,11 +721,3 @@ Nothing here changes the published package; it is listed for contributors.
 
 See the commit history at
 <https://github.com/OpenChargingCloud/ChargyCore.TS/commits/master>.
-
-Unpublished live pilot: `readLiveSessionDocument`, `verifyLiveSessionTransition`
-and `verifyDocumentSignaturesWithKeys` validate original JSON/JCS envelopes,
-exact predecessor references, fixed identities/document keys and cumulative
-OCMF strings. Envelope-key continuity is distinct from externally authorized
-CPO identity. `readOCMFSessionPriceContext.allTariffTexts` discovers all original
-tariff texts without claiming their signatures were checked; callers compare
-them only after all original meter signatures and associations pass.
