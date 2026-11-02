@@ -13,7 +13,7 @@ This software is written as a modern ESM TypeScript package with generated decla
 **0.18.0 was published to npm on 2 November 2026.** It includes the shared meter-key,
 historical-reading, start-price and CPO-authorized live-session APIs previously
 supplied as the unpublished 0.17.1-dev.0 candidate. See the
-[changelog](CHANGELOG.md) for the complete changes
+[changelog](CHANGELOG.md#0180---2026-11-02) for the complete changes
 and [migration guidance](CHANGELOG.md#migration).
 
 

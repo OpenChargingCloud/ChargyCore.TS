@@ -48,6 +48,11 @@ Includes the shared trust-integration APIs previously supplied as the unpublishe
   compatible transitive dependencies; TypeScript remains on 6.0.3 and PDF.js
   remains pinned to an exact version.
 
+### Fixed
+
+- Exclude generated `artifacts/` output from ESLint so release consumer smoke
+  checks do not cause `npm run verify` to fail.
+
 ### Security
 
 - Apply npm overrides for minimatch and rimraf's glob dependency in the
