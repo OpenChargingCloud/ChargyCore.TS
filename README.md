@@ -10,10 +10,10 @@ This software is written as a modern ESM TypeScript package with generated decla
 
 ## Release status
 
-**0.18.0 is prepared, not yet published to npm.** It includes the shared meter-key,
+**0.18.0 was published to npm on 2 November 2026.** It includes the shared meter-key,
 historical-reading, start-price and CPO-authorized live-session APIs previously
 supplied as the unpublished 0.17.1-dev.0 candidate. See the
-[changelog](CHANGELOG.md#0180-prepared-not-yet-published) for the complete changes
+[changelog](CHANGELOG.md) for the complete changes
 and [migration guidance](CHANGELOG.md#migration).
 
 
@@ -193,9 +193,11 @@ npx playwright install chromium
 
 ## Publishing
 
-Version 0.18.0 is prepared locally. Preparation does not publish to npm, create a
-release tag or change an application's pinned development package. Validate the
-source and inspect the package before approving a release:
+Version 0.18.0 is available on npm. The commands below record its release
+procedure. For a future release, choose a new version and replace the version,
+tag and archive names below; published versions are immutable. Update
+package.json, package-lock.json and the release notes, then validate the source
+and inspect the package before approving a release:
 
 ```bash
 npm ci
@@ -205,10 +207,10 @@ npm pack --dry-run
 npm pack
 ```
 
-After release approval, replace the prepared-release markers in this README and
-the changelog with the actual release status and date, rebuild and check the
-final archive. Commit the reviewed release files, then tag and push that exact
-commit to each configured remote:
+After release approval, finalize this README and the changelog with the actual
+release status and date, rebuild and check the final archive. Commit the
+reviewed release files, then tag and push that exact commit to each configured
+remote:
 
 ```bash
 git tag -s v0.18.0 -m "v0.18.0"
@@ -225,10 +227,10 @@ npm whoami
 npm publish ./open-charging-cloud-chargy-core-0.18.0.tgz --access public
 ```
 
-After publication, applications can replace their local Core development archive
-with `@open-charging-cloud/chargy-core@^0.18.0`, refresh their lockfile and verify
-a clean install. Applications using POI must update that separate package as well;
-Core intentionally does not depend on it.
+Applications can replace their local Core development archive with
+`@open-charging-cloud/chargy-core@^0.18.0`, refresh their lockfile and verify a
+clean install. WWCP POI 0.2.0 is also published. Applications using POI must
+update that separate package as well; Core intentionally does not depend on it.
 
 
 ## Funding

@@ -10,7 +10,7 @@ versions and are always listed first below.
 ## [Unreleased]
 
 
-## [0.18.0] (prepared; not yet published)
+## [0.18.0] - 2026-11-02
 
 Includes the shared trust-integration APIs previously supplied as the unpublished
 0.17.1-dev.0 development candidate, together with the dependency updates below.
