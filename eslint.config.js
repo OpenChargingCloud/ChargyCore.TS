@@ -7,6 +7,7 @@ export default tseslint.config(
     ignores: [
       "dist/**",
       "coverage/**",
+      "artifacts/**",
       "node_modules/**",
       ".npm-cache/**",
       "src/edl40-isa-ts/**",
