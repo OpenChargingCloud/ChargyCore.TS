@@ -9,6 +9,10 @@ versions and are always listed first below.
 
 ## [Unreleased]
 
+### Changed
+
+- Update Vitest and its browser, Playwright, coverage and UI packages to 5.1.0.
+
 
 ## [0.18.0] - 2026-11-02
 
