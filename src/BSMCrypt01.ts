@@ -31,6 +31,13 @@ interface IASN1Signature
     s: { toString(base: number): string };
 }
 
+// Units are defined by the BSM snapshot model (smdx_64901), not chosen by the
+// JSON container. Only RCR/TotWhImp and W have associated scale-factor points.
+const bsmNumericUnitCodes = {
+    Typ: 255, RCR: 30, TotWhImp: 30, W: 27, RCnt: 255, OS: 7, Epoch: 7,
+    TZO: 6, EpochSetCnt: 255, EpochSetOS: 7, DI: 255, DO: 255, Evt: 255
+} as const;
+
 export interface IBSMMeasurementValue extends chargeTransparencyRecord.IMeasurementValue
 {
 
@@ -507,6 +514,14 @@ export class BSMCrypt01 extends ACrypt {
                     if (elementObj === undefined || measurand === undefined)
                         throw new Error(`Invalid additional value #${String(index + 1)} within signed meter value #${String(measurementCounter)}!`);
 
+                    const name  = chargyLib.asString(measurand["name"]);
+                    const scale = measuredValue?.["scale"];
+                    if (name !== undefined && Object.hasOwn(bsmNumericUnitCodes, name) &&
+                        scale !== undefined && typeof scale !== "number")
+                    {
+                        throw new Error(`Invalid scale factor for BSM field '${name}' in snapshot #${measurementCounter}!`);
+                    }
+
                     return {
                         measurandId:    chargyLib.asString(measurand["id"]),
                         measurandName:  chargyLib.asString(measurand["name"]),
@@ -520,6 +535,8 @@ export class BSMCrypt01 extends ACrypt {
                     } satisfies IBSMAdditionalValue;
 
                 });
+
+                this.ValidateNumericValues(additionalValues, measurementCounter);
 
                 //#endregion
 
@@ -1187,28 +1204,30 @@ export class BSMCrypt01 extends ACrypt {
         const buffer        = new ArrayBuffer(requiredSize);
         const cryptoBuffer  = new DataView(buffer);
 
-        // TODO: Use units and scale factors from input data instead of making
-        // assumptions about them.
+        // The parser validates every numeric field against the BSM model before
+        // discarding its JSON metadata. Fixed model units and unscaled counters
+        // are therefore safe to reconstruct; the variable energy/power scale
+        // factors are retained separately for each snapshot.
         const cryptoResult:IBSMCrypt01Result = {
             status:        chargyInterfaces.VerificationResult.InvalidSignature,
             ArraySize:     requiredSize,
-            Typ:           chargyLib.SetUInt32_withCode(cryptoBuffer, measurementValue.Typ,          0, 255,   0),
-            RCR:           chargyLib.SetUInt32_withCode(cryptoBuffer, measurementValue.RCR,          measurementValue.RCR_SF,  30,   6),
-            TotWhImp:      chargyLib.SetUInt32_withCode(cryptoBuffer, measurementValue.TotWhImp,     measurementValue.TotWhImp_SF,  30,  12),
-            W:             chargyLib.SetUInt32_withCode(cryptoBuffer, measurementValue.W,            measurementValue.W_SF,  27,  18),
+            Typ:           chargyLib.SetUInt32_withCode(cryptoBuffer, measurementValue.Typ,          0,                         bsmNumericUnitCodes.Typ,          0),
+            RCR:           chargyLib.SetUInt32_withCode(cryptoBuffer, measurementValue.RCR,          measurementValue.RCR_SF,    bsmNumericUnitCodes.RCR,          6),
+            TotWhImp:      chargyLib.SetUInt32_withCode(cryptoBuffer, measurementValue.TotWhImp,     measurementValue.TotWhImp_SF, bsmNumericUnitCodes.TotWhImp,   12),
+            W:             chargyLib.SetUInt32_withCode(cryptoBuffer, measurementValue.W,            measurementValue.W_SF,      bsmNumericUnitCodes.W,           18),
             MA1:           chargyLib.SetText_withLength(cryptoBuffer, measurementValue.MA1,                   24),
-            RCnt:          chargyLib.SetUInt32_withCode(cryptoBuffer, measurementValue.RCnt,         0, 255,  24 + MA1_length),
-            OS:            chargyLib.SetUInt32_withCode(cryptoBuffer, measurementValue.OS,           0,   7,  30 + MA1_length),
-            Epoch:         chargyLib.SetUInt32_withCode(cryptoBuffer, measurementValue.Epoch,        0,   7,  36 + MA1_length),
-            TZO:           chargyLib.SetUInt32_withCode(cryptoBuffer, measurementValue.TZO,          0,   6,  42 + MA1_length),
-            EpochSetCnt:   chargyLib.SetUInt32_withCode(cryptoBuffer, measurementValue.EpochSetCnt,  0, 255,  48 + MA1_length),
-            EpochSetOS:    chargyLib.SetUInt32_withCode(cryptoBuffer, measurementValue.EpochSetOS,   0,   7,  54 + MA1_length),
-            DI:            chargyLib.SetUInt32_withCode(cryptoBuffer, measurementValue.DI,           0, 255,  60 + MA1_length),
-            DO:            chargyLib.SetUInt32_withCode(cryptoBuffer, measurementValue.DO,           0, 255,  66 + MA1_length),
+            RCnt:          chargyLib.SetUInt32_withCode(cryptoBuffer, measurementValue.RCnt,         0, bsmNumericUnitCodes.RCnt,         24 + MA1_length),
+            OS:            chargyLib.SetUInt32_withCode(cryptoBuffer, measurementValue.OS,           0, bsmNumericUnitCodes.OS,           30 + MA1_length),
+            Epoch:         chargyLib.SetUInt32_withCode(cryptoBuffer, measurementValue.Epoch,        0, bsmNumericUnitCodes.Epoch,        36 + MA1_length),
+            TZO:           chargyLib.SetUInt32_withCode(cryptoBuffer, measurementValue.TZO,          0, bsmNumericUnitCodes.TZO,          42 + MA1_length),
+            EpochSetCnt:   chargyLib.SetUInt32_withCode(cryptoBuffer, measurementValue.EpochSetCnt,  0, bsmNumericUnitCodes.EpochSetCnt,  48 + MA1_length),
+            EpochSetOS:    chargyLib.SetUInt32_withCode(cryptoBuffer, measurementValue.EpochSetOS,   0, bsmNumericUnitCodes.EpochSetOS,   54 + MA1_length),
+            DI:            chargyLib.SetUInt32_withCode(cryptoBuffer, measurementValue.DI,           0, bsmNumericUnitCodes.DI,           60 + MA1_length),
+            DO:            chargyLib.SetUInt32_withCode(cryptoBuffer, measurementValue.DO,           0, bsmNumericUnitCodes.DO,           66 + MA1_length),
             Meta1:         chargyLib.SetText_withLength(cryptoBuffer, measurementValue.Meta1,                 72 + MA1_length),
             Meta2:         chargyLib.SetText_withLength(cryptoBuffer, measurementValue.Meta2,                 72 + MA1_length + Meta1_length),
             Meta3:         chargyLib.SetText_withLength(cryptoBuffer, measurementValue.Meta3,                 72 + MA1_length + Meta1_length + Meta2_length),
-            Evt:           chargyLib.SetUInt32_withCode(cryptoBuffer, measurementValue.Evt,          0, 255,  72 + MA1_length + Meta1_length + Meta2_length + Meta3_length),
+            Evt:           chargyLib.SetUInt32_withCode(cryptoBuffer, measurementValue.Evt,          0, bsmNumericUnitCodes.Evt,          72 + MA1_length + Meta1_length + Meta2_length + Meta3_length),
         };
 
         const firstSignature = measurementValue.signatures?.[0];
@@ -1566,6 +1585,56 @@ export class BSMCrypt01 extends ACrypt {
 
     //#region Helper methods
 
+    private ValidateNumericValues(values: IBSMAdditionalValue[], snapshot: number): void
+    {
+        const unitNames: Record<number, readonly string[]> = {
+            255: ["UNITLESS", ""],
+            30:  ["WATT_HOUR", "WH"],
+            27:  ["WATT", "W"],
+            7:   ["SECOND", "S"],
+            6:   ["MIN", "MINUTE"]
+        };
+
+        for (const [name, unitCode] of Object.entries(bsmNumericUnitCodes))
+        {
+            const matches = values.filter(value => value.measurandName === name);
+            const value   = matches[0];
+            const context = `BSM field '${name}' in snapshot #${snapshot}`;
+
+            // Missing fields must not inherit data from the preceding snapshot;
+            // duplicate names would leave the signed representation ambiguous.
+            if (matches.length !== 1 || value === undefined)
+                throw new Error(`Expected exactly one ${context}!`);
+
+            if (value.unitEncoded !== unitCode ||
+                unitNames[unitCode]?.includes(value.unit?.toUpperCase() ?? "") !== true)
+            {
+                throw new Error(`Invalid unit for ${context}!`);
+            }
+
+            const scaled = name === "RCR" || name === "TotWhImp" || name === "W";
+            // Unscaled model points may omit scale entirely, as in the
+            // reference JSON exporter. An explicit scale must still be zero.
+            const scale = value.scale ?? (scaled ? NaN : 0);
+            if (!Number.isInteger(scale) || scale < -128 || scale > 127 || (!scaled && scale !== 0))
+            {
+                throw new Error(`Invalid scale factor for ${context}!`);
+            }
+
+            // The abstract signed representation uses 32-bit integers, even
+            // for model points whose Modbus registers are narrower. Validate
+            // before the byte writer can truncate or wrap an invalid value.
+            const number = chargyLib.asNumber(value.value);
+            const signed = name === "W" || name === "TZO";
+            if (number === undefined || !Number.isInteger(number) ||
+                number < (signed ? -2147483648 : 0) ||
+                number > (signed ? 2147483647 : 4294967295))
+            {
+                throw new Error(`Invalid numeric value for ${context}!`);
+            }
+        }
+    }
+
     private PrefixConverter(input: string): chargyInterfaces.DisplayPrefixes {
         switch(input.toLowerCase()) {
             case "kilo":  return chargyInterfaces.DisplayPrefixes.KILO;
@@ -1577,7 +1646,9 @@ export class BSMCrypt01 extends ACrypt {
 
     private UnitConverter(input: string): string{
         switch(input.toUpperCase()) {
+            case "WH":
             case "WATT_HOUR":  return "Wh";
+            case "W":
             case "WATT":       return "W";
             default:           return "";
         }

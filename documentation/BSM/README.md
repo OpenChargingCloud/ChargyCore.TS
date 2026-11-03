@@ -109,8 +109,10 @@ signature. Chargy reads them by their `measurand.name`:
 | `Evt` | uint | Event/error flags counter (decoded via `ParseEvents`). |
 
 The snapshot's top-level `value` mirrors the `RCR` data point (`measurand.id`
-`1-0:1.8.0*198`); the per-point scale factor, unit and DLMS unit code from
-`measuredValue` are used when building the signed payload.
+`1-0:1.8.0*198`). Chargy retains the energy and power scale factors separately
+for each snapshot. The units are fixed by the BSM model: incoming DLMS unit
+codes and unit labels must agree with that model before its signed payload is
+reconstructed. Unsupported units are rejected rather than reinterpreted.
 
 ## Metadata (`Meta1` / `Meta2` / `Meta3`) — and how Chargy processes it
 
@@ -203,6 +205,17 @@ The buffer is assembled in this order (string lengths are dynamic, so `MA1`,
 | 16 | `Meta3` | string | — | — |
 | 17 | `Evt` | numerical | 0 | 255 (none) |
 
+These fixed units and unscaled fields follow the reference
+[`bsm_snapshot` model](https://github.com/chargeITmobility/bsm-python/blob/master/bauer_bsm/bsm/models/smdx_64901.xml)
+and [digest encoder](https://github.com/chargeITmobility/bsm-python/blob/master/bauer_bsm/bsm/md.py).
+Every numerical field must occur exactly once in each snapshot. Its value must
+fit the signed (`W`, `TZO`) or unsigned 32-bit representation. Energy and power
+scale factors must be integers in the signed-byte range (-128 through 127);
+all other numerical fields have scale zero. The reference exporter may omit
+that zero scale and the label for unitless fields. `MIN` and `MINUTE` are both
+accepted for minutes. Explicit nonzero scales on unscaled fields, missing or
+contradictory unit codes, and malformed numbers are rejected as invalid input.
+
 Worked example from the reference (`RCR = 150 Wh`, scale `0`, Wh code `0x1e`):
 
 ```text
@@ -268,7 +281,9 @@ tests/fixtures/chargeIT/new_container_format/bsm-ws36a-good-with-non-zero-scale-
 ```
 
 They are exercised by `tests/chargeIT.tests.ts` (e.g. the `bsm-ws36a-good`
-tests). `bsm-ws36a-good.json` contains the signed `Meta1 = "contract-id:
+tests). `tests/BSMCrypt01.tests.ts` adds numeric-format regressions and uses an
+independent Node crypto encoder to sign negative scale factors and power values.
+`bsm-ws36a-good.json` contains the signed `Meta1 = "contract-id:
 rfid:102bb22f"` and `Meta3 = "csc-sw-version: unknown"` tags discussed above,
 together with the matching unsigned `contract` object and the container
 `evseId`.

@@ -13,6 +13,14 @@ versions and are always listed first below.
 
 - Update Vitest and its browser, Playwright, coverage and UI packages to 5.1.0.
 
+### Fixed
+
+- Validate BSM numeric fields against the snapshot model before reconstructing
+  signatures: check unit codes and labels, scale factors and integer ranges,
+  and reject missing or duplicate numeric fields. Preserve valid exports with
+  implicit zero scales on unscaled fields and retain per-snapshot energy/power
+  scaling, including negative exponents and signed power values.
+
 
 ## [0.18.0] - 2026-11-02
 
